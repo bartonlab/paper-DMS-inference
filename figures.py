@@ -867,6 +867,57 @@ def FIG3_VISUALIZATION(exp_scale = 10, sites_per_line = 35):
 
 
 
+###
+SUPPFIG1_RAWDATA_REP1 = './outputs/epistasis/tRNA/rep1_100.txt'
+SUPPFIG1_IDXMAT_REP1  = './outputs/epistasis/tRNA/index_matrix_rep1.csv'
+SUPPFIG1_RAWDATA_REP2 = './outputs/epistasis/tRNA/rep2_100.txt'
+SUPPFIG1_IDXMAT_REP2  = './outputs/epistasis/tRNA/index_matrix_rep2.csv'
+
+def SUPPFIG1_EPISTASIS():
+    with open(SUPPFIG1_RAWDATA_REP1, 'r') as f:
+        lines = f.readlines()
+    epistasis_selection = []
+    for line in lines:
+        epistasis_selection.append(float(line))
+        
+    df_index1 = pd.read_csv(SUPPFIG1_IDXMAT_REP1, names = ['variant_1', 'variant_2', 'index'], header = None)
+    start_site = df_index1['variant_1'].min()
+    end_site = df_index1['variant_2'].max()
+    df_i = []
+    for i in range(end_site+1):
+        df_i.append(df_index1[(df_index1['variant_1'] == i) & (df_index1['variant_2'] == i)].index.values[0])
+    index_list = df_index1['index'].tolist()
+    selection_list = []
+    for index in index_list:
+        selection_list.append(epistasis_selection[index])
+    df_index1['selection_coefficient'] = selection_list
+
+    with open(SUPPFIG1_RAWDATA_REP2, 'r') as f:
+        lines = f.readlines()
+    epistasis_selection = []
+    for line in lines:
+        epistasis_selection.append(float(line))
+        
+    df_index2 = pd.read_csv(SUPPFIG1_IDXMAT_REP2, names = ['variant_1', 'variant_2', 'index'], header = None)
+    start_site = df_index2['variant_1'].min()
+    end_site = df_index2['variant_2'].max()
+    df_i = []
+    for i in range(end_site+1):
+        df_i.append(df_index2[(df_index2['variant_1'] == i) & (df_index2['variant_2'] == i)].index.values[0])
+    index_list = df_index2['index'].tolist()
+    selection_list = []
+    for index in index_list:
+        selection_list.append(epistasis_selection[index])
+    df_index2['selection_coefficient'] = selection_list
+
+    result = pd.merge(df_index1, df_index2, on=["variant_1", "variant_2"])
+
+    print(result[["selection_coefficient_x", "selection_coefficient_y"]].corr(), result.shape)
+    result.plot.scatter(x='selection_coefficient_x', y='selection_coefficient_y', alpha=0.1)
+    plt.ylabel('rep #1')
+    plt.xlabel('rep #2')
+    # plt.savefig('all-selection.png', dpi=200)
+
 
 
 
