@@ -215,10 +215,14 @@ matplotlib.rc('text', usetex=False)
 FIG2_SIZE_X         = 18
 FIG2_SIZE_Y         = 8
 FIG2_A_MPL_COLOR    = '#4F94CD'#'blue'
-FIG2_A_MPL_MARKER   = 'o'
+FIG2_A_MPL_MARKER   = '*'
 FIG2_A_PREF_COLOR   = '#FFA54F'#'orange'
-FIG2_A_PREF_MARKER  = 'v'
+FIG2_A_PREF_MARKER  = '^'
 FIG2_A_MARKER_SIZE  = 20
+FIG2_A_LEGEND_XY    = [0.05, 1.05]
+FIG2_A_VIRUSTAG_XY  = [0.05, 0.35]
+FIG2_A_HUMANTAG_XY  = [16.0, 0.35]
+FIG2_A_TAGBOX       = dict(boxstyle='round', facecolor = 'white')
 FIG2_VIRUS_DIR      = './outputs/virus_protein/'
 FIG2_HUMAN_DIR      = './outputs/human_protein/'
 FIG2_VIRUS_PREF_DIR = './data/virus_protein/'
@@ -371,18 +375,20 @@ def FIG2_METHODS_COMPARISON():
     ax.set_ylim(top = 1.05, bottom = 0.3)
     ax.axvline( x = ' ', ls = '--', color = 'black', lw = 1)
     legend_elements = [
-                        Line2D([0], [0], marker = 'o', linestyle = 'None',
+                        Line2D([0], [0], marker = FIG2_A_MPL_MARKER, linestyle = 'None',
                                color = FIG2_A_MPL_COLOR,  label = 'MPL', markersize = 5),
-                        Line2D([0], [0], marker = 'v', linestyle = 'None',
+                        Line2D([0], [0], marker = FIG2_A_PREF_MARKER, linestyle = 'None',
                                color = FIG2_A_PREF_COLOR, label = 'Ratio methods', markersize = 5)
                        ]
     ax.legend(handles = legend_elements, 
-              loc = [0.05, 1.05], ncol = 2, 
+              loc = FIG2_A_LEGEND_XY, ncol = 2, 
               frameon = False, fontsize = TEXT_FONTSIZE, 
               handletextpad = 0.1)
     ax.spines['right'].set_visible(False)
     ax.spines[ 'top' ].set_visible(False)
     ax.tick_params(axis = 'both', which = 'major', labelsize = TEXT_FONTSIZE)
+    ax.text(FIG2_A_VIRUSTAG_XY[0], FIG2_A_VIRUSTAG_XY[1], 'Virus', fontsize = TEXT_FONTSIZE, bbox=FIG2_A_TAGBOX)
+    ax.text(FIG2_A_HUMANTAG_XY[0], FIG2_A_HUMANTAG_XY[1], 'Human', fontsize = TEXT_FONTSIZE, bbox=FIG2_A_TAGBOX)
 
     # Scatter plot of sample experiment
     SELECTION_LIST = []
