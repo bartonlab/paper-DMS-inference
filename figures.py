@@ -180,6 +180,8 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
             temp[2].append(selection_coefficients_corr)
             temp[3].append(enrichment_ratio_log_corr)
 
+        # ax2.plot(generation_, temp[0], c = 'red',    marker = marker[finite_list.index(finite_sampling)], markersize = FIG1_MARKER_SIZE, markeredgewidth = 0, alpha = 0.6)      
+        # ax2.plot(generation_, temp[1], c = 'green',  marker  = marker[finite_list.index(finite_sampling)], markersize = FIG1_MARKER_SIZE, markeredgewidth = 0, alpha = 0.6)      
         ax2.plot(generation_, temp[2], c = '#4F94CD', marker = marker[finite_list.index(finite_sampling)], markersize = FIG1_MARKER_SIZE, markeredgewidth = 0, alpha = 0.6)      
         ax2.plot(generation_, temp[3], c = 'orange', marker  = marker[finite_list.index(finite_sampling)], markersize = FIG1_MARKER_SIZE, markeredgewidth = 0, alpha = 0.6)      
         ax2.set_xlabel('Generation used for inference',      fontsize = TEXT_FONTSIZE)
@@ -189,9 +191,9 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
         ax2.set_ylim  ([-0.05, 1])
         
     legend_fig_1b = [Line2D([0], [0], color = '#4F94CD', lw = 2, label = 'Selection coefficients', alpha = 0.6),
-    #                  Line2D([0], [0], color = 'red',     lw = 2, label = 'Enrichment ratio',       alpha = 0.6),
+                     # Line2D([0], [0], color = 'red',     lw = 2, label = 'Enrichment ratio',       alpha = 0.6),
                      Line2D([0], [0], color = 'orange',  lw = 2, label = 'Log scaled ratio',       alpha = 0.6),
-    #                  Line2D([0], [0], color = 'green',   lw = 2, label = 'Log regression',         alpha = 0.6)
+                     # Line2D([0], [0], color = 'green',   lw = 2, label = 'Log regression',         alpha = 0.6)
                     ]
 
     ax2.set_yticks([0, 0.25, 0.5, 0.75, 1])
@@ -544,7 +546,7 @@ def FIG3_VISUALIZATION(exp_scale = 10, sites_per_line = 35):
             
             for j in range(len(SEQUENCE)):
                 logo.ax.text(j + 2, 1.05, SEQUENCE[j], **text_in_figure, color = 'grey')
-            logo.ax.text(18.5, 1.125, 'Wild type SEQUENCE', **text_in_figure, color = 'grey') 
+            logo.ax.text(18.5, 1.125, 'Wild type sequence', **text_in_figure, color = 'grey') 
             logo.style_spines(spines=['bottom', 'right', 'left', 'top'], visible = False)
             
         ax1.set_yticks([])
@@ -922,7 +924,7 @@ def SUPPFIG1_EPISTASIS():
     result.plot.scatter(x='selection_coefficient_x', y='selection_coefficient_y', alpha=0.1)
     plt.ylabel('rep #1')
     plt.xlabel('rep #2')
-    # plt.savefig('all-selection.png', dpi=200)
+    plt.savefig('Sup_Fig1_epistasis_correlation.pdf', dpi=200)
 
 
 
