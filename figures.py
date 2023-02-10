@@ -15,8 +15,8 @@ import matplotlib.colors as mcolors
 import matplotlib.gridspec as gridspec
 from matplotlib.font_manager import FontProperties
 import matplotlib.patches as mpatches
-
-
+import matplotlib.ticker as ticker
+import cv2
 
 import seaborn as sns 
 
@@ -128,11 +128,14 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
     for i in [FIG1_VAR]:
         ax1.plot(df_trajectory.columns[:FIG1_GEN], df_trajectory.T[i][:FIG1_GEN], color = FIG1_TRUE_COLOR, alpha = FIG1_TRUE_ALPHA)
 
-    legend_fig1_a = [Line2D([0], [0], color = FIG1_FINITE_COLOR, lw = 2, label = 'Finite sampling'),
+    legend_fig1_a = [Line2D([0], [0], color = FIG1_FINITE_COLOR, lw = 2, label = 'Finitely sampled'),
                      Line2D([0], [0], color = FIG1_TRUE_COLOR,   lw = 2, label = 'True evolution')]
     ax1.legend(handles = legend_fig1_a, frameon = False, fontsize = TEXT_FONTSIZE)
     ax1.spines['right'].set_visible(False)
     ax1.spines['top'].set_visible(False)
+    ax1.set_yscale('log')
+    ax1.set_ylim([3.9e-5, 1.1e-3])
+    ax1.set_xticks([0, 3, 6, 9])
 
     ax2 = fig.add_subplot(gs[1:, 0])
     generation   = 10
@@ -141,7 +144,6 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
 
     generations=[1, 4, 9, 19]
     finite_list = [50000]
-    replicates = 100
     marker = ['o', 'v', '*']
     generation_ = [i + 1 for i in generations[: -1]]
 
@@ -154,10 +156,10 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
             df_enrichment_ratio     = pd.read_csv(FIG1_WF_RATIO         + 'gen-%s_' %generation + 'sampling-%s' %finite_sampling + '.csv', index_col = 0)
             df_enrichment_ratio_log = pd.read_csv(FIG1_WF_LOGRATIO      + 'gen-%s_' %generation + 'sampling-%s' %finite_sampling + '.csv', index_col = 0)
 
-            enrichment_ratio_corr       =     df_enrichment_ratio[    df_enrichment_ratio.columns[1:]].T.corr(method = 'pearson')
-            log_regression_corr         =   df_enrichment_regress[  df_enrichment_regress.columns[1:]].T.corr(method = 'pearson')
-            selection_coefficients_corr =               df_select[              df_select.columns[1:]].T.corr(method = 'pearson')
-            enrichment_ratio_log_corr   = df_enrichment_ratio_log[df_enrichment_ratio_log.columns[1:]].T.corr(method = 'pearson')
+            enrichment_ratio_corr       =     df_enrichment_ratio.T.corr(method = 'pearson')
+            log_regression_corr         =   df_enrichment_regress.T.corr(method = 'pearson')
+            selection_coefficients_corr =               df_select.T.corr(method = 'pearson')
+            enrichment_ratio_log_corr   = df_enrichment_ratio_log.T.corr(method = 'pearson')
             
             factor = replicates * replicates - replicates
             enrichment_ratio_corr       = (enrichment_ratio_corr.sum().sum()       - replicates)/factor
@@ -165,33 +167,33 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
             selection_coefficients_corr = (selection_coefficients_corr.sum().sum() - replicates)/factor  
             enrichment_ratio_log_corr   = (enrichment_ratio_log_corr.sum().sum()   - replicates)/factor
           
-            enrichment_ratio_corr       =     df_enrichment_ratio.T.corr(method = 'pearson')
-            log_regression_corr         =   df_enrichment_regress.T.corr(method = 'pearson')
-            selection_coefficients_corr =               df_select.T.corr(method = 'pearson')
-            enrichment_ratio_log_corr   = df_enrichment_ratio_log.T.corr(method = 'pearson')
+            # enrichment_ratio_corr       =     df_enrichment_ratio.T.corr(method = 'pearson')
+            # log_regression_corr         =   df_enrichment_regress.T.corr(method = 'pearson')
+            # selection_coefficients_corr =               df_select.T.corr(method = 'pearson')
+            # enrichment_ratio_log_corr   = df_enrichment_ratio_log.T.corr(method = 'pearson')
             
-            enrichment_ratio_corr = (enrichment_ratio_corr.sum().sum()             - replicates)/factor
-            log_regression_corr = (log_regression_corr.sum().sum()                 - replicates)/factor
-            selection_coefficients_corr = (selection_coefficients_corr.sum().sum() - replicates)/factor  
-            enrichment_ratio_log_corr = (enrichment_ratio_log_corr.sum().sum()     - replicates)/factor
+            # enrichment_ratio_corr = (enrichment_ratio_corr.sum().sum()             - replicates)/factor
+            # log_regression_corr = (log_regression_corr.sum().sum()                 - replicates)/factor
+            # selection_coefficients_corr = (selection_coefficients_corr.sum().sum() - replicates)/factor  
+            # enrichment_ratio_log_corr = (enrichment_ratio_log_corr.sum().sum()     - replicates)/factor
             
             temp[0].append(enrichment_ratio_corr)
-            temp[1].append(log_regression_corr)
+            # temp[1].append(log_regression_corr)
             temp[2].append(selection_coefficients_corr)
             temp[3].append(enrichment_ratio_log_corr)
 
-        # ax2.plot(generation_, temp[0], c = 'red',    marker = marker[finite_list.index(finite_sampling)], markersize = FIG1_MARKER_SIZE, markeredgewidth = 0, alpha = 0.6)      
+        ax2.plot(generation_, temp[0], c = 'red',    marker = marker[finite_list.index(finite_sampling)], markersize = FIG1_MARKER_SIZE, markeredgewidth = 0, alpha = 0.6)      
         # ax2.plot(generation_, temp[1], c = 'green',  marker  = marker[finite_list.index(finite_sampling)], markersize = FIG1_MARKER_SIZE, markeredgewidth = 0, alpha = 0.6)      
         ax2.plot(generation_, temp[2], c = '#4F94CD', marker = marker[finite_list.index(finite_sampling)], markersize = FIG1_MARKER_SIZE, markeredgewidth = 0, alpha = 0.6)      
         ax2.plot(generation_, temp[3], c = 'orange', marker  = marker[finite_list.index(finite_sampling)], markersize = FIG1_MARKER_SIZE, markeredgewidth = 0, alpha = 0.6)      
-        ax2.set_xlabel('Generation used for inference',      fontsize = TEXT_FONTSIZE)
-        ax2.set_ylabel('Pearson correlation \ncoefficients', fontsize = TEXT_FONTSIZE)
+        ax2.set_xlabel('Generations used for inference',      fontsize = TEXT_FONTSIZE)
+        ax2.set_ylabel('Average Pearson correlation coefficients \nbetween inferred mutational effects \nacross 100 simulated replicates', fontsize = TEXT_FONTSIZE)
         ax2.set_xticks([2, 5, 10])
         ax2.set_xlim  ([   0, 11])
         ax2.set_ylim  ([-0.05, 1])
         
     legend_fig_1b = [Line2D([0], [0], color = '#4F94CD', lw = 2, label = 'Selection coefficients', alpha = 0.6),
-                     # Line2D([0], [0], color = 'red',     lw = 2, label = 'Enrichment ratio',       alpha = 0.6),
+                     Line2D([0], [0], color = 'red',     lw = 2, label = 'Enrichment ratio',       alpha = 0.6),
                      Line2D([0], [0], color = 'orange',  lw = 2, label = 'Log scaled ratio',       alpha = 0.6),
                      # Line2D([0], [0], color = 'green',   lw = 2, label = 'Log regression',         alpha = 0.6)
                     ]
@@ -201,7 +203,7 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
     ax2.spines['right'].set_visible(False)
     ax2.spines[ 'top' ].set_visible(False)
     ax2.tick_params(axis = 'both', which = 'major', labelsize = TEXT_FONTSIZE)
-    ax2.legend(handles = legend_fig_1b, frameon = False, fontsize = TEXT_FONTSIZE)
+    ax2.legend(handles = legend_fig_1b, frameon = False, fontsize = TEXT_FONTSIZE, loc = 'upper left')
     fig.show()
     fig.savefig(FIG_FILE + FIG1_NAME, dpi = FIG_DPI)
 
@@ -214,12 +216,12 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
 # FIGURE 2 ARGUMENTS
 matplotlib.rc_file_defaults()
 matplotlib.rc('text', usetex=False)
-FIG2_SIZE_X         = 18
-FIG2_SIZE_Y         = 8
+FIG2_SIZE_X         = 15
+FIG2_SIZE_Y         = 20
 FIG2_A_MPL_COLOR    = '#4F94CD'#'blue'
-FIG2_A_MPL_MARKER   = '*'
-FIG2_A_PREF_COLOR   = '#FFA54F'#'orange'
-FIG2_A_PREF_MARKER  = '^'
+FIG2_A_MPL_MARKER   = '.'
+FIG2_A_PREF_COLOR   = 'grey'#'orange'
+FIG2_A_PREF_MARKER  = '.'
 FIG2_A_MARKER_SIZE  = 20
 FIG2_A_LEGEND_XY    = [0.05, 1.05]
 FIG2_A_VIRUSTAG_XY  = [0.05, 0.35]
@@ -263,8 +265,14 @@ FIG2_B_REPLICATE_NUM = 3
 FIG2_B_SAMPLE_DIR    = './outputs/virus_protein/HIVEnv/BF520/selection_coefficients/'
 FIG2_B_SCATTER_SIZE  = 7
 FIG2_B_SCATTER_ALPHA = 0.4
-FIG2_B_SCATTER_COLOR = 'orange'
 FIG2_B_CORR_DIGIT    = 2
+
+FIG2_C_REPLICATE_NUM = 3
+FIG2_C_SAMPLE_DIR    = './data/virus_protein/HIVEnv/BF520/pref/'
+FIG2_C_SCATTER_SIZE  = 7
+FIG2_C_SCATTER_ALPHA = 0.4
+FIG2_C_CORR_DIGIT    = 2
+
 FIG2_NAME            = 'Fig2_comparison.pdf'
 
 # FIGURE 2 MAIN PLOT FUNCTION
@@ -310,19 +318,28 @@ def FIG2_METHODS_COMPARISON():
 
     PERFORMANCE_FIG_SIZE = (FIG2_SIZE_X * CM, FIG2_SIZE_Y * CM)
     fig = plt.figure(figsize = PERFORMANCE_FIG_SIZE)
-    fig.text(0.05, 0.92, s = 'a', **SERIAL_FONT, transform = fig.transFigure)
-    fig.text(0.6,  0.92, s = 'b', **SERIAL_FONT, transform = fig.transFigure)
-    gs  = fig.add_gridspec(2, 5, wspace = 1.3, **FIG2_BOX_ARG)
-    ax  = fig.add_subplot(gs[:2,:3])
-    ax2 = fig.add_subplot(gs[:2,3:])
+    fig.text(0.0, 0.88, s = 'a', **SERIAL_FONT, transform = fig.transFigure)
+    fig.text(0.0, 0.56, s = 'b', **SERIAL_FONT, transform = fig.transFigure)
+    fig.text(0.5, 0.56, s = 'c', **SERIAL_FONT, transform = fig.transFigure)
+    gs  = fig.add_gridspec(6, 4, wspace = 1.3, **FIG2_BOX_ARG)
+    gs.update(wspace=0.5, hspace=0.5)
+    ax  = fig.add_subplot(gs[:2,:4])
+    ax2 = fig.add_subplot(gs[3:,:2])
+    ax3 = fig.add_subplot(gs[3:,2:])
     FIG2_B_INNER = gridspec.GridSpecFromSubplotSpec(2, 2,
-                                                    hspace = 0.6,
-                                                    wspace = 0.5,
+                                                    hspace = 0.2,
+                                                    wspace = 0,
                                                     subplot_spec  = ax2, 
                                                     height_ratios = [1, 1], width_ratios = [1, 1])
 
-    ax.set_xlabel('Target protein', fontsize = TEXT_FONTSIZE)
-    ax.set_ylabel('Correlation coefficient of inference \n across replicates', fontsize = TEXT_FONTSIZE)
+    FIG2_C_INNER = gridspec.GridSpecFromSubplotSpec(2, 2,
+                                                    hspace = 0.2,
+                                                    wspace = 0,
+                                                    subplot_spec  = ax3, 
+                                                    height_ratios = [1, 1], width_ratios = [1, 1])
+
+    ax.set_xlabel('Data set', fontsize = TEXT_FONTSIZE)
+    ax.set_ylabel('Average Pearson correlation coefficients of \ninferred mutational effects across replicates', fontsize = TEXT_FONTSIZE)
 
     MPL_LIST = FIG2_A_MPL_AVG.items()
     MPL_LIST = sorted(MPL_LIST, key = lambda x: x[1], reverse = True)
@@ -389,10 +406,10 @@ def FIG2_METHODS_COMPARISON():
     ax.spines['right'].set_visible(False)
     ax.spines[ 'top' ].set_visible(False)
     ax.tick_params(axis = 'both', which = 'major', labelsize = TEXT_FONTSIZE)
-    ax.text(FIG2_A_VIRUSTAG_XY[0], FIG2_A_VIRUSTAG_XY[1], 'Virus', fontsize = TEXT_FONTSIZE, bbox=FIG2_A_TAGBOX)
-    ax.text(FIG2_A_HUMANTAG_XY[0], FIG2_A_HUMANTAG_XY[1], 'Human', fontsize = TEXT_FONTSIZE, bbox=FIG2_A_TAGBOX)
+    ax.text(FIG2_A_VIRUSTAG_XY[0], FIG2_A_VIRUSTAG_XY[1], 'Virus proteins', fontsize = TEXT_FONTSIZE)
+    ax.text(FIG2_A_HUMANTAG_XY[0], FIG2_A_HUMANTAG_XY[1], 'Human proteins', fontsize = TEXT_FONTSIZE)
 
-    # Scatter plot of sample experiment
+    # Scatter plot of sample experiment of MPL
     SELECTION_LIST = []
     for file in os.listdir(FIG2_B_SAMPLE_DIR):
         if file.endswith('.csv.gz'):
@@ -419,22 +436,30 @@ def FIG2_METHODS_COMPARISON():
             if i == 0 and j == 1:
                 ax2_sub = plt.Subplot(fig, FIG2_B_INNER[0, 0])
                 ax2_sub.scatter(SELECTION_LIST[i], SELECTION_LIST[j], **SCATTER_DOT)
-                ax2_sub.set_ylabel('Rep #2', fontsize = TEXT_FONTSIZE)
+                ax2_sub.set_ylabel('Replicate 2', fontsize = TEXT_FONTSIZE)
+                ax2_sub.set_yticks([-1, 0, 1])
+                ax2_sub.set_xticks([-1, 0, 1])
+                ax2_sub.set_xticklabels([])
+
 
             if i == 0 and j == 2:
                 ax2_sub = plt.Subplot(fig, FIG2_B_INNER[1, 0])
                 ax2_sub.scatter(SELECTION_LIST[i], SELECTION_LIST[j], **SCATTER_DOT)
-                ax2_sub.set_ylabel('Rep #3', fontsize = TEXT_FONTSIZE)
-                ax2_sub.set_xlabel('Rep #1', fontsize = TEXT_FONTSIZE)
+                ax2_sub.set_ylabel('Replicate 3', fontsize = TEXT_FONTSIZE)
+                ax2_sub.set_xlabel('Replicate 1', fontsize = TEXT_FONTSIZE)
+                ax2_sub.set_yticks([-1, 0, 1])
+                ax2_sub.set_xticks([-1, 0, 1])
 
             if i == 1 and j == 2:
                 ax2_sub = plt.Subplot(fig, FIG2_B_INNER[1, 1])
                 ax2_sub.scatter(SELECTION_LIST[i], SELECTION_LIST[j], **SCATTER_DOT)
-                ax2_sub.set_xlabel('Rep #2', fontsize = TEXT_FONTSIZE)
+                ax2_sub.set_xlabel('Replicate 2', fontsize = TEXT_FONTSIZE)
+                ax2_sub.set_yticks([-1, 0, 1])
+                ax2_sub.set_yticklabels([])
+                ax2_sub.set_xticks([-1, 0, 1])                
                 
             ax2_sub.text(-0.8, 1.1, 'R = %.2f' %CORR, fontsize = TEXT_FONTSIZE)
-            ax2_sub.set_yticks([-1, 0, 1])
-            ax2_sub.set_xticks([-1, 0, 1])
+
             ax2_sub.set_xlim([-1.1, 1.3])
             ax2_sub.set_ylim([-1.1, 1.3])
             fig.add_subplot(ax2_sub)
@@ -442,9 +467,71 @@ def FIG2_METHODS_COMPARISON():
             ax2_sub.spines[ 'top' ].set_visible(False)
             ax2_sub.tick_params(axis = 'both', which = 'major', labelsize = TEXT_FONTSIZE)
             ax2_sub.set_aspect('equal')
-    ax2.set_xlabel('Selection coefficient', fontsize = TEXT_FONTSIZE, labelpad = 32) 
-    ax2.set_ylabel('Selection coefficient', fontsize = TEXT_FONTSIZE, labelpad = 32) 
-    fig.savefig(FIG_FILE + FIG2_NAME, dpi = 400)
+    ax2.set_xlabel('Selection coefficient', fontsize = TEXT_FONTSIZE, labelpad = 25) 
+    ax2.set_ylabel('Selection coefficient', fontsize = TEXT_FONTSIZE, labelpad = 25) 
+
+    # Scatter plot of sample experiment of Enrichment ratio
+    ENRICHMENT_LIST = []
+    for file in os.listdir(FIG2_C_SAMPLE_DIR):
+        if file.endswith('.csv'):
+            df_temp = pd.read_csv(FIG2_C_SAMPLE_DIR+file)
+            df_temp = df_temp.drop('site', axis = 1)
+            ENRICHMENT_LIST.append(df_temp.to_numpy().flatten())
+    ax3.set_yticks([])
+    ax3.set_xticks([])
+    ax3.spines[ 'top'  ].set_visible(False)
+    ax3.spines['right' ].set_visible(False)
+    ax3.spines['bottom'].set_visible(False)
+    ax3.spines[ 'left' ].set_visible(False)
+
+    SCATTER_DOT_ENRICH = {
+        'alpha': 0.2,
+        'edgecolor': 'none',
+        's': FIG2_B_SCATTER_SIZE,
+        'color': 'grey'
+    }
+
+    for i in range(3):
+        for j in range(i + 1, 3):
+            CORR = round(st.pearsonr(ENRICHMENT_LIST[i], ENRICHMENT_LIST[j])[0], FIG2_B_CORR_DIGIT)
+            if i == 0 and j == 1:
+                ax3_sub = plt.Subplot(fig, FIG2_C_INNER[0, 0])
+                ax3_sub.scatter(ENRICHMENT_LIST[i], ENRICHMENT_LIST[j], **SCATTER_DOT_ENRICH)
+                ax3_sub.set_ylabel('Replicate 2', fontsize = TEXT_FONTSIZE)
+                ax3_sub.set_yticks([0, 0.5, 1])
+                ax3_sub.set_xticks([0, 0.5, 1])
+                ax3_sub.set_xticklabels([])
+
+
+            if i == 0 and j == 2:
+                ax3_sub = plt.Subplot(fig, FIG2_C_INNER[1, 0])
+                ax3_sub.scatter(ENRICHMENT_LIST[i], ENRICHMENT_LIST[j], **SCATTER_DOT_ENRICH)
+                ax3_sub.set_ylabel('Replicate 3', fontsize = TEXT_FONTSIZE)
+                ax3_sub.set_xlabel('Replicate 1', fontsize = TEXT_FONTSIZE)
+                ax3_sub.set_yticks([0, 0.5, 1])
+                ax3_sub.set_xticks([0, 0.5, 1])
+
+            if i == 1 and j == 2:
+                ax3_sub = plt.Subplot(fig, FIG2_C_INNER[1, 1])
+                ax3_sub.scatter(ENRICHMENT_LIST[i], ENRICHMENT_LIST[j], **SCATTER_DOT_ENRICH)
+                ax3_sub.set_xlabel('Replicate 2', fontsize = TEXT_FONTSIZE)
+                ax3_sub.set_yticks([0, 0.5, 1])
+                ax3_sub.set_yticklabels([])
+                ax3_sub.set_xticks([0, 0.5, 1])                
+                
+            ax3_sub.text(0.0, 1.1, 'R = %.2f' %CORR, fontsize = TEXT_FONTSIZE)
+
+            ax3_sub.set_xlim([-0.1, 1.3])
+            ax3_sub.set_ylim([-0.1, 1.3])
+            fig.add_subplot(ax3_sub)
+            ax3_sub.spines['right'].set_visible(False)
+            ax3_sub.spines[ 'top' ].set_visible(False)
+            ax3_sub.tick_params(axis = 'both', which = 'major', labelsize = TEXT_FONTSIZE)
+            ax3_sub.set_aspect('equal')
+    ax3.set_xlabel('Enrichment ratio', fontsize = TEXT_FONTSIZE, labelpad = 25) 
+    ax3.set_ylabel('Enrichment ratio', fontsize = TEXT_FONTSIZE, labelpad = 25) 
+    fig.savefig(FIG_FILE + FIG2_NAME, dpi = 400, bbox_inches = 'tight')
+
 
 
 #################
