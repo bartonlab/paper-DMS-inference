@@ -530,7 +530,9 @@ def FIG2_METHODS_COMPARISON():
             ax3_sub.set_aspect('equal')
     ax3.set_xlabel('Enrichment ratio', fontsize = TEXT_FONTSIZE, labelpad = 25) 
     ax3.set_ylabel('Enrichment ratio', fontsize = TEXT_FONTSIZE, labelpad = 25) 
+    
     fig.savefig(FIG_FILE + FIG2_NAME, dpi = 400, bbox_inches = 'tight')
+    plt.show()
 
 
 
@@ -956,10 +958,115 @@ def FIG3_VISUALIZATION(exp_scale = 10, sites_per_line = 35):
         clb.ax.set_xlabel(r'$\sum$|epistasis|', fontsize = TEXT_FONTSIZE)
         
     plt.tight_layout()
-    fig.savefig(FIG_FILE + 'Fig3_realdata.pdf', dpi = 400)
-    plt.show()  
-    return flights
+    plt.savefig(FIG_FILE + 'Fig3_realdata.pdf', dpi=200)
+    plt.show() 
 
+
+FIG4_SIZE_X        = 20
+FIG4_SIZE_Y        = 15
+FIG4_C_LEGEND_XY   = [0.4, 0.6]
+FIG4_BOX_ARG       = dict(left = 0.12, right = 0.95, bottom = 0.3, top = 0.85)
+EPISTASIS_FIG_SIZE = (FIG4_SIZE_X * CM, FIG4_SIZE_Y * CM)
+
+
+matplotlib.rc_file_defaults()
+matplotlib.rc('text', usetex=False)
+matplotlib.rc('font', **FONT)
+
+
+def FIG4_VISUALIZATION():    
+    fig = plt.figure(figsize = EPISTASIS_FIG_SIZE)
+    gs  = fig.add_gridspec(11, 12, wspace = 1.3, **FIG4_BOX_ARG)
+    gs.update(wspace=0.5, hspace=0.5)
+    ax  = fig.add_subplot(gs[:11,:7])
+    ax2 = fig.add_subplot(gs[:6,8:])
+    ax3 = fig.add_subplot(gs[7:,8:])
+
+    df_merged = pd.read_csv('./data/epistasis/merged_table.csv')
+    df_merged.loc[(df_merged['site_1_y']==df_merged['site_2_y'])&(df_merged['AA_1_y']==df_merged['AA_2_y'])]
+    df_new = df_merged.copy()[['site_1_y','site_2_y','epistasis_paper','epistasis_MPL_cons_1']].dropna()
+    df_new['epistasis_paper'] = np.abs(df_new['epistasis_paper'])
+    df_new['epistasis_MPL_cons_1'] = np.abs(df_new['epistasis_MPL_cons_1'])
+    df_new=df_new.groupby(['site_1_y', 'site_2_y'])['epistasis_paper', 'epistasis_MPL_cons_1'].agg('sum').reset_index()
+    df_new['epistasis_paper'] = (df_new['epistasis_paper'] - df_new['epistasis_paper'].min())/(df_new['epistasis_paper'].max() - df_new['epistasis_paper'].min())
+    df_new['epistasis_MPL_cons_1'] = (df_new['epistasis_MPL_cons_1'] - df_new['epistasis_MPL_cons_1'].min())/(df_new['epistasis_MPL_cons_1'].max() - df_new['epistasis_MPL_cons_1'].min())
+
+    x_list = [i + 2 for i in range(34)]
+    df_heatmap = pd.DataFrame(columns=x_list)
+    for i in (x_list):
+        df_heatmap[i]=np.zeros(36)
+    for index, row in df_new.iterrows():
+        df_heatmap.loc[row['site_1_y']+1,row['site_2_y']+1]=row['epistasis_paper']
+        df_heatmap.loc[row['site_2_y']+1,row['site_1_y']+1]=row['epistasis_MPL_cons_1']
+    df_heatmap=df_heatmap.iloc[2:]
+    sns.heatmap(df_heatmap,cmap='Blues',cbar_kws={'label': r'$\sum$|epistasis|'}, ax=ax)
+    ax.set_xlabel('site',fontsize = TEXT_FONTSIZE)
+    ax.set_ylabel('site',fontsize = TEXT_FONTSIZE)
+    ax.set_xlabel('Site', labelpad = 7)
+    ax.set_ylabel('Site', labelpad = 7)
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+
+    ax.set_xticks([i for i in range(1,len(SEQUENCE)) if (i)%5 == 0])
+    ax.set_xticklabels([i + 10 for i in range(1,len(SEQUENCE)) if (i)%5 == 0], fontsize = TEXT_FONTSIZE)
+    ax.set_yticks([i for i in range(1,len(SEQUENCE)) if (i)%5 == 0])
+    ax.set_yticklabels([i + 10 for i in range(1,len(SEQUENCE)) if (i)%5 == 0], fontsize = TEXT_FONTSIZE)
+    ax.tick_params(axis = u'both', which = u'both', length = 0)
+    ax.invert_yaxis()
+
+
+    df_epistasis = df_merged.dropna().copy()
+    df_epistasis['epistasis_MPL_absolute']   = np.abs(df_epistasis['epistasis_MPL_cons_1'])
+    df_epistasis['epistasis_paper_absolute'] = np.abs(df_epistasis['epistasis_paper'])
+
+    df_epistasis = df_epistasis[['site_1_y', 'site_2_y', 'epistasis_MPL_cons_1', 'epistasis_MPL_absolute', 'epistasis_paper','epistasis_paper_absolute', 'distance']].sort_values('epistasis_MPL_absolute')
+    df_unique = df_epistasis[['site_1_y','site_2_y','distance','epistasis_MPL_absolute','epistasis_paper_absolute']]
+    df_MPL = df_unique.groupby(['site_1_y','site_2_y','distance'])['epistasis_MPL_absolute', 'epistasis_paper_absolute'].agg('sum').reset_index().sort_values('epistasis_MPL_absolute')
+    df_func = df_unique.groupby(['site_1_y','site_2_y','distance'])['epistasis_MPL_absolute', 'epistasis_paper_absolute'].agg('sum').reset_index().sort_values('epistasis_paper_absolute')
+    
+    df_epistasis.plot.scatter(x = 'epistasis_paper', y = 'epistasis_MPL_cons_1', alpha = 0.1, ax = ax2, s = 5)
+    pr = st.pearsonr(df_epistasis.dropna()['epistasis_paper'], df_epistasis.dropna()['epistasis_MPL_cons_1'])[0]
+    sr = st.spearmanr(df_epistasis.dropna()['epistasis_paper'], df_epistasis.dropna()['epistasis_MPL_cons_1'])[0]
+    ax2.set_ylabel('popDMS epistasis',    fontsize = TEXT_FONTSIZE)
+    ax2.set_xlabel('reference epistasis', fontsize = TEXT_FONTSIZE)
+    ax2.spines['right'].set_visible(False)
+    ax2.spines['top'].set_visible(False)
+    ax2.text(-1.5, 1.5, s = 'Pearsonr = %.2f'%pr, fontsize = TEXT_FONTSIZE)
+    ax2.text(-1.5, 1.3, s = 'Spearmanr = %.2f'%sr, fontsize = TEXT_FONTSIZE)
+    ax2.set_yticks([0,0.5,1,1.5])
+    fig.text(0.08, 0.85, s = 'a', **SERIAL_FONT, transform = fig.transFigure)
+    fig.text(0.63, 0.85, s = 'b', **SERIAL_FONT, transform = fig.transFigure)
+    fig.text(0.63, 0.5,  s = 'c', **SERIAL_FONT, transform = fig.transFigure)
+
+    t_test_1 = df_MPL['distance'].iloc[-30:].tolist()
+    t_test_2 = df_unique['distance'].tolist()    
+    t_test_3 = df_func['distance'].iloc[-30:].tolist()
+    bins = np.linspace(3, 27, 15)
+    x = st.ttest_ind(a = t_test_1, b = t_test_2, equal_var = True)
+    y = st.ttest_ind(a = t_test_3, b = t_test_2, equal_var = True)
+    ax3.hist(t_test_2, bins, label = 'overall', density=True, alpha = 0.3, edgecolor = 'k')
+    ax3.hist(t_test_1, bins, label = 'reference, t=%.2f p=%.2e'%(y[0],y[1]), density = True, alpha = 0.3, edgecolor = 'k')
+    ax3.hist(t_test_3, bins, label = 'popDMS, t=%.2f p=%.2e'%(x[0],x[1]),    density = True, alpha = 0.3, edgecolor = 'k')
+    ax3.set_xlabel('distance (Ångströms)', fontsize = TEXT_FONTSIZE)
+    ax3.set_ylabel('frequency',fontsize = TEXT_FONTSIZE)
+    ax3.spines['right'].set_visible(False)
+    ax3.spines['top'].set_visible(False)
+    
+    legend_fig_4c = [Line2D([0], [0], color = 'lightskyblue',  lw = 2, label = 'overall', alpha = 1),
+                     Line2D([0], [0], color = 'green', lw = 2, label = 'reference, t=%.2f p=%.2e'%(y[0],y[1]), alpha = 0.3),
+                     Line2D([0], [0], color = 'orange',lw = 2, label = 'popDMS, t=%.2f p=%.2e'%(x[0],x[1]), alpha = 0.6),
+                    ]
+    ax3.legend(handles = legend_fig_4c, 
+              loc = FIG4_C_LEGEND_XY, ncol = 1, 
+              frameon = False, fontsize = TEXT_FONTSIZE, 
+              handletextpad = 0.1)
+
+
+    plt.tight_layout()
+    plt.savefig(FIG_FILE + 'Fig4_epistasis.pdf', dpi=200)
+    plt.show() 
 
 
 ###
@@ -1011,7 +1118,9 @@ def SUPPFIG1_EPISTASIS():
     result.plot.scatter(x='selection_coefficient_x', y='selection_coefficient_y', alpha=0.1)
     plt.ylabel('rep #1')
     plt.xlabel('rep #2')
-    plt.savefig('Sup_Fig1_epistasis_correlation.pdf', dpi=200)
+    plt.tight_layout()
+    plt.savefig(FIG_FILE + 'Sup_Fig1_epistasis_correlation.pdf', dpi=200)
+    plt.show()
 
 
 
