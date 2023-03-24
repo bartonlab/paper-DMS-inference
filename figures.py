@@ -16,15 +16,12 @@ import matplotlib.gridspec as gridspec
 from matplotlib.font_manager import FontProperties
 import matplotlib.patches as mpatches
 import matplotlib.ticker as ticker
-import cv2
 
 import seaborn as sns 
 
 import logomaker as lm
 
 from matplotlib.lines import Line2D
-import warnings
-warnings.filterwarnings("ignore")
 
 # Plot variables
 TEXT_FONTSIZE = 6
@@ -56,9 +53,10 @@ matplotlib.rc('font', **FONT)
 FIG_FILE = './figures/'
 
 
-
+######################
 # FIGURE 1 FINITE SAMPLING SIMULATION
 # FIGURE 1 ARGUMENTS
+
 matplotlib.rc_file_defaults()
 matplotlib.rc('text', usetex=False)
 FIG1_A_POS = {
@@ -108,8 +106,6 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
     ax1.tick_params(axis = 'both', which = 'major', labelsize = TEXT_FONTSIZE)
     ax1.set_yscale(FIG1_SIMU_SCALE)
     num_traj = 0
-
-
 
     for entry in os.scandir(FIG1_TRAJECTORY_DIR + 'gen-' + str(FIG1_GEN) + FIG1_FINITE_SIZE):
         if num_traj < 10:
@@ -208,12 +204,10 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
     fig.savefig(FIG_FILE + FIG1_NAME, dpi = FIG_DPI)
 
 
-
 ######################
-
-
 # FIGURE 2 METHODS COMPARISON 
 # FIGURE 2 ARGUMENTS
+
 matplotlib.rc_file_defaults()
 matplotlib.rc('text', usetex=False)
 FIG2_SIZE_X         = 15
@@ -535,10 +529,10 @@ def FIG2_METHODS_COMPARISON():
     plt.show()
 
 
-
 #################
 # FIGURE 3 VISUALIZATION 
 # FIGURE 3 ARGUMENTS
+
 matplotlib.rc_file_defaults()
 matplotlib.rcParams.update({'font.size': TEXT_FONTSIZE})
 SERIAL_FONT = {
