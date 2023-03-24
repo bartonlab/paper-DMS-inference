@@ -28,7 +28,13 @@ TEXT_FONTSIZE = 6
 SERIAL_FONTSIZE = 8
 TEXT_FONT = 'Arial'
 FIG_DPI = 400
-CM = 1/2.54
+
+cm2inch = lambda x: x/2.54
+SINGLE_COLUMN   = cm2inch(8.8)
+ONE_FIVE_COLUMN = cm2inch(11.4)
+DOUBLE_COLUMN   = cm2inch(18.0)
+SLIDE_WIDTH     = 10.5
+GOLDR           = (1.0 + np.sqrt(5)) / 2.0
 
 SERIAL_FONT = {
     'family': TEXT_FONT,
@@ -67,9 +73,9 @@ FIG1_B_POS = {
     'x': 0.05,
     'y': 0.48
 }
-FIG1_SIZE_X = 9
-FIG1_SIZE_Y = 12
-FIG1_SIMU_SCALE = 'linear'
+FIG1_SIZE_X = SINGLE_COLUMN
+FIG1_SIZE_Y = SINGLE_COLUMN
+FIG1_SIMU_SCALE   = 'linear'
 FIG1_VAR          = 'F'
 FIG1_HSPACE       = 0.4
 FIG1_FINITE_NUM   = 10
@@ -93,7 +99,7 @@ FIG1_NAME         = 'Fig1_simulation.pdf'
 
 # FIGURE 1 MAIN PLOT FUNCTION
 def FIG1_SIMULATION_FINITE_SAMPLING():
-    fig = plt.figure(figsize = (FIG1_SIZE_X * CM,FIG1_SIZE_Y * CM))
+    fig = plt.figure(figsize = (FIG1_SIZE_X, FIG1_SIZE_Y))
     gs  = fig.add_gridspec(2, 1, hspace = FIG1_HSPACE, **FIG1_BOX_ARG)
 
     fig.text(**FIG1_A_POS, s = 'a', **SERIAL_FONT, transform = fig.transFigure)
@@ -102,7 +108,7 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
     # Plot trajectories
     ax1 = fig.add_subplot(gs[:1, 0])
     ax1.set_xlabel('Generation', fontsize = TEXT_FONTSIZE)
-    ax1.set_ylabel('Allele frequency', fontsize = TEXT_FONTSIZE)
+    ax1.set_ylabel('Variant frequency', fontsize = TEXT_FONTSIZE)
     ax1.tick_params(axis = 'both', which = 'major', labelsize = TEXT_FONTSIZE)
     ax1.set_yscale(FIG1_SIMU_SCALE)
     num_traj = 0
@@ -160,9 +166,9 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
             factor = replicates * replicates - replicates
             enrichment_ratio_corr       = (enrichment_ratio_corr.sum().sum()       - replicates)/factor
             log_regression_corr         = (log_regression_corr.sum().sum()         - replicates)/factor
-            selection_coefficients_corr = (selection_coefficients_corr.sum().sum() - replicates)/factor  
+            selection_coefficients_corr = (selection_coefficients_corr.sum().sum() - replicates)/factor
             enrichment_ratio_log_corr   = (enrichment_ratio_log_corr.sum().sum()   - replicates)/factor
-          
+            
             # enrichment_ratio_corr       =     df_enrichment_ratio.T.corr(method = 'pearson')
             # log_regression_corr         =   df_enrichment_regress.T.corr(method = 'pearson')
             # selection_coefficients_corr =               df_select.T.corr(method = 'pearson')
@@ -174,24 +180,24 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
             # enrichment_ratio_log_corr = (enrichment_ratio_log_corr.sum().sum()     - replicates)/factor
             
             temp[0].append(enrichment_ratio_corr)
-            # temp[1].append(log_regression_corr)
+            temp[1].append(log_regression_corr)
             temp[2].append(selection_coefficients_corr)
             temp[3].append(enrichment_ratio_log_corr)
 
         ax2.plot(generation_, temp[0], c = 'red',    marker = marker[finite_list.index(finite_sampling)], markersize = FIG1_MARKER_SIZE, markeredgewidth = 0, alpha = 0.6)      
-        # ax2.plot(generation_, temp[1], c = 'green',  marker  = marker[finite_list.index(finite_sampling)], markersize = FIG1_MARKER_SIZE, markeredgewidth = 0, alpha = 0.6)      
+        ax2.plot(generation_, temp[1], c = 'green',  marker  = marker[finite_list.index(finite_sampling)], markersize = FIG1_MARKER_SIZE, markeredgewidth = 0, alpha = 0.6)
         ax2.plot(generation_, temp[2], c = '#4F94CD', marker = marker[finite_list.index(finite_sampling)], markersize = FIG1_MARKER_SIZE, markeredgewidth = 0, alpha = 0.6)      
         ax2.plot(generation_, temp[3], c = 'orange', marker  = marker[finite_list.index(finite_sampling)], markersize = FIG1_MARKER_SIZE, markeredgewidth = 0, alpha = 0.6)      
         ax2.set_xlabel('Generations used for inference',      fontsize = TEXT_FONTSIZE)
-        ax2.set_ylabel('Average Pearson correlation coefficients \nbetween inferred mutational effects \nacross 100 simulated replicates', fontsize = TEXT_FONTSIZE)
+        ax2.set_ylabel('Average Pearson correlation between\nreplicate inferred mutational effects', fontsize = TEXT_FONTSIZE)
         ax2.set_xticks([2, 5, 10])
         ax2.set_xlim  ([   0, 11])
         ax2.set_ylim  ([-0.05, 1])
         
-    legend_fig_1b = [Line2D([0], [0], color = '#4F94CD', lw = 2, label = 'Selection coefficients', alpha = 0.6),
-                     Line2D([0], [0], color = 'red',     lw = 2, label = 'Enrichment ratio',       alpha = 0.6),
-                     Line2D([0], [0], color = 'orange',  lw = 2, label = 'Log scaled ratio',       alpha = 0.6),
-                     # Line2D([0], [0], color = 'green',   lw = 2, label = 'Log regression',         alpha = 0.6)
+    legend_fig_1b = [Line2D([0], [0], color = '#4F94CD', lw = 2, label = 'popDMS',           alpha = 0.6),
+                     Line2D([0], [0], color = 'red',     lw = 2, label = 'Enrichment ratio', alpha = 0.6),
+                     Line2D([0], [0], color = 'orange',  lw = 2, label = 'Log scaled ratio', alpha = 0.6),
+                     Line2D([0], [0], color = 'green',   lw = 2, label = 'Log regression',   alpha = 0.6)
                     ]
 
     ax2.set_yticks([0, 0.25, 0.5, 0.75, 1])
@@ -210,11 +216,11 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
 
 matplotlib.rc_file_defaults()
 matplotlib.rc('text', usetex=False)
-FIG2_SIZE_X         = 15
-FIG2_SIZE_Y         = 20
-FIG2_A_MPL_COLOR    = '#4F94CD'#'blue'
+FIG2_SIZE_X         = DOUBLE_COLUMN
+FIG2_SIZE_Y         = DOUBLE_COLUMN / GOLDR
+FIG2_A_MPL_COLOR    = '#4F94CD' #'blue'
 FIG2_A_MPL_MARKER   = '.'
-FIG2_A_PREF_COLOR   = 'grey'#'orange'
+FIG2_A_PREF_COLOR   = 'grey' #'orange'
 FIG2_A_PREF_MARKER  = '.'
 FIG2_A_MARKER_SIZE  = 20
 FIG2_A_LEGEND_XY    = [0.05, 1.05]
@@ -254,7 +260,7 @@ FIG2_A_HUMAN_RESULT_DIR = {
                    'Thrombo_TpoR_2': ['TpoR/TpoR_S505NMPL/', 6]
                    }
 
-FIG2_BOX_ARG         = dict(left = 0.12, right = 0.95, bottom = 0.3, top = 0.85)
+FIG2_BOX_ARG         = dict(left = 0.12, right = 0.95, bottom = 0.12, top = 0.95)
 FIG2_B_REPLICATE_NUM = 3
 FIG2_B_SAMPLE_DIR    = './outputs/virus_protein/HIVEnv/BF520/selection_coefficients/'
 FIG2_B_SCATTER_SIZE  = 7
@@ -310,7 +316,7 @@ def FIG2_METHODS_COMPARISON():
             correlation_average      = (temp_df.corr().sum().sum() - temp_df.shape[1])/(temp_df.shape[1]**2 - temp_df.shape[1])
             FIG2_A_PREF_AVG[protein] = correlation_average
 
-    PERFORMANCE_FIG_SIZE = (FIG2_SIZE_X * CM, FIG2_SIZE_Y * CM)
+    PERFORMANCE_FIG_SIZE = (FIG2_SIZE_X, FIG2_SIZE_Y)
     fig = plt.figure(figsize = PERFORMANCE_FIG_SIZE)
     fig.text(0.0, 0.88, s = 'a', **SERIAL_FONT, transform = fig.transFigure)
     fig.text(0.0, 0.56, s = 'b', **SERIAL_FONT, transform = fig.transFigure)
@@ -525,7 +531,7 @@ def FIG2_METHODS_COMPARISON():
     ax3.set_xlabel('Enrichment ratio', fontsize = TEXT_FONTSIZE, labelpad = 25) 
     ax3.set_ylabel('Enrichment ratio', fontsize = TEXT_FONTSIZE, labelpad = 25) 
     
-    fig.savefig(FIG_FILE + FIG2_NAME, dpi = 400, bbox_inches = 'tight')
+    fig.savefig(FIG_FILE + FIG2_NAME, dpi = 400)
     plt.show()
 
 
@@ -545,7 +551,7 @@ INDEX_FILE     = './outputs/epistasis/index_matrix.csv'
 SEQUENCE       = "DVPLPAGWEMAKTSSGQRYFLNHIDQTTTWQDPR"
 PAPER_FIGURE_SIZE_X = 18
 PAPER_FIGURE_SIZE_Y = 14
-EXAMPLE_FIG_SIZE    = (PAPER_FIGURE_SIZE_X * CM, PAPER_FIGURE_SIZE_Y * CM)
+EXAMPLE_FIG_SIZE    = (PAPER_FIGURE_SIZE_X, PAPER_FIGURE_SIZE_Y)
 
 AA  = sorted(['A', 'R', 'N', 'D', 'C', 'E', 'Q', 'G', 'H', 'I', 'L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', '*'])
 Amino_acid_dict = {'Ala': 'A',
@@ -951,7 +957,6 @@ def FIG3_VISUALIZATION(exp_scale = 10, sites_per_line = 35):
         clb = fig.colorbar(hm, ax = ax4, orientation = 'vertical', pad = 0.07, shrink = 0.6)
         clb.ax.set_xlabel(r'$\sum$|epistasis|', fontsize = TEXT_FONTSIZE)
         
-    plt.tight_layout()
     plt.savefig(FIG_FILE + 'Fig3_realdata.pdf', dpi=200)
     plt.show() 
 
@@ -960,7 +965,7 @@ FIG4_SIZE_X        = 20
 FIG4_SIZE_Y        = 15
 FIG4_C_LEGEND_XY   = [0.4, 0.6]
 FIG4_BOX_ARG       = dict(left = 0.12, right = 0.95, bottom = 0.3, top = 0.85)
-EPISTASIS_FIG_SIZE = (FIG4_SIZE_X * CM, FIG4_SIZE_Y * CM)
+EPISTASIS_FIG_SIZE = (FIG4_SIZE_X, FIG4_SIZE_Y)
 
 
 matplotlib.rc_file_defaults()
@@ -1057,8 +1062,6 @@ def FIG4_VISUALIZATION():
               frameon = False, fontsize = TEXT_FONTSIZE, 
               handletextpad = 0.1)
 
-
-    plt.tight_layout()
     plt.savefig(FIG_FILE + 'Fig4_epistasis.pdf', dpi=200)
     plt.show() 
 
@@ -1112,7 +1115,6 @@ def SUPPFIG1_EPISTASIS():
     result.plot.scatter(x='selection_coefficient_x', y='selection_coefficient_y', alpha=0.1)
     plt.ylabel('rep #1')
     plt.xlabel('rep #2')
-    plt.tight_layout()
     plt.savefig(FIG_FILE + 'Sup_Fig1_epistasis_correlation.pdf', dpi=200)
     plt.show()
 
