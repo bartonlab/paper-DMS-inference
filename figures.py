@@ -17,6 +17,8 @@ from matplotlib.font_manager import FontProperties
 import matplotlib.patches as mpatches
 import matplotlib.ticker as ticker
 
+import mplot as mp
+
 import seaborn as sns 
 
 import logomaker as lm
@@ -29,12 +31,33 @@ SERIAL_FONTSIZE = 8
 TEXT_FONT = 'Arial'
 FIG_DPI = 400
 
+COLOR_1  = '#1295D8'
+COLOR_2  = '#FFB511'
+BKCOLOR  = '#252525'
+LCOLOR   = '#969696'
+C_BEN    = '#EB4025' #'#F16913'
+C_BEN_LT = '#F08F78' #'#fdd0a2'
+C_NEU    =  LCOLOR   #'#E8E8E8' # LCOLOR
+C_NEU_LT = '#E8E8E8' #'#F0F0F0' #'#d9d9d9'
+C_DEL    = C_MPL = '#3E8DCF' #'#604A7B'
+C_DEL_LT = '#78B4E7' #'#dadaeb'
+
 cm2inch = lambda x: x/2.54
 SINGLE_COLUMN   = cm2inch(8.8)
 ONE_FIVE_COLUMN = cm2inch(11.4)
 DOUBLE_COLUMN   = cm2inch(18.0)
 SLIDE_WIDTH     = 10.5
 GOLDR           = (1.0 + np.sqrt(5)) / 2.0
+
+# paper style
+FONTFAMILY    = 'Arial'
+SIZESUBLABEL  = 8
+SIZELABEL     = 6
+SIZETICK      = 6
+SMALLSIZEDOT  = 6.
+SIZELINE      = 0.6
+AXES_FONTSIZE = 6
+AXWIDTH       = 0.4
 
 SERIAL_FONT = {
     'family': TEXT_FONT,
@@ -54,6 +77,27 @@ REGION_FONT = {
     'size': TEXT_FONTSIZE
 }
 
+DEF_ERRORPROPS = {
+    'mew'        : AXWIDTH,
+    'markersize' : SMALLSIZEDOT/2,
+    'fmt'        : 'o',
+    'elinewidth' : SIZELINE/2,
+    'capthick'   : 0,
+    'capsize'    : 0
+}
+
+DEF_LABELPROPS = {
+    'family' : FONTFAMILY,
+    'size'   : SIZELABEL,
+    'color'  : BKCOLOR,
+    'clip_on': False
+}
+
+FIGPROPS = {
+    'transparent' : True,
+    #'bbox_inches' : 'tight'
+}
+
 matplotlib.rc('font', **FONT)
 
 FIG_FILE = './figures/'
@@ -65,40 +109,41 @@ FIG_FILE = './figures/'
 
 matplotlib.rc_file_defaults()
 matplotlib.rc('text', usetex=False)
-FIG1_A_POS = {
-    'x': 0.05,
-    'y': 0.95
-}
-FIG1_B_POS = {
-    'x': 0.05,
-    'y': 0.48
-}
-FIG1_SIZE_X = SINGLE_COLUMN
-FIG1_SIZE_Y = SINGLE_COLUMN
-FIG1_SIMU_SCALE   = 'linear'
-FIG1_VAR          = 'F'
-FIG1_HSPACE       = 0.4
-FIG1_FINITE_NUM   = 10
-FIG1_MARKER_SIZE  = 5
-FIG1_GEN          = 10
-FIG1_ALPHA        = 0.5
-FIG1_BOX_ARG      = dict(left = 0.2, right = 0.95, bottom = 0.1, top = 0.95)
-FIG1_FINITE_COLOR = 'grey'
-FIG1_TRUE_COLOR   = 'red'
-FIG1_TRUE_ALPHA   = 0.5
-
-FIG1_TRAJECTORY_DIR = './outputs/simulation/WF_finite_sampling/'
-FIG1_INFERENCE_DIR = './outputs/simulation/WF_mutational_effects/'
-FIG1_WF_SIMU_FILE = './outputs/simulation/WF_simulation.csv'
-FIG1_WF_SELECTION = FIG1_INFERENCE_DIR + '/selection_coefficients/'
-FIG1_WF_LOGREG    = FIG1_INFERENCE_DIR+'/log_regression/'
-FIG1_WF_RATIO     = FIG1_INFERENCE_DIR+'/enrichment_ratio/'
-FIG1_WF_LOGRATIO  = FIG1_INFERENCE_DIR+'/enrichment_ratio_log/'
-FIG1_FINITE_SIZE  = '_sampling-50000/'
-FIG1_NAME         = 'Fig1_simulation.pdf'
 
 # FIGURE 1 MAIN PLOT FUNCTION
 def FIG1_SIMULATION_FINITE_SAMPLING():
+
+    FIG1_A_POS = {
+        'x': 0.05,
+        'y': 0.95
+    }
+    FIG1_B_POS = {
+        'x': 0.05,
+        'y': 0.48
+    }
+    FIG1_SIZE_X = SINGLE_COLUMN
+    FIG1_SIZE_Y = SINGLE_COLUMN
+    FIG1_SIMU_SCALE   = 'linear'
+    FIG1_VAR          = 'F'
+    FIG1_HSPACE       = 0.4
+    FIG1_FINITE_NUM   = 10
+    FIG1_MARKER_SIZE  = 5
+    FIG1_GEN          = 10
+    FIG1_ALPHA        = 0.3
+    FIG1_BOX_ARG      = dict(left = 0.2, right = 0.95, bottom = 0.1, top = 0.95)
+    FIG1_TRUE_COLOR   = COLOR_2
+    FIG1_TRUE_ALPHA   = 1.0
+
+    FIG1_TRAJECTORY_DIR = './outputs/simulation/WF_finite_sampling/'
+    FIG1_INFERENCE_DIR = './outputs/simulation/WF_mutational_effects/'
+    FIG1_WF_SIMU_FILE = './outputs/simulation/WF_simulation.csv'
+    FIG1_WF_SELECTION = FIG1_INFERENCE_DIR + '/selection_coefficients/'
+    FIG1_WF_LOGREG    = FIG1_INFERENCE_DIR+'/log_regression/'
+    FIG1_WF_RATIO     = FIG1_INFERENCE_DIR+'/enrichment_ratio/'
+    FIG1_WF_LOGRATIO  = FIG1_INFERENCE_DIR+'/enrichment_ratio_log/'
+    FIG1_FINITE_SIZE  = '_sampling-50000/'
+    FIG1_NAME         = 'Fig1_simulation.pdf'
+
     fig = plt.figure(figsize = (FIG1_SIZE_X, FIG1_SIZE_Y))
     gs  = fig.add_gridspec(2, 1, hspace = FIG1_HSPACE, **FIG1_BOX_ARG)
 
@@ -121,7 +166,7 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
                 col_list = df_trajectory.columns.tolist()
                 col_list.remove('generation')
                 for i in [FIG1_VAR]:
-                    ax1.plot(df_trajectory['generation'], df_trajectory[i], color = FIG1_FINITE_COLOR, alpha = FIG1_ALPHA)
+                    ax1.plot(df_trajectory['generation'], df_trajectory[i], color = BKCOLOR, alpha = FIG1_ALPHA)
         else:
             continue
 
@@ -130,14 +175,41 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
     for i in [FIG1_VAR]:
         ax1.plot(df_trajectory.columns[:FIG1_GEN], df_trajectory.T[i][:FIG1_GEN], color = FIG1_TRUE_COLOR, alpha = FIG1_TRUE_ALPHA)
 
-    legend_fig1_a = [Line2D([0], [0], color = FIG1_FINITE_COLOR, lw = 2, label = 'Finitely sampled'),
-                     Line2D([0], [0], color = FIG1_TRUE_COLOR,   lw = 2, label = 'True evolution')]
-    ax1.legend(handles = legend_fig1_a, frameon = False, fontsize = TEXT_FONTSIZE)
+#    legend_fig1_a = [Line2D([0], [0], color = FIG1_FINITE_COLOR, lw = 2, label = 'Finitely sampled'),
+#                     Line2D([0], [0], color = FIG1_TRUE_COLOR,   lw = 2, label = 'True evolution')]
+#    ax1.legend(handles = legend_fig1_a, frameon = False, fontsize = TEXT_FONTSIZE)
     ax1.spines['right'].set_visible(False)
     ax1.spines['top'].set_visible(False)
     ax1.set_yscale('log')
     ax1.set_ylim([3.9e-5, 1.1e-3])
     ax1.set_xticks([0, 3, 6, 9])
+    
+    # legend
+                    
+    colors    = [FIG1_TRUE_COLOR, BKCOLOR]
+    colors_lt = [FIG1_TRUE_COLOR, LCOLOR]
+    plotprops = DEF_ERRORPROPS.copy()
+    plotprops['clip_on'] = False
+    
+    invt = ax1.transData.inverted()
+    xy1  = invt.transform((   0, 0))
+    xy2  = invt.transform((7.50, 9))
+    xy3  = invt.transform((3.00, 9))
+    xy4  = invt.transform((5.25, 9))
+
+    legend_dx1 = xy1[0]-xy2[0]
+    legend_dx2 = xy1[0]-xy3[0]
+    legend_dx  = xy1[0]-xy4[0]
+    legend_dy  = -2.4e-4
+    legend_x   =  0.015
+    legend_y   = [1e-3, 1e-3 + legend_dy]
+    legend_t   = ['True evolution', 'Finitely sampled']
+    
+    for k in range(len(legend_y)):
+        mp.error(ax=ax1, x=[[legend_x+legend_dx]], y=[[legend_y[k]]], edgecolor=[colors[k]], facecolor=[colors_lt[k]], plotprops=plotprops)
+        ax1.text(legend_x, legend_y[k], legend_t[k], ha='left', va='center', **DEF_LABELPROPS)
+        
+    # second panel
 
     ax2 = fig.add_subplot(gs[1:, 0])
     generation   = 10
@@ -179,35 +251,62 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
             # selection_coefficients_corr = (selection_coefficients_corr.sum().sum() - replicates)/factor  
             # enrichment_ratio_log_corr = (enrichment_ratio_log_corr.sum().sum()     - replicates)/factor
             
-            temp[0].append(enrichment_ratio_corr)
-            temp[1].append(log_regression_corr)
-            temp[2].append(selection_coefficients_corr)
+            temp[0].append(selection_coefficients_corr)
+            temp[1].append(enrichment_ratio_corr)
+            temp[2].append(log_regression_corr)
             temp[3].append(enrichment_ratio_log_corr)
+            
+        PALETTE = sns.hls_palette(3)
 
-        ax2.plot(generation_, temp[0], c = 'red',    marker = marker[finite_list.index(finite_sampling)], markersize = FIG1_MARKER_SIZE, markeredgewidth = 0, alpha = 0.6)      
-        ax2.plot(generation_, temp[1], c = 'green',  marker  = marker[finite_list.index(finite_sampling)], markersize = FIG1_MARKER_SIZE, markeredgewidth = 0, alpha = 0.6)
-        ax2.plot(generation_, temp[2], c = '#4F94CD', marker = marker[finite_list.index(finite_sampling)], markersize = FIG1_MARKER_SIZE, markeredgewidth = 0, alpha = 0.6)      
-        ax2.plot(generation_, temp[3], c = 'orange', marker  = marker[finite_list.index(finite_sampling)], markersize = FIG1_MARKER_SIZE, markeredgewidth = 0, alpha = 0.6)      
+        ax2.plot(generation_, temp[0], c = C_MPL,      marker = marker[finite_list.index(finite_sampling)], markersize = SMALLSIZEDOT, markeredgewidth = 0, alpha = 1)
+        ax2.plot(generation_, temp[1], c = PALETTE[0], marker = marker[finite_list.index(finite_sampling)], markersize = SMALLSIZEDOT, markeredgewidth = 0, alpha = 1)
+        ax2.plot(generation_, temp[2], c = PALETTE[1], marker = marker[finite_list.index(finite_sampling)], markersize = SMALLSIZEDOT, markeredgewidth = 0, alpha = 1)
+        ax2.plot(generation_, temp[3], c = PALETTE[2], marker = marker[finite_list.index(finite_sampling)], markersize = SMALLSIZEDOT, markeredgewidth = 0, alpha = 1)
         ax2.set_xlabel('Generations used for inference',      fontsize = TEXT_FONTSIZE)
         ax2.set_ylabel('Average Pearson correlation between\nreplicate inferred mutational effects', fontsize = TEXT_FONTSIZE)
         ax2.set_xticks([2, 5, 10])
         ax2.set_xlim  ([   0, 11])
         ax2.set_ylim  ([-0.05, 1])
         
-    legend_fig_1b = [Line2D([0], [0], color = '#4F94CD', lw = 2, label = 'popDMS',           alpha = 0.6),
-                     Line2D([0], [0], color = 'red',     lw = 2, label = 'Enrichment ratio', alpha = 0.6),
-                     Line2D([0], [0], color = 'orange',  lw = 2, label = 'Log scaled ratio', alpha = 0.6),
-                     Line2D([0], [0], color = 'green',   lw = 2, label = 'Log regression',   alpha = 0.6)
-                    ]
+#    legend_fig_1b = [Line2D([0], [0], color = '#4F94CD', lw = 2, label = 'popDMS',           alpha = 0.6),
+#                     Line2D([0], [0], color = 'red',     lw = 2, label = 'Enrichment ratio', alpha = 0.6),
+#                     Line2D([0], [0], color = 'orange',  lw = 2, label = 'Log scaled ratio', alpha = 0.6),
+#                     Line2D([0], [0], color = 'green',   lw = 2, label = 'Log regression',   alpha = 0.6)
+#                    ]
+
+    # legend
+                    
+    colors    = [C_MPL, PALETTE[0], PALETTE[1], PALETTE[2]]
+    colors_lt = [C_MPL, PALETTE[0], PALETTE[1], PALETTE[2]]
+    plotprops = DEF_ERRORPROPS.copy()
+    plotprops['clip_on'] = False
+    
+    invt = ax2.transData.inverted()
+    xy1  = invt.transform((   0,  0))
+    xy2  = invt.transform((7.50, 10))
+    xy3  = invt.transform((3.00, 10))
+    xy4  = invt.transform((5.25, 10))
+
+    legend_dx1 = xy1[0]-xy2[0]
+    legend_dx2 = xy1[0]-xy3[0]
+    legend_dx  = xy1[0]-xy4[0]
+    legend_dy  = xy1[1]-xy2[1]
+    legend_x   = 1.8
+    legend_y   = [0.99, 0.99 + 1*legend_dy, 0.99 + 2*legend_dy, 0.99 + 3*legend_dy]
+    legend_t   = ['popDMS', 'Enrichment ratio', 'Log ratio', 'Log regression']
+    
+    for k in range(len(legend_y)):
+        mp.error(ax=ax2, x=[[legend_x+legend_dx]], y=[[legend_y[k]]], edgecolor=[colors[k]], facecolor=[colors_lt[k]], plotprops=plotprops)
+        ax2.text(legend_x, legend_y[k], legend_t[k], ha='left', va='center', **DEF_LABELPROPS)
 
     ax2.set_yticks([0, 0.25, 0.5, 0.75, 1])
     ax2.set_xlim([1, 11])
     ax2.spines['right'].set_visible(False)
     ax2.spines[ 'top' ].set_visible(False)
     ax2.tick_params(axis = 'both', which = 'major', labelsize = TEXT_FONTSIZE)
-    ax2.legend(handles = legend_fig_1b, frameon = False, fontsize = TEXT_FONTSIZE, loc = 'upper left')
+    #ax2.legend(handles = legend_fig_1b, frameon = False, fontsize = TEXT_FONTSIZE, loc = 'upper left')
     fig.show()
-    fig.savefig(FIG_FILE + FIG1_NAME, dpi = FIG_DPI)
+    fig.savefig(FIG_FILE + FIG1_NAME, dpi = FIG_DPI, **FIGPROPS)
 
 
 ######################
@@ -216,67 +315,66 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
 
 matplotlib.rc_file_defaults()
 matplotlib.rc('text', usetex=False)
-FIG2_SIZE_X         = DOUBLE_COLUMN
-FIG2_SIZE_Y         = DOUBLE_COLUMN / GOLDR
-FIG2_A_MPL_COLOR    = '#4F94CD' #'blue'
-FIG2_A_MPL_MARKER   = '.'
-FIG2_A_PREF_COLOR   = 'grey' #'orange'
-FIG2_A_PREF_MARKER  = '.'
-FIG2_A_MARKER_SIZE  = 20
-FIG2_A_LEGEND_XY    = [0.05, 1.05]
-FIG2_A_VIRUSTAG_XY  = [0.05, 0.35]
-FIG2_A_HUMANTAG_XY  = [16.0, 0.35]
-FIG2_A_TAGBOX       = dict(boxstyle='round', facecolor = 'white')
-FIG2_VIRUS_DIR      = './outputs/virus_protein/'
-FIG2_HUMAN_DIR      = './outputs/human_protein/'
-FIG2_VIRUS_PREF_DIR = './data/virus_protein/'
-FIG2_HUMAN_PREF_DIR = './data/human_protein/'
-
-FIG2_A_VIRUS_RESULT_DIR = {
-                   'Flu_A549':        ['PB2/A549/', 3],
-                   'Flu_CCL141':      ['PB2/CCL141/', 3],
-                   'Flu_Aichi68C':    ['Aichi68C_PR8/Aichi68C/', 2],
-                   'Flu_PR8':         ['Aichi68C_PR8/PR8/', 2],
-                   'Flu_MatrixM1':    ['Matrix_M1/', 3],
-                   'Flu_MS':          ['MxA/MS/', 2],
-                   'Flu_MxA':         ['MxA/MxA/', 2],
-                   'Flu_MxAneg':      ['MxA/MxAneg/', 2],
-                   'HIV_BG505':       ['HIVEnv/BG505/', 3],
-                   'HIV_BF520':       ['HIVEnv/BF520/', 3],
-                   'HIV_CD4_human':   ['HIVEnv_CD4/BF520_human/', 2],
-                   'HIV_CD4_rhesus':  ['HIVEnv_CD4/BF520_rhesus/', 2],
-                   'HIV_bnAbs_FP16':  ['HIV_bnAbs/FP16/', 2],
-                   'HIV_bnAbs_FP20':  ['HIV_bnAbs/FP20/', 2],
-                   'HIV_bnAbs_VRC34': ['HIV_bnAbs/VRC34/', 2]
-                   }
-FIG2_A_HUMAN_RESULT_DIR = {   
-                   'HDR_Y2H_1':      ['BRCA1/Y2H_1/', 3],
-                   'HDR_Y2H_2':      ['BRCA1/Y2H_2/', 3],
-                   'HDR_E3':         ['BRCA1/E3/', 6],
-                   'WWdomain_YAP1':  ['YAP1/', 2],
-                   'Ubiq_Ube4b':     ['Ube4b/', 2],
-                   'HDR_DRB1':       ['DRB1/', 2],
-                   'Thrombo_TpoR_1': ['TpoR/TpoR_MPL/', 6],
-                   'Thrombo_TpoR_2': ['TpoR/TpoR_S505NMPL/', 6]
-                   }
-
-FIG2_BOX_ARG         = dict(left = 0.12, right = 0.95, bottom = 0.12, top = 0.95)
-FIG2_B_REPLICATE_NUM = 3
-FIG2_B_SAMPLE_DIR    = './outputs/virus_protein/HIVEnv/BF520/selection_coefficients/'
-FIG2_B_SCATTER_SIZE  = 7
-FIG2_B_SCATTER_ALPHA = 0.4
-FIG2_B_CORR_DIGIT    = 2
-
-FIG2_C_REPLICATE_NUM = 3
-FIG2_C_SAMPLE_DIR    = './data/virus_protein/HIVEnv/BF520/pref/'
-FIG2_C_SCATTER_SIZE  = 7
-FIG2_C_SCATTER_ALPHA = 0.4
-FIG2_C_CORR_DIGIT    = 2
-
-FIG2_NAME            = 'Fig2_comparison.pdf'
 
 # FIGURE 2 MAIN PLOT FUNCTION
 def FIG2_METHODS_COMPARISON():
+
+    # variables
+    FIG2_SIZE_X         = DOUBLE_COLUMN
+    FIG2_SIZE_Y         = DOUBLE_COLUMN * 1.1 / GOLDR
+    FIG2_A_MPL_COLOR    = C_MPL
+    FIG2_A_MPL_MARKER   = '.'
+    FIG2_A_PREF_COLOR   = LCOLOR
+    FIG2_A_PREF_MARKER  = '.'
+    FIG2_A_MARKER_SIZE  = SMALLSIZEDOT*2
+    FIG2_A_TAGBOX       = dict(boxstyle='round', facecolor = 'white')
+    FIG2_VIRUS_DIR      = './outputs/virus_protein/'
+    FIG2_HUMAN_DIR      = './outputs/human_protein/'
+    FIG2_VIRUS_PREF_DIR = './data/virus_protein/'
+    FIG2_HUMAN_PREF_DIR = './data/human_protein/'
+
+    FIG2_A_VIRUS_RESULT_DIR = {
+                       'Flu_A549':        ['PB2/A549/', 3],
+                       'Flu_CCL141':      ['PB2/CCL141/', 3],
+                       'Flu_Aichi68C':    ['Aichi68C_PR8/Aichi68C/', 2],
+                       'Flu_PR8':         ['Aichi68C_PR8/PR8/', 2],
+                       'Flu_MatrixM1':    ['Matrix_M1/', 3],
+                       'Flu_MS':          ['MxA/MS/', 2],
+                       'Flu_MxA':         ['MxA/MxA/', 2],
+                       'Flu_MxAneg':      ['MxA/MxAneg/', 2],
+                       'HIV_BG505':       ['HIVEnv/BG505/', 3],
+                       'HIV_BF520':       ['HIVEnv/BF520/', 3],
+                       'HIV_CD4_human':   ['HIVEnv_CD4/BF520_human/', 2],
+                       'HIV_CD4_rhesus':  ['HIVEnv_CD4/BF520_rhesus/', 2],
+                       'HIV_bnAbs_FP16':  ['HIV_bnAbs/FP16/', 2],
+                       'HIV_bnAbs_FP20':  ['HIV_bnAbs/FP20/', 2],
+                       'HIV_bnAbs_VRC34': ['HIV_bnAbs/VRC34/', 2]
+                       }
+    FIG2_A_HUMAN_RESULT_DIR = {
+                       'HDR_Y2H_1':      ['BRCA1/Y2H_1/', 3],
+                       'HDR_Y2H_2':      ['BRCA1/Y2H_2/', 3],
+                       'HDR_E3':         ['BRCA1/E3/', 6],
+                       'WWdomain_YAP1':  ['YAP1/', 2],
+                       'Ubiq_Ube4b':     ['Ube4b/', 2],
+                       'HDR_DRB1':       ['DRB1/', 2],
+                       'Thrombo_TpoR_1': ['TpoR/TpoR_MPL/', 6],
+                       'Thrombo_TpoR_2': ['TpoR/TpoR_S505NMPL/', 6]
+                       }
+
+    FIG2_B_REPLICATE_NUM = 3
+    FIG2_B_SAMPLE_DIR    = './outputs/virus_protein/HIVEnv/BF520/selection_coefficients/'
+    FIG2_B_SCATTER_SIZE  = SMALLSIZEDOT
+    FIG2_B_SCATTER_ALPHA = 0.2
+    FIG2_B_CORR_DIGIT    = 2
+
+    FIG2_C_REPLICATE_NUM = 3
+    FIG2_C_SAMPLE_DIR    = './data/virus_protein/HIVEnv/BF520/pref/'
+    FIG2_C_SCATTER_SIZE  = SMALLSIZEDOT
+    FIG2_C_SCATTER_ALPHA = 0.2
+    FIG2_C_CORR_DIGIT    = 2
+
+    FIG2_NAME            = 'Fig2_comparison.pdf'
+
     FIG2_A_PREF_AVG = {}
     FIG2_A_MPL_AVG  = {}
     for target_protein, info in FIG2_A_VIRUS_RESULT_DIR.items():
@@ -318,43 +416,56 @@ def FIG2_METHODS_COMPARISON():
 
     PERFORMANCE_FIG_SIZE = (FIG2_SIZE_X, FIG2_SIZE_Y)
     fig = plt.figure(figsize = PERFORMANCE_FIG_SIZE)
-    fig.text(0.0, 0.88, s = 'a', **SERIAL_FONT, transform = fig.transFigure)
-    fig.text(0.0, 0.56, s = 'b', **SERIAL_FONT, transform = fig.transFigure)
-    fig.text(0.5, 0.56, s = 'c', **SERIAL_FONT, transform = fig.transFigure)
-    gs  = fig.add_gridspec(6, 4, wspace = 1.3, **FIG2_BOX_ARG)
-    gs.update(wspace=0.5, hspace=0.5)
-    ax  = fig.add_subplot(gs[:2,:4])
-    ax2 = fig.add_subplot(gs[3:,:2])
-    ax3 = fig.add_subplot(gs[3:,2:])
-    FIG2_B_INNER = gridspec.GridSpecFromSubplotSpec(2, 2,
-                                                    hspace = 0.2,
-                                                    wspace = 0,
-                                                    subplot_spec  = ax2, 
-                                                    height_ratios = [1, 1], width_ratios = [1, 1])
-
-    FIG2_C_INNER = gridspec.GridSpecFromSubplotSpec(2, 2,
-                                                    hspace = 0.2,
-                                                    wspace = 0,
-                                                    subplot_spec  = ax3, 
-                                                    height_ratios = [1, 1], width_ratios = [1, 1])
+    
+    box_t = 0.98
+    box_b = 0.07
+    box_l = 0.10
+    box_r = 0.98
+    
+    box_dy = 0.05
+    box_dx = box_dy * (FIG2_SIZE_Y / FIG2_SIZE_X)
+    box_y  = (box_t - box_b - 4*box_dy)/2
+    box_x  = box_y * (FIG2_SIZE_Y / FIG2_SIZE_X) / 2
+    
+    FIG2_BOX_COMP = dict(left=box_l,                  right=box_r,                  bottom=box_t-box_y,            top=box_t)
+    FIG2_BOX_REP1 = dict(left=box_l,                  right=box_l+2*box_x+1*box_dx, bottom=box_t-2*box_y-4*box_dy, top=box_t-box_y-3*box_dy)
+    FIG2_BOX_REP2 = dict(left=box_l+2*box_x+3*box_dx, right=box_l+4*box_x+4*box_dx, bottom=box_t-2*box_y-4*box_dy, top=box_t-box_y-3*box_dy)
+    
+    gs_comp = gridspec.GridSpec(1, 1, wspace=0, **FIG2_BOX_COMP)
+    gs_rep1 = gridspec.GridSpec(2, 2, hspace=box_dy, wspace=box_dx, **FIG2_BOX_REP1)
+    gs_rep2 = gridspec.GridSpec(2, 2, hspace=box_dy, wspace=box_dx, **FIG2_BOX_REP2)
+    
+    ax = plt.subplot(gs_comp[0, 0])
+    
+    # sublabels
+    ldx = -0.05
+    ldy = -0.01
+    fig.text(FIG2_BOX_COMP['left']+ldx, FIG2_BOX_COMP['top']+ldy, s = 'a', **SERIAL_FONT, transform = fig.transFigure)
+    fig.text(FIG2_BOX_REP1['left']+ldx, FIG2_BOX_REP1['top']+ldy, s = 'b', **SERIAL_FONT, transform = fig.transFigure)
+    fig.text(FIG2_BOX_REP2['left']+ldx, FIG2_BOX_REP2['top']+ldy, s = 'c', **SERIAL_FONT, transform = fig.transFigure)
+    
+#    ax  = fig.add_subplot(gs[:2,:4])
+#    ax2 = fig.add_subplot(gs[3:,:2])
+#    ax3 = fig.add_subplot(gs[3:,2:])
+#    FIG2_B_INNER = gridspec.GridSpecFromSubplotSpec(2, 2,
+#                                                    hspace = 0.2,
+#                                                    wspace = 0,
+#                                                    subplot_spec  = ax2,
+#                                                    height_ratios = [1, 1], width_ratios = [1, 1])
+#
+#    FIG2_C_INNER = gridspec.GridSpecFromSubplotSpec(2, 2,
+#                                                    hspace = 0.2,
+#                                                    wspace = 0,
+#                                                    subplot_spec  = ax3,
+#                                                    height_ratios = [1, 1], width_ratios = [1, 1])
 
     ax.set_xlabel('Data set', fontsize = TEXT_FONTSIZE)
-    ax.set_ylabel('Average Pearson correlation coefficients of \ninferred mutational effects across replicates', fontsize = TEXT_FONTSIZE)
-
-    MPL_LIST = FIG2_A_MPL_AVG.items()
-    MPL_LIST = sorted(MPL_LIST, key = lambda x: x[1], reverse = True)
-    x, y = zip(*MPL_LIST)
-    ax.scatter(x,  y,  marker = FIG2_A_MPL_MARKER,  color = FIG2_A_MPL_COLOR,  s = FIG2_A_MARKER_SIZE)
-    ENRICH_LIST = FIG2_A_PREF_AVG.items()
-    x_, y_ = zip(*ENRICH_LIST)
-    ax.scatter(x_, y_, marker = FIG2_A_PREF_MARKER, color = FIG2_A_PREF_COLOR, s = FIG2_A_MARKER_SIZE)
-    labels = x
-    ax.set_xticklabels(labels, rotation = 45, ha = 'right')
+    ax.set_ylabel('Average Pearson correlation between\nreplicate inferred mutational effects', fontsize = TEXT_FONTSIZE)
 
     # human
-    FIG2_A_PREF_AVG = {}
-    FIG2_A_MPL_AVG = {}
-    FIG2_A_MPL_AVG[' '] = 100
+    #FIG2_A_PREF_AVG = {}
+    #FIG2_A_MPL_AVG = {}
+    #FIG2_A_MPL_AVG[' '] = 100
     for target_protein, info in FIG2_A_HUMAN_RESULT_DIR.items():
         path = FIG2_HUMAN_DIR+info[0] + 'selection_coefficients/'
         for file in os.listdir(path):
@@ -380,34 +491,50 @@ def FIG2_METHODS_COMPARISON():
                 df_corr = df_corr.dropna()
                 correlation_average = (df_corr.corr().sum().sum() - df_corr.shape[1])/(df_corr.shape[1]**2 - df_corr.shape[1])
                 FIG2_A_PREF_AVG[protein] = correlation_average
- 
+                
     MPL_LIST = FIG2_A_MPL_AVG.items()
-    MPL_LIST = sorted(MPL_LIST, key=lambda x: x[1], reverse = True)
+    MPL_LIST = sorted(MPL_LIST, key = lambda x: x[1], reverse = True)
     x, y = zip(*MPL_LIST)
-    ax.scatter(x, y, marker = FIG2_A_MPL_MARKER, color = FIG2_A_MPL_COLOR, s = FIG2_A_MARKER_SIZE)
-
+    ax.scatter(x, y, color = FIG2_A_MPL_COLOR, s = FIG2_A_MARKER_SIZE)
+    
     ENRICH_LIST = FIG2_A_PREF_AVG.items()
     x_, y_ = zip(*ENRICH_LIST)
-    ax.scatter(x_, y_, marker = FIG2_A_PREF_MARKER, color = FIG2_A_PREF_COLOR, s = FIG2_A_MARKER_SIZE)
-    labels = labels + x
+    ax.scatter(x_, y_, color = FIG2_A_PREF_COLOR, s = FIG2_A_MARKER_SIZE)
+    labels = [label.replace('_', ' ') for label in x]
     ax.set_xticklabels(labels, rotation = 45, ha = 'right')
-    ax.set_ylim(top = 1.05, bottom = 0.3)
-    ax.axvline( x = ' ', ls = '--', color = 'black', lw = 1)
-    legend_elements = [
-                        Line2D([0], [0], marker = FIG2_A_MPL_MARKER, linestyle = 'None',
-                               color = FIG2_A_MPL_COLOR,  label = 'MPL', markersize = 5),
-                        Line2D([0], [0], marker = FIG2_A_PREF_MARKER, linestyle = 'None',
-                               color = FIG2_A_PREF_COLOR, label = 'Ratio methods', markersize = 5)
-                       ]
-    ax.legend(handles = legend_elements, 
-              loc = FIG2_A_LEGEND_XY, ncol = 2, 
-              frameon = False, fontsize = TEXT_FONTSIZE, 
-              handletextpad = 0.1)
+    
+    # legend
+    
+    ax.set_yticks([0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 1.0])
+    ax.set_xlim([-0.5, len(x)-0.5])
+    ax.set_ylim(top = 1.02, bottom = 0.25)
+                    
+    colors    = [FIG2_A_MPL_COLOR, FIG2_A_PREF_COLOR]
+    colors_lt = [FIG2_A_MPL_COLOR, FIG2_A_PREF_COLOR]
+    plotprops = DEF_ERRORPROPS.copy()
+    plotprops['clip_on'] = False
+    
+    invt = ax.transData.inverted()
+    xy1  = invt.transform((   0,  0))
+    xy2  = invt.transform((7.50, 10))
+    xy3  = invt.transform((3.00, 10))
+    xy4  = invt.transform((5.25, 10))
+
+    legend_dx1 = xy1[0]-xy2[0]
+    legend_dx2 = xy1[0]-xy3[0]
+    legend_dx  = xy1[0]-xy4[0]
+    legend_dy  = xy1[1]-xy2[1]
+    legend_x   = 0.2
+    legend_y   = [0.35, 0.35 + 1*legend_dy]
+    legend_t   = ['popDMS', 'Ratio/regression methods']
+    
+    for k in range(len(legend_y)):
+        mp.error(ax=ax, x=[[legend_x+legend_dx]], y=[[legend_y[k]]], edgecolor=[colors[k]], facecolor=[colors_lt[k]], plotprops=plotprops)
+        ax.text(legend_x, legend_y[k], legend_t[k], ha='left', va='center', **DEF_LABELPROPS)
+    
     ax.spines['right'].set_visible(False)
     ax.spines[ 'top' ].set_visible(False)
     ax.tick_params(axis = 'both', which = 'major', labelsize = TEXT_FONTSIZE)
-    ax.text(FIG2_A_VIRUSTAG_XY[0], FIG2_A_VIRUSTAG_XY[1], 'Virus proteins', fontsize = TEXT_FONTSIZE)
-    ax.text(FIG2_A_HUMANTAG_XY[0], FIG2_A_HUMANTAG_XY[1], 'Human proteins', fontsize = TEXT_FONTSIZE)
 
     # Scatter plot of sample experiment of MPL
     SELECTION_LIST = []
@@ -417,58 +544,49 @@ def FIG2_METHODS_COMPARISON():
             df_temp = df_temp[(df_temp['rep_1'] != 0)&(df_temp['rep_2'] != 0)]
             for rep in range(1, FIG2_B_REPLICATE_NUM + 1):
                 SELECTION_LIST.append(df_temp['rep_' + str(rep)].tolist())
-    ax2.set_yticks([])
-    ax2.set_xticks([])
-    ax2.spines[ 'top'  ].set_visible(False)
-    ax2.spines['right' ].set_visible(False)
-    ax2.spines['bottom'].set_visible(False)
-    ax2.spines[ 'left' ].set_visible(False)
 
     SCATTER_DOT = {
         'alpha': 0.2,
         'edgecolor': 'none',
         's': FIG2_B_SCATTER_SIZE
     }
-
+    
+    ticks = []
+    lim = [-1.1, 1.3]
+    td  = (lim[1] - lim[0])*0.06
+    
     for i in range(3):
         for j in range(i + 1, 3):
             CORR = round(st.pearsonr(SELECTION_LIST[i], SELECTION_LIST[j])[0], FIG2_B_CORR_DIGIT)
+            ax2_sub = 0
             if i == 0 and j == 1:
-                ax2_sub = plt.Subplot(fig, FIG2_B_INNER[0, 0])
-                ax2_sub.scatter(SELECTION_LIST[i], SELECTION_LIST[j], **SCATTER_DOT)
+                ax2_sub = plt.subplot(gs_rep1[0, 0])
                 ax2_sub.set_ylabel('Replicate 2', fontsize = TEXT_FONTSIZE)
-                ax2_sub.set_yticks([-1, 0, 1])
-                ax2_sub.set_xticks([-1, 0, 1])
-                ax2_sub.set_xticklabels([])
-
 
             if i == 0 and j == 2:
-                ax2_sub = plt.Subplot(fig, FIG2_B_INNER[1, 0])
-                ax2_sub.scatter(SELECTION_LIST[i], SELECTION_LIST[j], **SCATTER_DOT)
+                ax2_sub = plt.subplot(gs_rep1[1, 0])
                 ax2_sub.set_ylabel('Replicate 3', fontsize = TEXT_FONTSIZE)
                 ax2_sub.set_xlabel('Replicate 1', fontsize = TEXT_FONTSIZE)
-                ax2_sub.set_yticks([-1, 0, 1])
-                ax2_sub.set_xticks([-1, 0, 1])
 
             if i == 1 and j == 2:
-                ax2_sub = plt.Subplot(fig, FIG2_B_INNER[1, 1])
-                ax2_sub.scatter(SELECTION_LIST[i], SELECTION_LIST[j], **SCATTER_DOT)
+                ax2_sub = plt.subplot(gs_rep1[1, 1])
                 ax2_sub.set_xlabel('Replicate 2', fontsize = TEXT_FONTSIZE)
-                ax2_sub.set_yticks([-1, 0, 1])
-                ax2_sub.set_yticklabels([])
-                ax2_sub.set_xticks([-1, 0, 1])                
-                
-            ax2_sub.text(-0.8, 1.1, 'R = %.2f' %CORR, fontsize = TEXT_FONTSIZE)
 
-            ax2_sub.set_xlim([-1.1, 1.3])
-            ax2_sub.set_ylim([-1.1, 1.3])
-            fig.add_subplot(ax2_sub)
+            ax2_sub.scatter(SELECTION_LIST[i], SELECTION_LIST[j], **SCATTER_DOT)
+            ax2_sub.text(lim[0]+td, lim[1]-td, 'R = %.2f' %CORR, fontsize = TEXT_FONTSIZE)
+
+            ax2_sub.set_xticks(ticks)
+            ax2_sub.set_yticks(ticks)
+            ax2_sub.set_xlim(lim)
+            ax2_sub.set_ylim(lim)
+
             ax2_sub.spines['right'].set_visible(False)
             ax2_sub.spines[ 'top' ].set_visible(False)
-            ax2_sub.tick_params(axis = 'both', which = 'major', labelsize = TEXT_FONTSIZE)
-            ax2_sub.set_aspect('equal')
-    ax2.set_xlabel('Selection coefficient', fontsize = TEXT_FONTSIZE, labelpad = 25) 
-    ax2.set_ylabel('Selection coefficient', fontsize = TEXT_FONTSIZE, labelpad = 25) 
+            
+    ddx = 0.03
+    ddy = ddx * (FIG2_SIZE_X / FIG2_SIZE_Y)
+    fig.text(box_l-ddx,                box_t-1.5*box_y-3.5*box_dy, s='popDMS', rotation=90, ha='center', va='center', **DEF_LABELPROPS, transform=fig.transFigure)
+    fig.text(box_l+1*box_x+0.5*box_dx, box_b - ddy,                s='popDMS', rotation=0,  ha='center', va='center', **DEF_LABELPROPS, transform=fig.transFigure)
 
     # Scatter plot of sample experiment of Enrichment ratio
     ENRICHMENT_LIST = []
@@ -477,61 +595,86 @@ def FIG2_METHODS_COMPARISON():
             df_temp = pd.read_csv(FIG2_C_SAMPLE_DIR+file)
             df_temp = df_temp.drop('site', axis = 1)
             ENRICHMENT_LIST.append(df_temp.to_numpy().flatten())
-    ax3.set_yticks([])
-    ax3.set_xticks([])
-    ax3.spines[ 'top'  ].set_visible(False)
-    ax3.spines['right' ].set_visible(False)
-    ax3.spines['bottom'].set_visible(False)
-    ax3.spines[ 'left' ].set_visible(False)
 
     SCATTER_DOT_ENRICH = {
         'alpha': 0.2,
         'edgecolor': 'none',
         's': FIG2_B_SCATTER_SIZE,
-        'color': 'grey'
     }
+    
+    ticks = []
+    lim = [-0.05, 1.05]
+    td  = (lim[1] - lim[0])*0.05
 
     for i in range(3):
         for j in range(i + 1, 3):
             CORR = round(st.pearsonr(ENRICHMENT_LIST[i], ENRICHMENT_LIST[j])[0], FIG2_B_CORR_DIGIT)
+            ax3_sub = 0
             if i == 0 and j == 1:
-                ax3_sub = plt.Subplot(fig, FIG2_C_INNER[0, 0])
-                ax3_sub.scatter(ENRICHMENT_LIST[i], ENRICHMENT_LIST[j], **SCATTER_DOT_ENRICH)
+                ax3_sub = plt.subplot(gs_rep2[0, 0])
                 ax3_sub.set_ylabel('Replicate 2', fontsize = TEXT_FONTSIZE)
-                ax3_sub.set_yticks([0, 0.5, 1])
-                ax3_sub.set_xticks([0, 0.5, 1])
-                ax3_sub.set_xticklabels([])
-
 
             if i == 0 and j == 2:
-                ax3_sub = plt.Subplot(fig, FIG2_C_INNER[1, 0])
-                ax3_sub.scatter(ENRICHMENT_LIST[i], ENRICHMENT_LIST[j], **SCATTER_DOT_ENRICH)
+                ax3_sub = plt.subplot(gs_rep2[1, 0])
                 ax3_sub.set_ylabel('Replicate 3', fontsize = TEXT_FONTSIZE)
                 ax3_sub.set_xlabel('Replicate 1', fontsize = TEXT_FONTSIZE)
-                ax3_sub.set_yticks([0, 0.5, 1])
-                ax3_sub.set_xticks([0, 0.5, 1])
 
             if i == 1 and j == 2:
-                ax3_sub = plt.Subplot(fig, FIG2_C_INNER[1, 1])
-                ax3_sub.scatter(ENRICHMENT_LIST[i], ENRICHMENT_LIST[j], **SCATTER_DOT_ENRICH)
+                ax3_sub = plt.subplot(gs_rep2[1, 1])
                 ax3_sub.set_xlabel('Replicate 2', fontsize = TEXT_FONTSIZE)
-                ax3_sub.set_yticks([0, 0.5, 1])
-                ax3_sub.set_yticklabels([])
-                ax3_sub.set_xticks([0, 0.5, 1])                
-                
-            ax3_sub.text(0.0, 1.1, 'R = %.2f' %CORR, fontsize = TEXT_FONTSIZE)
 
-            ax3_sub.set_xlim([-0.1, 1.3])
-            ax3_sub.set_ylim([-0.1, 1.3])
-            fig.add_subplot(ax3_sub)
+            ax3_sub.scatter(ENRICHMENT_LIST[i], ENRICHMENT_LIST[j], c=LCOLOR, **SCATTER_DOT)
+            ax3_sub.text(lim[0]+td, lim[1]-td, 'R = %.2f' %CORR, fontsize = TEXT_FONTSIZE)
+
+            ax3_sub.set_xticks(ticks)
+            ax3_sub.set_yticks(ticks)
+            ax3_sub.set_xlim(lim)
+            ax3_sub.set_ylim(lim)
+
             ax3_sub.spines['right'].set_visible(False)
             ax3_sub.spines[ 'top' ].set_visible(False)
-            ax3_sub.tick_params(axis = 'both', which = 'major', labelsize = TEXT_FONTSIZE)
-            ax3_sub.set_aspect('equal')
-    ax3.set_xlabel('Enrichment ratio', fontsize = TEXT_FONTSIZE, labelpad = 25) 
-    ax3.set_ylabel('Enrichment ratio', fontsize = TEXT_FONTSIZE, labelpad = 25) 
+
+#    for i in range(3):
+#        for j in range(i + 1, 3):
+#            CORR = round(st.pearsonr(ENRICHMENT_LIST[i], ENRICHMENT_LIST[j])[0], FIG2_B_CORR_DIGIT)
+#            if i == 0 and j == 1:
+#                ax3_sub = plt.Subplot(fig, FIG2_C_INNER[0, 0])
+#                ax3_sub.scatter(ENRICHMENT_LIST[i], ENRICHMENT_LIST[j], **SCATTER_DOT_ENRICH)
+#                ax3_sub.set_ylabel('Replicate 2', fontsize = TEXT_FONTSIZE)
+#                ax3_sub.set_yticks([0, 0.5, 1])
+#                ax3_sub.set_xticks([0, 0.5, 1])
+#                ax3_sub.set_xticklabels([])
+#
+#
+#            if i == 0 and j == 2:
+#                ax3_sub = plt.Subplot(fig, FIG2_C_INNER[1, 0])
+#                ax3_sub.scatter(ENRICHMENT_LIST[i], ENRICHMENT_LIST[j], **SCATTER_DOT_ENRICH)
+#                ax3_sub.set_ylabel('Replicate 3', fontsize = TEXT_FONTSIZE)
+#                ax3_sub.set_xlabel('Replicate 1', fontsize = TEXT_FONTSIZE)
+#                ax3_sub.set_yticks([0, 0.5, 1])
+#                ax3_sub.set_xticks([0, 0.5, 1])
+#
+#            if i == 1 and j == 2:
+#                ax3_sub = plt.Subplot(fig, FIG2_C_INNER[1, 1])
+#                ax3_sub.scatter(ENRICHMENT_LIST[i], ENRICHMENT_LIST[j], **SCATTER_DOT_ENRICH)
+#                ax3_sub.set_xlabel('Replicate 2', fontsize = TEXT_FONTSIZE)
+#                ax3_sub.set_yticks([0, 0.5, 1])
+#                ax3_sub.set_yticklabels([])
+#                ax3_sub.set_xticks([0, 0.5, 1])
+#
+#            ax3_sub.text(0.0, 1.1, 'R = %.2f' %CORR, fontsize = TEXT_FONTSIZE)
+#
+#            ax3_sub.set_xlim([-0.1, 1.3])
+#            ax3_sub.set_ylim([-0.1, 1.3])
+#            fig.add_subplot(ax3_sub)
+#            ax3_sub.spines['right'].set_visible(False)
+#            ax3_sub.spines[ 'top' ].set_visible(False)
+#            ax3_sub.tick_params(axis = 'both', which = 'major', labelsize = TEXT_FONTSIZE)
+#            ax3_sub.set_aspect('equal')
+#    ax3.set_xlabel('Enrichment ratio', fontsize = TEXT_FONTSIZE, labelpad = 25)
+#    ax3.set_ylabel('Enrichment ratio', fontsize = TEXT_FONTSIZE, labelpad = 25)
     
-    fig.savefig(FIG_FILE + FIG2_NAME, dpi = 400)
+    fig.savefig(FIG_FILE + FIG2_NAME, dpi = 400, **FIGPROPS)
     plt.show()
 
 
