@@ -914,16 +914,16 @@ def FIG3_VISUALIZATION(exp_scale = 10, sites_per_line = 35):
         for i in selected_rows:
             #MPL
             if m%3 == 0:
-                df_all = df_all.append(df_zero)
+                df_all = df_all.concat(df_zero)
             m += 1
-            df_all    = df_all.append(df_zero)
+            df_all    = df_all.concat(df_zero)
             df_temp   = data1[data1['site'] == str(i) + '_MPL'].copy()
             temp_pure = df_temp[df_temp.columns[1:]]
             
             temp_pure = np.exp(MPL_scale * temp_pure)
             temp_pure.replace(1, 0, inplace = True)
             temp_pure = temp_pure.div(temp_pure.sum(axis = 1), axis = 0)
-            df_all = df_all.append(temp_pure)
+            df_all = df_all.concat(temp_pure)
             
             #PREF
             df_temp   = data2[data2['site'] == str(i) + '_Pref'].copy()
@@ -931,7 +931,7 @@ def FIG3_VISUALIZATION(exp_scale = 10, sites_per_line = 35):
             temp_pure = np.exp(PREF_scale * temp_pure)
             temp_pure.replace(1, 0, inplace = True)
             temp_pure = temp_pure.div(temp_pure.sum(axis = 1), axis = 0)
-            df_all = df_all.append(temp_pure)
+            df_all = df_all.concat(temp_pure)
         
         df_all['plot_site'] = [i for i in range(10)] + [i for i in range(10)] + [i for i in range(10)]
         plot_index = df_all['site']
