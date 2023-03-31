@@ -150,7 +150,7 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
     FIG1_SIZE_X = SINGLE_COLUMN
     FIG1_SIZE_Y = SINGLE_COLUMN
     FIG1_SIMU_SCALE   = 'linear'
-    FIG1_VAR          = 'F'
+    FIG1_VAR          = 'R'
     FIG1_HSPACE       = 0.4
     FIG1_FINITE_NUM   = 10
     FIG1_MARKER_SIZE  = 5
@@ -167,7 +167,7 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
     FIG1_WF_LOGREG    = FIG1_INFERENCE_DIR+'/log_regression/'
     FIG1_WF_RATIO     = FIG1_INFERENCE_DIR+'/enrichment_ratio/'
     FIG1_WF_LOGRATIO  = FIG1_INFERENCE_DIR+'/enrichment_ratio_log/'
-    FIG1_FINITE_SIZE  = '_sampling-50000/'
+    FIG1_FINITE_SIZE  = '_sampling-10000/'
     FIG1_NAME         = 'Fig1_simulation.pdf'
 
     fig = plt.figure(figsize = (FIG1_SIZE_X, FIG1_SIZE_Y))
@@ -207,7 +207,7 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
     ax1.spines['right'].set_visible(False)
     ax1.spines['top'].set_visible(False)
     ax1.set_yscale('log')
-    ax1.set_ylim([3.9e-5, 1.1e-3])
+#     ax1.set_ylim([3.9e-5, 1.1e-3])
     ax1.set_xticks([0, 3, 6, 9])
     
     # legend
@@ -243,7 +243,7 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
     sample_index = 10
 
     generations=[1, 4, 9, 19]
-    finite_list = [50000]
+    finite_list = [10000]
     marker = ['o', 'v', '*']
     generation_ = [i + 1 for i in generations[: -1]]
 
