@@ -102,6 +102,32 @@ matplotlib.rc('font', **FONT)
 
 FIG_FILE = './figures/'
 
+name2name = {
+    'Flu_A549': 'PB2 A549',
+    'Flu_CCL141': 'PB2 CCL141',
+    'HIV_BG505': 'Env BG505',
+    'HIV_BF520': 'Env BF520',
+    'HIV_CD4_human': 'BF520 hu',
+    'HIV_CD4_rhesus': 'BF520 rhm',
+    'HIV_bnAbs_VRC34': 'VRC34',
+    'HIV_bnAbs_FP16': 'FP16-02',
+    'HIV_bnAbs_FP20': 'FP20-01',
+    'Flu_MS': 'NP MS',
+    'Flu_MxA': 'NP MxA',
+    'Flu_MxAneg': 'NP MxA',
+    'Flu_MatrixM1': 'M1',
+    'Flu_Aichi68C': 'Aichi68',
+    'Flu_PR8': 'PR8',
+    'WWdomain_YAP1': 'WW',
+    'Ubiq_Ube4b': 'Ube4b',
+    'HDR_Y2H_1': 'Y2H 1',
+    'HDR_Y2H_2': 'Y2H 2',
+    'HDR_E3': 'E3',
+    'HDR_DRB1': 'DBR1',
+    'Thrombo_TpoR_1': 'TpoR 1',
+    'Thrombo_TpoR_2': 'TpoR 2',
+}
+
 
 ######################
 # FIGURE 1 FINITE SAMPLING SIMULATION
@@ -459,9 +485,6 @@ def FIG2_METHODS_COMPARISON():
 #                                                    subplot_spec  = ax3,
 #                                                    height_ratios = [1, 1], width_ratios = [1, 1])
 
-    ax.set_xlabel('Data set', fontsize = TEXT_FONTSIZE)
-    ax.set_ylabel('Average Pearson correlation between\nreplicate inferred mutational effects', fontsize = TEXT_FONTSIZE)
-
     # human
     #FIG2_A_PREF_AVG = {}
     #FIG2_A_MPL_AVG = {}
@@ -495,19 +518,39 @@ def FIG2_METHODS_COMPARISON():
     MPL_LIST = FIG2_A_MPL_AVG.items()
     MPL_LIST = sorted(MPL_LIST, key = lambda x: x[1], reverse = True)
     x, y = zip(*MPL_LIST)
-    ax.scatter(x, y, color = FIG2_A_MPL_COLOR, s = FIG2_A_MARKER_SIZE)
+#    ax.scatter(x, y, color = FIG2_A_MPL_COLOR, s = FIG2_A_MARKER_SIZE)
+    ax.scatter(x, np.array(y)**2, color = FIG2_A_MPL_COLOR, s = FIG2_A_MARKER_SIZE)
     
     ENRICH_LIST = FIG2_A_PREF_AVG.items()
     x_, y_ = zip(*ENRICH_LIST)
-    ax.scatter(x_, y_, color = FIG2_A_PREF_COLOR, s = FIG2_A_MARKER_SIZE)
-    labels = [label.replace('_', ' ') for label in x]
-    ax.set_xticklabels(labels, rotation = 45, ha = 'right')
+#    ax.scatter(x_, y_, color = FIG2_A_PREF_COLOR, s = FIG2_A_MARKER_SIZE)
+    ax.scatter(x_, np.array(y_)**2, color = FIG2_A_PREF_COLOR, s = FIG2_A_MARKER_SIZE)
+    
+#    for i in range(len(x)):
+#        print('%s\t%s' % (x[i], y[i]))
+#
+#    print('')
+#
+#    for i in range(len(x_)):
+#        print('%s\t%s' % (x_[i], y_[i]))
+    
+    #labels = [label.replace('_', ' ') for label in x]
+    ax.set_xticklabels([name2name[label] for label in x], rotation = 45, ha = 'right')
     
     # legend
     
-    ax.set_yticks([0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 1.0])
+#    ax.set_xlabel('Data set', fontsize = TEXT_FONTSIZE)
+#    ax.set_ylabel('Average Pearson correlation between\nreplicate inferred mutational effects', fontsize = TEXT_FONTSIZE)
+    ax.text(len(x)/2, -0.30, 'Data set', ha='center', va='center', **DEF_LABELPROPS)
+    ax.set_ylabel('Average percent variantion explained\nbetween replicate inferred\nmutational effects, ' + r'$R^2$', fontsize = TEXT_FONTSIZE)
+    
+#    ax.set_yticks([0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90, 1.0])
+#    ax.set_ylim(0.25, 1.02)
+    ax.set_yticks([0, 0.20, 0.40, 0.60, 0.80, 1.0])
+#    ax.yaxis.set_minor_locator(matplotlib.ticker.MultipleLocator(0.1))
+#    ax.set_yminorticks([0.1, 0.30, 0.50, 0.70, 0.90])
+    ax.set_ylim(0, 1)
     ax.set_xlim([-0.5, len(x)-0.5])
-    ax.set_ylim(top = 1.02, bottom = 0.25)
                     
     colors    = [FIG2_A_MPL_COLOR, FIG2_A_PREF_COLOR]
     colors_lt = [FIG2_A_MPL_COLOR, FIG2_A_PREF_COLOR]
@@ -525,7 +568,7 @@ def FIG2_METHODS_COMPARISON():
     legend_dx  = xy1[0]-xy4[0]
     legend_dy  = xy1[1]-xy2[1]
     legend_x   = 0.2
-    legend_y   = [0.35, 0.35 + 1*legend_dy]
+    legend_y   = [0.12, 0.12 + 1*legend_dy]
     legend_t   = ['popDMS', 'Ratio/regression methods']
     
     for k in range(len(legend_y)):
@@ -688,7 +731,7 @@ SERIAL_FONT = {
     'size'  : TEXT_FONTSIZE + 2,
     'weight': 'bold'}
 OFFSET_LETTER  = 0
-SELECTION_FILE = FIG2_HUMAN_DIR + 'YAP1/selection_coefficients/YAP1_-4.csv.gz'
+SELECTION_FILE = './outputs/human_protein/' + 'YAP1/selection_coefficients/YAP1_-4.csv.gz'
 EPISTASIS_FILE = './outputs/epistasis/YAP1_100.txt'
 INDEX_FILE     = './outputs/epistasis/index_matrix.csv'
 SEQUENCE       = "DVPLPAGWEMAKTSSGQRYFLNHIDQTTTWQDPR"
