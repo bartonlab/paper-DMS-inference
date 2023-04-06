@@ -167,7 +167,7 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
     FIG1_WF_LOGREG    = FIG1_INFERENCE_DIR+'/log_regression/'
     FIG1_WF_RATIO     = FIG1_INFERENCE_DIR+'/enrichment_ratio/'
     FIG1_WF_LOGRATIO  = FIG1_INFERENCE_DIR+'/enrichment_ratio_log/'
-    # FIG1_FINITE_SIZE  = '_sampling-10000/'
+    FIG1_FINITE_SIZE  = '_sampling-10000/'
     FIG1_NAME         = 'Fig1_simulation.pdf'
 
     fig = plt.figure(figsize = (FIG1_SIZE_X, FIG1_SIZE_Y))
@@ -184,10 +184,18 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
     ax1.set_yscale(FIG1_SIMU_SCALE)
     num_traj = 0
 
-    for traj_num in range(FIG1_FINITE_NUM):
-        df_trajectory = pd.read_csv(FIG1_TRAJECTORY_DIR + 'rep-%s'%traj_num + '.csv.zip', index_col=0)
-        for i in [FIG1_VAR]:
-            ax1.plot([i for i in range(FIG1_FINITE_NUM)], df_trajectory.loc[i][:FIG1_GEN], color = BKCOLOR, alpha = FIG1_ALPHA)
+    for entry in os.scandir(FIG1_TRAJECTORY_DIR + 'gen-' + str(FIG1_GEN) + FIG1_FINITE_SIZE):
+        if num_traj < 10:
+            num_traj += 1
+            if entry.path.endswith(".csv") and entry.is_file():
+                df_trajectory = pd.read_csv(entry.path, index_col = 0)
+                col_list = df_trajectory.columns.tolist()
+                col_list.remove('generation')
+                for i in [FIG1_VAR]:
+                    ax1.plot(df_trajectory['generation'], df_trajectory[i], color = BKCOLOR, alpha = FIG1_ALPHA)
+        else:
+            continue
+
     df_trajectory = pd.read_csv(FIG1_WF_SIMU_FILE, index_col=0)
     col_list      = df_trajectory.T.columns.tolist()
     for i in [FIG1_VAR]:
@@ -199,6 +207,7 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
     ax1.spines['right'].set_visible(False)
     ax1.spines['top'].set_visible(False)
     ax1.set_yscale('log')
+#     ax1.set_ylim([3.9e-5, 1.1e-3])
     ax1.set_xticks([0, 3, 6, 9])
     
     # legend
@@ -234,7 +243,7 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
     sample_index = 10
 
     generations=[1, 4, 9, 19]
-    finite_list = [50000]
+    finite_list = [10000]
     marker = ['o', 'v', '*']
     generation_ = [i + 1 for i in generations[: -1]]
 
@@ -242,10 +251,10 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
         temp = [[],[],[],[]]
         for generation in generation_:
 
-            df_select               = pd.read_csv(FIG1_INFERENCE_DIR + '/selection_coefficients_gen-%s_'%generation+'sampling-%s'%finite_sampling+'.csv.zip', index_col=0)
-            df_enrichment_regress   = pd.read_csv(FIG1_INFERENCE_DIR + '/log_regression_gen-%s_'%generation+'sampling-%s'%finite_sampling+'.csv.zip', index_col=0)
-            df_enrichment_ratio     = pd.read_csv(FIG1_INFERENCE_DIR + '/enrichment_ratio_gen-%s_'%generation+'sampling-%s'%finite_sampling+'.csv.zip', index_col=0)
-            df_enrichment_ratio_log = pd.read_csv(FIG1_INFERENCE_DIR + '/enrichment_ratio_log_gen-%s_'%generation+'sampling-%s'%finite_sampling+'.csv.zip', index_col=0)
+            df_select               = pd.read_csv(FIG1_WF_SELECTION     + 'gen-%s_' %generation + 'sampling-%s' %finite_sampling + '.csv', index_col = 0)
+            df_enrichment_regress   = pd.read_csv(FIG1_WF_LOGREG        + 'gen-%s_' %generation + 'sampling-%s' %finite_sampling + '.csv', index_col = 0)
+            df_enrichment_ratio     = pd.read_csv(FIG1_WF_RATIO         + 'gen-%s_' %generation + 'sampling-%s' %finite_sampling + '.csv', index_col = 0)
+            df_enrichment_ratio_log = pd.read_csv(FIG1_WF_LOGRATIO      + 'gen-%s_' %generation + 'sampling-%s' %finite_sampling + '.csv', index_col = 0)
 
             enrichment_ratio_corr       =     df_enrichment_ratio.T.corr(method = 'pearson')
             log_regression_corr         =   df_enrichment_regress.T.corr(method = 'pearson')
@@ -258,6 +267,15 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
             selection_coefficients_corr = (selection_coefficients_corr.sum().sum() - replicates)/factor
             enrichment_ratio_log_corr   = (enrichment_ratio_log_corr.sum().sum()   - replicates)/factor
             
+            # enrichment_ratio_corr       =     df_enrichment_ratio.T.corr(method = 'pearson')
+            # log_regression_corr         =   df_enrichment_regress.T.corr(method = 'pearson')
+            # selection_coefficients_corr =               df_select.T.corr(method = 'pearson')
+            # enrichment_ratio_log_corr   = df_enrichment_ratio_log.T.corr(method = 'pearson')
+            
+            # enrichment_ratio_corr = (enrichment_ratio_corr.sum().sum()             - replicates)/factor
+            # log_regression_corr = (log_regression_corr.sum().sum()                 - replicates)/factor
+            # selection_coefficients_corr = (selection_coefficients_corr.sum().sum() - replicates)/factor  
+            # enrichment_ratio_log_corr = (enrichment_ratio_log_corr.sum().sum()     - replicates)/factor
             
             temp[0].append(selection_coefficients_corr)
             temp[1].append(enrichment_ratio_corr)
