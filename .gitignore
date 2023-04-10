@@ -3,6 +3,10 @@ __pycache__
 .ipynb_checkpoints
 */.ipynb_checkpoints
 
+# Local files
+figures-slides.ipynb
+figures-slides.py
+
 # Mac hidden files
 .DS_Store
 */.DS_Store
