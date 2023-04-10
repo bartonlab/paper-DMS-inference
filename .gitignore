@@ -5,7 +5,7 @@ __pycache__
 
 # Local files
 figures-slides.ipynb
-figures-slides.py
+figures_slides.py
 
 # Mac hidden files
 .DS_Store
