@@ -125,7 +125,7 @@ def get_counts(Input_dir, replicates, Input_file_prefix, flag):
     if flag == 'single':
         for replicate in replicates:
             df_allele_counts[replicate] = {}
-            Input_file = Input_dir + Input_file_prefix[flag] + str(replicate) + '.csv'
+            Input_file = Input_dir + Input_file_prefix[flag] + str(replicate) + '.csv.zip'
             print(' ', Input_file)
             table = pd.read_csv(Input_file)
             original_rows = table.shape[0]
@@ -148,7 +148,7 @@ def get_counts(Input_dir, replicates, Input_file_prefix, flag):
     if flag == 'double':
         for replicate in replicates:
             df_allele_counts[replicate] = {}
-            Input_file = Input_dir + Input_file_prefix[flag] + str(replicate) + '.csv'
+            Input_file = Input_dir + Input_file_prefix[flag] + str(replicate) + '.csv.zip'
             print(' ', Input_file)
             table = pd.read_csv(Input_file)
             original_rows = table.shape[0]
@@ -417,7 +417,7 @@ def initialization(site_start, site_end, Input_dir, Output_dir, epistasis):
         flag_list = ['single', 'double', 'triple', 'quadruple']
 
     for flag in flag_list:
-        Input_file_prefix[flag] = flag + '_allele_counts_rep'
+        Input_file_prefix[flag] = flag + '_allele_rep'
 
     sites = list(range(site_start, site_end+1))
 
