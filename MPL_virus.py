@@ -175,7 +175,7 @@ def codon2aa(c, noq=False):              # Returns the amino acid character corr
 
 def err_correct(DMS_DIR, DNACODON):
 
-    df_0 = pd.read_csv('%s/%s' % (DMS_DIR, DNACODON), comment = '#', memory_map = True)     # Read raw data file
+    df_0 = pd.read_csv('%s%s' % (DMS_DIR, DNACODON), comment = '#', memory_map = True)     # Read raw data file
 
     r    = len(CODONS)              # How many codon 
     L    = len(df_0)                # How long the sequence is
@@ -231,7 +231,7 @@ def joint_replicates_list(**func_para):
 
     print('------ Calculating joint selection coefficients for %s ------' %homolog)
 
-    df_0 = pd.read_csv('%s/%s/%s' % (DMS_DIR, DATA_DIR, PRE_FILES[0]), comment = '#', memory_map = True)
+    df_0 = pd.read_csv('%s/%s%s' % (DMS_DIR, DATA_DIR, PRE_FILES[0]), comment = '#', memory_map = True)
     q    = len(AA)
     L    = len(df_0)
     size = q * L
@@ -245,8 +245,8 @@ def joint_replicates_list(**func_para):
     for run_name in runname_index:     # If we have more experiment replicates, the result will be more accurate.
         print("Cumulating replicate_%s data of %s..." %(run_name, homolog))
         index = runname_index.index(run_name)
-        df_0 = pd.read_csv('%s/%s/%s' % (DMS_DIR, DATA_DIR, PRE_FILES[index]),  comment = '#', memory_map = True)
-        df_1 = pd.read_csv('%s/%s/%s' % (DMS_DIR, DATA_DIR, POST_FILES[index]), comment = '#', memory_map = True)
+        df_0 = pd.read_csv('%s/%s%s' % (DMS_DIR, DATA_DIR, PRE_FILES[index]),  comment = '#', memory_map = True)
+        df_1 = pd.read_csv('%s/%s%s' % (DMS_DIR, DATA_DIR, POST_FILES[index]), comment = '#', memory_map = True)
 
         x_0  = np.zeros(size)
         x_1  = np.zeros(size)
@@ -407,8 +407,8 @@ def single_replicate(**func_para):
 
     #df_0 = pd.read_csv('%s/data_%s/mutDNA-%s_codoncounts.csv'   % (DMS_DIR, homolog, run_name), comment = '#', memory_map = True)
     #df_1 = pd.read_csv('%s/data_%s/mutvirus-%s_codoncounts.csv' % (DMS_DIR, homolog, run_name), comment = '#', memory_map = True)
-    df_0 = pd.read_csv('%s/%s/%s' % (DMS_DIR, DATA_DIR, PRE_FILE),  comment = '#', memory_map = True)
-    df_1 = pd.read_csv('%s/%s/%s' % (DMS_DIR, DATA_DIR, POST_FILE), comment = '#', memory_map = True)
+    df_0 = pd.read_csv('%s/%s%s' % (DMS_DIR, DATA_DIR, PRE_FILE),  comment = '#', memory_map = True)
+    df_1 = pd.read_csv('%s/%s%s' % (DMS_DIR, DATA_DIR, POST_FILE), comment = '#', memory_map = True)
     q    = len(AA)
     L    = len(df_0)
     size = q * L
@@ -581,8 +581,8 @@ def MPL_elements(**func_para):
 
     #df_0 = pd.read_csv('%s/data_%s/mutDNA-%s_codoncounts.csv'   % (DMS_DIR, homolog, run_name), comment = '#', memory_map = True)
     #df_1 = pd.read_csv('%s/data_%s/mutvirus-%s_codoncounts.csv' % (DMS_DIR, homolog, run_name), comment = '#', memory_map = True)
-    df_0 = pd.read_csv('%s/%s' % (DMS_DIR, PRE_FILE),  comment = '#', memory_map = True)
-    df_1 = pd.read_csv('%s/%s' % (DMS_DIR, POST_FILE), comment = '#', memory_map = True)
+    df_0 = pd.read_csv('%s%s' % (DMS_DIR, PRE_FILE),  comment = '#', memory_map = True)
+    df_1 = pd.read_csv('%s%s' % (DMS_DIR, POST_FILE), comment = '#', memory_map = True)
 
     q    = len(AA)
     L    = len(df_0)
@@ -760,8 +760,8 @@ def enrichment_ratio(**func_para):
 
     #df_0 = pd.read_csv('%s/data_%s/mutDNA-%s_codoncounts.csv'   % (DMS_DIR, homolog, run_name), comment = '#', memory_map = True)
     #df_1 = pd.read_csv('%s/data_%s/mutvirus-%s_codoncounts.csv' % (DMS_DIR, homolog, run_name), comment = '#', memory_map = True)
-    df_0 = pd.read_csv('%s/%s' % (DMS_DIR, PRE_FILE),  comment = '#', memory_map = True)
-    df_1 = pd.read_csv('%s/%s' % (DMS_DIR, POST_FILE), comment = '#', memory_map = True)
+    df_0 = pd.read_csv('%s%s' % (DMS_DIR, PRE_FILE),  comment = '#', memory_map = True)
+    df_1 = pd.read_csv('%s%s' % (DMS_DIR, POST_FILE), comment = '#', memory_map = True)
 
     q    = len(AA)
     L    = len(df_0)
