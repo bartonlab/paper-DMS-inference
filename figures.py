@@ -123,7 +123,7 @@ name2name = {
     'HDR_Y2H_1': 'Y2H 1',
     'HDR_Y2H_2': 'Y2H 2',
     'HDR_E3': 'E3',
-    'HDR_DRB1': 'DBR1',
+    'HDR_DBR1': 'DBR1',
     'Thrombo_TpoR_1': 'TpoR 1',
     'Thrombo_TpoR_2': 'TpoR 2',
 }
@@ -364,7 +364,7 @@ def FIG2_METHODS_COMPARISON():
                        'HDR_E3':         ['BRCA1/E3/', 6],
                        'WWdomain_YAP1':  ['YAP1/', 2],
                        'Ubiq_Ube4b':     ['Ube4b/', 2],
-                       'HDR_DRB1':       ['DRB1/', 2],
+                       'HDR_DBR1':       ['DBR1/', 2],
                        'Thrombo_TpoR_1': ['TpoR/TpoR_MPL/', 6],
                        'Thrombo_TpoR_2': ['TpoR/TpoR_S505NMPL/', 6]
                        }
