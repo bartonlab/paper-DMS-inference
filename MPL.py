@@ -462,7 +462,7 @@ aa2codon = {                                                         # DNA codon
     }
 
 
-AA  = sorted(['A', 'R', 'N', 'D', 'C', 'E', 'Q', 'G', 'H', 'I','L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', '*'])
+AA  = ['A', 'R', 'N', 'D', 'C', 'E', 'Q', 'G', 'H', 'I','L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', '*']
 NUC = ['A', 'C', 'G', 'T']
 
 codon_to_aa_num = {}
