@@ -103,7 +103,6 @@ matplotlib.rc('font', **FONT)
 FIG_FILE = './figures/'
 
 name2name = {
-    'Flu_WSN':  'WSN',
     'Flu_A549': 'PB2 A549',
     'Flu_CCL141': 'PB2 CCL141',
     'HIV_BG505': 'Env BG505',
@@ -337,81 +336,47 @@ def FIG2_METHODS_COMPARISON():
     FIG2_A_PREF_MARKER  = '.'
     FIG2_A_MARKER_SIZE  = SMALLSIZEDOT*2
     FIG2_A_TAGBOX       = dict(boxstyle='round', facecolor = 'white')
-#     FIG2_VIRUS_DIR      = './outputs/virus_protein/'
-#     FIG2_HUMAN_DIR      = './outputs/human_protein/'
-#     FIG2_VIRUS_PREF_DIR = './data/virus_protein/'
-#     FIG2_HUMAN_PREF_DIR = './data/human_protein/'
+    FIG2_VIRUS_DIR      = './outputs/virus_protein/'
+    FIG2_HUMAN_DIR      = './outputs/human_protein/'
+    FIG2_VIRUS_PREF_DIR = './data/virus_protein/'
+    FIG2_HUMAN_PREF_DIR = './data/human_protein/'
 
-#     FIG2_A_VIRUS_RESULT_DIR = {
-#                        'Flu_A549':        ['PB2/A549/', 3],
-#                        'Flu_CCL141':      ['PB2/CCL141/', 3],
-#                        'Flu_Aichi68C':    ['Aichi68C_PR8/Aichi68C/', 2],
-#                        'Flu_PR8':         ['Aichi68C_PR8/PR8/', 2],
-#                        'Flu_MatrixM1':    ['Matrix_M1/', 3],
-#                        'Flu_MS':          ['MxA/MS/', 2],
-#                        'Flu_MxA':         ['MxA/MxA/', 2],
-#                        'Flu_MxAneg':      ['MxA/MxAneg/', 2],
-#                        'HIV_BG505':       ['HIVEnv/BG505/', 3],
-#                        'HIV_BF520':       ['HIVEnv/BF520/', 3],
-#                        'HIV_CD4_human':   ['HIVEnv_CD4/BF520_human/', 2],
-#                        'HIV_CD4_rhesus':  ['HIVEnv_CD4/BF520_rhesus/', 2],
-#                        'HIV_bnAbs_FP16':  ['HIV_bnAbs/FP16/', 2],
-#                        'HIV_bnAbs_FP20':  ['HIV_bnAbs/FP20/', 2],
-#                        'HIV_bnAbs_VRC34': ['HIV_bnAbs/VRC34/', 2]
-#                        }
-#     FIG2_A_HUMAN_RESULT_DIR = {
-#                        'HDR_Y2H_1':      ['BRCA1/Y2H_1/', 3],
-#                        'HDR_Y2H_2':      ['BRCA1/Y2H_2/', 3],
-#                        'HDR_E3':         ['BRCA1/E3/', 6],
-#                        'WWdomain_YAP1':  ['YAP1/', 2],
-#                        'Ubiq_Ube4b':     ['Ube4b/', 2],
-#                        'HDR_DBR1':       ['DBR1/', 2],
-#                        'Thrombo_TpoR_1': ['TpoR/TpoR_MPL/', 6],
-#                        'Thrombo_TpoR_2': ['TpoR/TpoR_S505NMPL/', 6]
-#                        }
-
-    FIG2_PREF_DIR = './data/prefs/'
-    FIG2_SELE_DIR = './outputs/selection_coefficients/'
     FIG2_A_VIRUS_RESULT_DIR = {
-                       'Flu_WSN':         ['WSN',                   '-2', 3],#
-                       'Flu_A549':        ['A549',                  '-3', 2],#
-                       'Flu_CCL141':      ['CCL141',                '-3', 3],#
-                       'Flu_Aichi68C':    ['Aichi68C',              '-2', 2],#
-                       'Flu_PR8':         ['PR8' ,                  '-3', 2],#
-                       'Flu_MatrixM1':    ['Matrix_M1',             '-2', 3],#
-                       'Flu_MS':          ['MS',                    '-3', 2],#
-                       'Flu_MxA':         ['MxA',                   '-3', 2],#
-                       'Flu_MxAneg':      ['MxAneg',                '-3', 2],#
-                       'HIV_BG505':       ['HIV Env BG505' ,        '-3', 3],#
-                       'HIV_BF520':       ['HIV Env BF520' ,        '-3', 3],#
-                       'HIV_CD4_human':   ['HIV BF520 human host',  '-3', 2],#
-                       'HIV_CD4_rhesus':  ['HIV BF520 rhesus host', '-2', 2],#
-                       'HIV_bnAbs_FP16':  ['HIV bnAbs FP16',        '-2', 2],
-                       'HIV_bnAbs_FP20':  ['HIV bnAbs FP20',        '-2', 2],
-                       'HIV_bnAbs_VRC34': ['HIV bnAbs VRC34',       '-2', 2],
+                       'Flu_A549':        ['PB2/A549/', 3],
+                       'Flu_CCL141':      ['PB2/CCL141/', 3],
+                       'Flu_Aichi68C':    ['Aichi68C_PR8/Aichi68C/', 2],
+                       'Flu_PR8':         ['Aichi68C_PR8/PR8/', 2],
+                       'Flu_MatrixM1':    ['Matrix_M1/', 3],
+                       'Flu_MS':          ['MxA/MS/', 2],
+                       'Flu_MxA':         ['MxA/MxA/', 2],
+                       'Flu_MxAneg':      ['MxA/MxAneg/', 2],
+                       'HIV_BG505':       ['HIVEnv/BG505/', 3],
+                       'HIV_BF520':       ['HIVEnv/BF520/', 3],
+                       'HIV_CD4_human':   ['HIVEnv_CD4/BF520_human/', 2],
+                       'HIV_CD4_rhesus':  ['HIVEnv_CD4/BF520_rhesus/', 2],
+                       'HIV_bnAbs_FP16':  ['HIV_bnAbs/FP16/', 2],
+                       'HIV_bnAbs_FP20':  ['HIV_bnAbs/FP20/', 2],
+                       'HIV_bnAbs_VRC34': ['HIV_bnAbs/VRC34/', 2]
                        }
-    
     FIG2_A_HUMAN_RESULT_DIR = {
-                       'HDR_Y2H_1':      ['Y2H_1',         '-1', 3],
-                       'HDR_Y2H_2':      ['Y2H_2',         '-1', 3],
-                       'HDR_E3':         ['E3',            '-1', 6],
-                       'WWdomain_YAP1':  ['YAP1',          '-3', 2],
-                       'Ubiq_Ube4b':     ['Ube4b',         '-4', 2],
-                       'HDR_DBR1':       ['DBR1',          '1',  2],
-                       'Thrombo_TpoR_1': ['TpoR_MPL',      '-1', 6],
-                       'Thrombo_TpoR_2': ['TpoR_S505NMPL', '-1', 6],
+                       'HDR_Y2H_1':      ['BRCA1/Y2H_1/', 3],
+                       'HDR_Y2H_2':      ['BRCA1/Y2H_2/', 3],
+                       'HDR_E3':         ['BRCA1/E3/', 6],
+                       'WWdomain_YAP1':  ['YAP1/', 2],
+                       'Ubiq_Ube4b':     ['Ube4b/', 2],
+                       'HDR_DBR1':       ['DBR1/', 2],
+                       'Thrombo_TpoR_1': ['TpoR/TpoR_MPL/', 6],
+                       'Thrombo_TpoR_2': ['TpoR/TpoR_S505NMPL/', 6]
                        }
 
     FIG2_B_REPLICATE_NUM = 3
-#     FIG2_B_SAMPLE_DIR    = './outputs/virus_protein/HIVEnv/BF520/selection_coefficients/'
-    FIG2_B_SAMPLE_DIR   = './outputs/selection_coefficients/'
+    FIG2_B_SAMPLE_DIR    = './outputs/virus_protein/HIVEnv/BF520/selection_coefficients/'
     FIG2_B_SCATTER_SIZE  = SMALLSIZEDOT
     FIG2_B_SCATTER_ALPHA = 0.2
     FIG2_B_CORR_DIGIT    = 2
 
     FIG2_C_REPLICATE_NUM = 3
-#     FIG2_C_SAMPLE_DIR    = './data/virus_protein/HIVEnv/BF520/pref/'
-    FIG2_C_SAMPLE_DIR   = './data/prefs/'
+    FIG2_C_SAMPLE_DIR    = './data/virus_protein/HIVEnv/BF520/pref/'
     FIG2_C_SCATTER_SIZE  = SMALLSIZEDOT
     FIG2_C_SCATTER_ALPHA = 0.2
     FIG2_C_CORR_DIGIT    = 2
@@ -421,38 +386,41 @@ def FIG2_METHODS_COMPARISON():
     FIG2_A_PREF_AVG = {}
     FIG2_A_MPL_AVG  = {}
     for target_protein, info in FIG2_A_VIRUS_RESULT_DIR.items():
-        path = FIG2_SELE_DIR +  info[0] + '_' + info[1] + '.csv.gz'
-        df_temp = pd.read_csv(path)
-        df_temp = df_temp[(df_temp['rep_1'] != 0) & (df_temp['rep_2'] != 0)]
-        df_corr = df_temp[df_temp.columns[2:]]
-        correlation_average = (df_corr.corr().sum().sum() - df_corr.shape[1])/(df_corr.shape[1]**2 - df_corr.shape[1])
-        FIG2_A_MPL_AVG[target_protein] = correlation_average
+        path = FIG2_VIRUS_DIR+  info[0] + 'selection_coefficients/'
+        for file in os.listdir(path):
+            if file.endswith('.csv.gz'):
+                df_temp = pd.read_csv(path + file)
+                df_temp = df_temp[(df_temp['rep_1'] != 0) & (df_temp['rep_2'] != 0)]
+                df_corr = df_temp[df_temp.columns[2:]]
+                correlation_average = (df_corr.corr().sum().sum() - df_corr.shape[1])/(df_corr.shape[1]**2 - df_corr.shape[1])
+                FIG2_A_MPL_AVG[target_protein] = correlation_average
                 
     for protein, info_list in FIG2_A_VIRUS_RESULT_DIR.items():
         SELECTION_LIST = []
         ENRICH_LIST    = []
-        replicate      = info_list[2]
+        replicate      = info_list[1]
+        for file in os.listdir(FIG2_VIRUS_PREF_DIR + info_list[0] + 'pref'):
+            if '.DS_Store' in file:
+                continue
+            else:
+                FILE_PATH = FIG2_VIRUS_PREF_DIR + info_list[0] + 'pref/' + file
+                temp_df   = pd.read_csv(FILE_PATH, index_col = 0)
+                ENRICH_LIST.append(list(temp_df.values.flatten()))
+            
+        correlation_average = 0
+        for i in range(len(ENRICH_LIST)):
+            for j in range(i + 1, len(ENRICH_LIST)):
+                correlation_average += st.pearsonr(ENRICH_LIST[i], ENRICH_LIST[j])[0]
+        if correlation_average == 0:
+            FIG2_A_PREF_AVG[protein] = correlation_average
+        else:  
+            correlation_average /= len(ENRICH_LIST)*(len(ENRICH_LIST) - 1)/2
+            FIG2_A_PREF_AVG[protein] = correlation_average
         if 'HIV_bnAbs' in protein or 'Flu_MS' in protein or 'Flu_Mx' in protein:
-            FILE_PATH = FIG2_PREF_DIR + info_list[0] + '_enrichment.csv.gz'
+            FILE_PATH = FIG2_VIRUS_PREF_DIR+info_list[0] + 'pref/enrichment.csv.gz'
             temp_df   = pd.read_csv(FILE_PATH)
             correlation_average      = (temp_df.corr().sum().sum() - temp_df.shape[1])/(temp_df.shape[1]**2 - temp_df.shape[1])
             FIG2_A_PREF_AVG[protein] = correlation_average
-        else:
-            for rep in range(replicate):
-                FILE_PATH = FIG2_PREF_DIR + info_list[0] + '-' + str(rep+1) + '_prefs.csv'
-                temp_df   = pd.read_csv(FILE_PATH, index_col = 0)
-                ENRICH_LIST.append(list(temp_df.values.flatten()))
-
-            correlation_average = 0
-            for i in range(len(ENRICH_LIST)):
-                for j in range(i + 1, len(ENRICH_LIST)):
-                    correlation_average += st.pearsonr(ENRICH_LIST[i], ENRICH_LIST[j])[0]
-            if correlation_average == 0:
-                FIG2_A_PREF_AVG[protein] = correlation_average
-            else:  
-                correlation_average /= len(ENRICH_LIST)*(len(ENRICH_LIST) - 1)/2
-                FIG2_A_PREF_AVG[protein] = correlation_average
-
 
     PERFORMANCE_FIG_SIZE = (FIG2_SIZE_X, FIG2_SIZE_Y)
     fig = plt.figure(figsize = PERFORMANCE_FIG_SIZE)
@@ -503,37 +471,32 @@ def FIG2_METHODS_COMPARISON():
     #FIG2_A_PREF_AVG = {}
     #FIG2_A_MPL_AVG = {}
     #FIG2_A_MPL_AVG[' '] = 100
-#     for target_protein, info in FIG2_A_HUMAN_RESULT_DIR.items():
-#         path = FIG2_HUMAN_DIR+info[0] + 'selection_coefficients/'
-#         for file in os.listdir(path):
-#             if file.endswith('.csv.gz'):
-#                 df_temp = pd.read_csv(path + file)
-#                 df_temp = df_temp[(df_temp['rep_1'] != 0)&(df_temp['rep_2'] != 0)]
-#                 df_corr = df_temp[df_temp.columns[2:]]
-#                 correlation_average = (df_corr.corr().sum().sum() - df_corr.shape[1])/(df_corr.shape[1]**2 - df_corr.shape[1])
-#                 FIG2_A_MPL_AVG[target_protein] = correlation_average
     for target_protein, info in FIG2_A_HUMAN_RESULT_DIR.items():
-        path = FIG2_SELE_DIR +  info[0] + '_' + info[1] + '.csv.gz'
-        df_temp = pd.read_csv(path)
-        df_temp = df_temp[(df_temp['rep_1'] != 0) & (df_temp['rep_2'] != 0)]
-        df_corr = df_temp[df_temp.columns[2:]]
-        correlation_average = (df_corr.corr().sum().sum() - df_corr.shape[1])/(df_corr.shape[1]**2 - df_corr.shape[1])
-        FIG2_A_MPL_AVG[target_protein] = correlation_average
+        path = FIG2_HUMAN_DIR+info[0] + 'selection_coefficients/'
+        for file in os.listdir(path):
+            if file.endswith('.csv.gz'):
+                df_temp = pd.read_csv(path + file)
+                df_temp = df_temp[(df_temp['rep_1'] != 0)&(df_temp['rep_2'] != 0)]
+                df_corr = df_temp[df_temp.columns[2:]]
+                correlation_average = (df_corr.corr().sum().sum() - df_corr.shape[1])/(df_corr.shape[1]**2 - df_corr.shape[1])
+                FIG2_A_MPL_AVG[target_protein] = correlation_average
 
     for protein, info_list in FIG2_A_HUMAN_RESULT_DIR.items():
-#         SELECTION_LIST = []
-#         ENRICH_LIST    = []
-#         replicate      = info_list[1]
+        SELECTION_LIST = []
+        ENRICH_LIST    = []
+        replicate      = info_list[1]
         
-        FILE_PATH = FIG2_PREF_DIR + info_list[0] + '_prefs.csv.gz'
-        temp_df = pd.read_csv(FILE_PATH, index_col = 0)
-        if 'hgvs_pro' in temp_df.columns:
-            temp_df = temp_df[~temp_df['hgvs_pro'].str.contains('\[')]
-        df_corr = temp_df[temp_df.columns.tolist()[-info_list[2]:]]
-        df_corr = df_corr.dropna()
-        correlation_average = (df_corr.corr().sum().sum() - df_corr.shape[1])/(df_corr.shape[1]**2 - df_corr.shape[1])
-        FIG2_A_PREF_AVG[protein] = correlation_average
-
+        for file in os.listdir(FIG2_HUMAN_PREF_DIR + info_list[0] + 'pref'):
+            FILE_PATH = FIG2_HUMAN_PREF_DIR + info_list[0] + 'pref/' + file
+            if 'enrichment.csv.gz' in FILE_PATH:
+                temp_df = pd.read_csv(FILE_PATH, index_col = 0)
+                if 'hgvs_pro' in temp_df.columns:
+                    temp_df = temp_df[~temp_df['hgvs_pro'].str.contains('\[')]
+                df_corr = temp_df[temp_df.columns.tolist()[-info_list[1]:]]
+                df_corr = df_corr.dropna()
+                correlation_average = (df_corr.corr().sum().sum() - df_corr.shape[1])/(df_corr.shape[1]**2 - df_corr.shape[1])
+                FIG2_A_PREF_AVG[protein] = correlation_average
+                
     MPL_LIST = FIG2_A_MPL_AVG.items()
     MPL_LIST = sorted(MPL_LIST, key = lambda x: x[1], reverse = True)
     x, y = zip(*MPL_LIST)
@@ -600,17 +563,12 @@ def FIG2_METHODS_COMPARISON():
 
     # Scatter plot of sample experiment of MPL
     SELECTION_LIST = []
-#     for file in os.listdir(FIG2_B_SAMPLE_DIR):
-#         if file.endswith('.csv.gz'):
-#             df_temp = pd.read_csv(FIG2_B_SAMPLE_DIR+file)
-#             df_temp = df_temp[(df_temp['rep_1'] != 0)&(df_temp['rep_2'] != 0)]
-#             for rep in range(1, FIG2_B_REPLICATE_NUM + 1):
-#                 SELECTION_LIST.append(df_temp['rep_' + str(rep)].tolist())
-
-    df_temp = pd.read_csv(FIG2_B_SAMPLE_DIR+'HIV Env BF520_-3.csv.gz')
-    df_temp = df_temp[(df_temp['rep_1'] != 0)&(df_temp['rep_2'] != 0)]
-    for rep in range(1, FIG2_B_REPLICATE_NUM + 1):
-        SELECTION_LIST.append(df_temp['rep_' + str(rep)].tolist())
+    for file in os.listdir(FIG2_B_SAMPLE_DIR):
+        if file.endswith('.csv.gz'):
+            df_temp = pd.read_csv(FIG2_B_SAMPLE_DIR+file)
+            df_temp = df_temp[(df_temp['rep_1'] != 0)&(df_temp['rep_2'] != 0)]
+            for rep in range(1, FIG2_B_REPLICATE_NUM + 1):
+                SELECTION_LIST.append(df_temp['rep_' + str(rep)].tolist())
 
     SCATTER_DOT = {
         'alpha': 0.2,
@@ -657,20 +615,11 @@ def FIG2_METHODS_COMPARISON():
 
     # Scatter plot of sample experiment of Enrichment ratio
     ENRICHMENT_LIST = []
-    for rep in range(FIG2_C_REPLICATE_NUM):
-        FILE_PATH = FIG2_C_SAMPLE_DIR + 'HIV Env BF520-' + str(rep+1) + '_prefs.csv'
-        temp_df   = pd.read_csv(FILE_PATH, index_col = 0)
-        ENRICHMENT_LIST.append(list(temp_df.values.flatten()))
-#     for file in os.listdir(FIG2_C_SAMPLE_DIR):
-#         if file.endswith('.csv'):
-#             df_temp = pd.reCd_csv(FIG2_C_SAMPLE_DIR+file)
-#             df_temp = df_temp.drop('site', axis = 1)
-#             ENRICHMENT_LIST.append(df_temp.to_numpy().flatten())
-#     for file in os.listdir(FIG2_C_SAMPLE_DIR):
-#         if file.endswith('.csv'):
-#             df_temp = pd.read_csv(FIG2_C_SAMPLE_DIR+file)
-#             df_temp = df_temp.drop('site', axis = 1)
-#             ENRICHMENT_LIST.append(df_temp.to_numpy().flatten())
+    for file in os.listdir(FIG2_C_SAMPLE_DIR):
+        if file.endswith('.csv'):
+            df_temp = pd.read_csv(FIG2_C_SAMPLE_DIR+file)
+            df_temp = df_temp.drop('site', axis = 1)
+            ENRICHMENT_LIST.append(df_temp.to_numpy().flatten())
 
     SCATTER_DOT_ENRICH = {
         'alpha': 0.2,
