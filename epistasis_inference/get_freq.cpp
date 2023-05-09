@@ -14,7 +14,6 @@
 #include <chrono>
 #include <Eigen/Sparse>
 #include <Eigen/SparseLU>
-#include "zlib/zlib.h"
 
 typedef Eigen::Triplet<double> Trip;
 typedef Eigen::SparseMatrix<double> SpMat;
