@@ -27,16 +27,16 @@ This repository includes codes for inferring selection coefficients using the ma
 
 Here's an example statement about the need for external software to execute any part of the code: Parts of the analysis are implemented in C++11 and the [GNU Scientific Library](https://www.gnu.org/software/gsl/). 
 
-Download Eigen package with the link: https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip to access to the C++ template library for linear algebra: matrices, vectors, numerical solvers, and related algorithms. Make sure that we are using the version of 3.4.0. Unzip the directory under ./epistasis_inference/. 
+Download Eigen package with this [link](https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip) to access to the C++ template library for linear algebra: matrices, vectors, numerical solvers, and related algorithms. Make sure that we are using the version of 3.4.0. Unzip the directory under ./epistasis_inference/. 
 
 Figures reproduction requires one external package `logomaker` from PyPI using the pip package manager by executing the following at the commandline: `pip install logomaker`
 
 ### Epistasis inference: 
 1. open the terminal and open the directory ./epistasis_inference/ 
-2. enter the command line "g++ -std=c++11 -lgslcblas -lgsl -I ./eigen-3.4.0/ get_freq.cpp -o get_freq".
-3. enter the command line "./get_freq"
-4. enter the command line "g++ -std=c++11 -lgslcblas -lgsl -I ./eigen-3.4.0/ inversion.cpp -o inversion".
-5. enter the command line "./inversion"
+2. enter the command line `g++ -std=c++11 -lgslcblas -lgsl -I ./eigen-3.4.0/ get_freq.cpp -o get_freq`
+3. enter the command line `./get_freq`
+4. enter the command line `g++ -std=c++11 -lgslcblas -lgsl -I ./eigen-3.4.0/ inversion.cpp -o inversion`
+5. enter the command line `./inversion`
 
 # License
 
