@@ -32,7 +32,7 @@ Download Eigen package with this [link](https://gitlab.com/libeigen/eigen/-/arch
 Figures reproduction requires one external package `logomaker` from PyPI using the pip package manager by executing the following at the commandline: `pip install logomaker`
 
 ### Epistasis inference: 
-1. open the terminal and open the directory ./epistasis_inference/ 
+1. open the terminal and open the directory `cd ./epistasis_inference/`
 2. enter the command line `g++ -std=c++11 -lgslcblas -lgsl -I ./eigen-3.4.0/ get_freq.cpp -o get_freq`
 3. enter the command line `./get_freq`
 4. enter the command line `g++ -std=c++11 -lgslcblas -lgsl -I ./eigen-3.4.0/ inversion.cpp -o inversion`
