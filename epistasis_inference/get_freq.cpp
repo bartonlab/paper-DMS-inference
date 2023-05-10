@@ -607,7 +607,8 @@ void build_cov( const int &seq_len, int dimension, int regularization,
                 std::set<int> idx_list, //all alleles idx
                 std::unordered_map<int, std::unordered_map<int, int>> double_idx,
                 std::map<std::tuple<int, int>, SpMat> &frq_vect_full,
-                std::map<std::tuple<int, int>, SpMat> &cov_matx_full){
+                std::map<std::tuple<int, int>, SpMat> &cov_matx_full,
+                const char* protein_name){
 
     int rep;
     int gen;
@@ -742,7 +743,7 @@ void build_cov( const int &seq_len, int dimension, int regularization,
 
         rep = Info_vec[i][0];
         gen = Info_vec[i][1];
-        filename = "multiple_allele_"+std::to_string(rep)+"_"+std::to_string(gen)+".csv";
+        filename = std::string(protein_name)+"_multiple_allele_"+std::to_string(rep)+"_"+std::to_string(gen)+".csv";
         outputFile.open(filename);
         //std::cout<<rep<<","<<gen<<"----"<<std::endl;
         for(auto const &ent1 : matrix_element[rep][gen]) {
@@ -764,7 +765,7 @@ void build_cov( const int &seq_len, int dimension, int regularization,
     for(int i = 0; i < Info_vec.size(); i++){
         rep = Info_vec[i][0];
         gen = Info_vec[i][1];
-        filename = "freq_"+std::to_string(rep)+"_"+std::to_string(gen)+".csv";
+        filename = std::string(protein_name)+"_freq_"+std::to_string(rep)+"_"+std::to_string(gen)+".csv";
         outputFile.open(filename);
 
         for(auto const &ent1 : frequency_element[rep][gen]) {
@@ -836,7 +837,7 @@ void build_cov( const int &seq_len, int dimension, int regularization,
 
 
 
-int main() {
+int main(int argc, char* argv[]) {
 
     clock_t start, end;
     double cpu_time_used; 
@@ -849,18 +850,16 @@ int main() {
     std::string filename;
     int seq_length = raw_sequence.length();
     int regularization = 1;
-    const char* FileName = "new_count_1.csv";
+    // const char* FileName = "YAP1_genotype_count_rep2.csv";
+    const char* protein_name = argv[1];
+    const char* FileName = argv[2];
+    // int current_rep = argv[2];
     const char *raw_seq = raw_sequence.c_str();
     
     int raw_seq_idx[seq_length];
     for(int tmp_idx = 0; tmp_idx < seq_length; tmp_idx++){
         raw_seq_idx[tmp_idx] = tmp_idx * 21 + get_AA_idx(raw_sequence[tmp_idx]);
     }
-
-    //std::cout << raw_seq[1] << std::endl;
-    //raw_sequence     = 'DVPLPAGWEMAKTSSGQRYFLNHIDQTTTWQDPR'
-    //raw_sequence     = 'FLIMVDVPLPAGWEMAKTSSFLNHIDQTTT'
-    //raw_sequence     = 'FLIMV'
 
 // read how many lines in data file & Info_vec = (rep,gen,tot_cnt)
     FILE* get_line = fopen(FileName, "r");
@@ -937,7 +936,9 @@ int main() {
         double_idx[elem.first][elem.second] = idx_num;
         idx_num++;
     }    
-    filename = "index_matrix.csv";
+    // filename = "index_matrix.csv";
+    filename = argv[3];
+
     outputFile.open(filename);
     for(auto const &ent1 : double_idx) {
         // ent1.first is the first key
@@ -973,7 +974,7 @@ int main() {
     //int variant_num = triplet_sin.size();
     const int seq_len = idx_raw.size();
 
-    build_cov(seq_len, dimension, regularization, variant_record, Info_vec, idx_raw, idx_list, double_idx, frq_vect_full, cov_matx);
+    build_cov(seq_len, dimension, regularization, variant_record, Info_vec, idx_raw, idx_list, double_idx, frq_vect_full, cov_matx, protein_name);
     end = clock();
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
     std::cout << cpu_time_used;
