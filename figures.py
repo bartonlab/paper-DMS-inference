@@ -1046,15 +1046,15 @@ def FIG3_VISUALIZATION(exp_scale = 10, sites_per_line = 35):
             logo.ax.set_xlim([-2, 10])
 
             if i == 0:
-                logo.ax.text(2.5, 1.1, 'Site 10(E)', **text_in_figure)
-                logo.ax.text(5.5, 1.1, 'Site 16(S)', **text_in_figure)
-                logo.ax.text(8.5, 1.1, 'Site 27(Q)', **text_in_figure)
+                logo.ax.text(2.5, 1.1, 'Site 18(E)', **text_in_figure)
+                logo.ax.text(5.5, 1.1, 'Site 24(S)', **text_in_figure)
+                logo.ax.text(8.5, 1.1, 'Site 35(Q)', **text_in_figure)
                 logo.ax.text(-.5, .5, 'Similar\ninference\n(Wild Type)', **text_in_figure)
                 
             if i == 1:
-                logo.ax.text(2.5, 1.1, 'Site  4(P)', **text_in_figure)
-                logo.ax.text(5.5, 1.1, 'Site 13(K)', **text_in_figure)
-                logo.ax.text(8.5, 1.1, 'Site 28(T)', **text_in_figure)
+                logo.ax.text(2.5, 1.1, 'Site 12(P)', **text_in_figure)
+                logo.ax.text(5.5, 1.1, 'Site 21(K)', **text_in_figure)
+                logo.ax.text(8.5, 1.1, 'Site 36(T)', **text_in_figure)
                 logo.ax.set_ylabel("Normalized measurements", fontsize = TEXT_FONTSIZE, labelpad=10)
                 logo.ax.text(-.5, .5, 'Similar\ninference\n(Tolerance)', 
                              fontsize = TEXT_FONTSIZE, 
@@ -1066,9 +1066,9 @@ def FIG3_VISUALIZATION(exp_scale = 10, sites_per_line = 35):
             else:
                 logo.ax.set_ylabel(" ", fontsize = TEXT_FONTSIZE, labelpad = 3)
             if i == 2:
-                logo.ax.text(2.5, 1.1, 'Site 29(T)', **text_in_figure)
-                logo.ax.text(5.5, 1.1, 'Site 30(T)', **text_in_figure)
-                logo.ax.text(8.5, 1.1, 'Site 34(P)', **text_in_figure)
+                logo.ax.text(2.5, 1.1, 'Site 37(T)', **text_in_figure)
+                logo.ax.text(5.5, 1.1, 'Site 38(T)', **text_in_figure)
+                logo.ax.text(8.5, 1.1, 'Site 42(P)', **text_in_figure)
                 logo.ax.text(-.5, .5, 'Different\ninference', 
                              fontsize = TEXT_FONTSIZE, 
                              bbox = dict(facecolor ='none', 
