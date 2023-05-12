@@ -928,7 +928,7 @@ def FIG3_VISUALIZATION(exp_scale = 10, sites_per_line = 35):
 
 # Comparison Logoplot
         inner = gridspec.GridSpecFromSubplotSpec(3, 1,subplot_spec = ax3, wspace = 0.1, hspace = 0.5)
-        df_enrich   = pd.read_csv('./data/human_protein/YAP1/pref/enrichment.csv.gz')
+        df_enrich   = pd.read_csv('./data/prefs/YAP1_prefs.csv.gz')
         df_enrich['hgvs_pro'].astype(str)
         df_enrich   = df_enrich[~df_enrich['hgvs_pro'].str.contains('\[')]
         df_enrich   = df_enrich[ df_enrich['hgvs_pro'].str.contains('p.')]
@@ -990,16 +990,19 @@ def FIG3_VISUALIZATION(exp_scale = 10, sites_per_line = 35):
         for i in selected_rows:
             #MPL
             if m%3 == 0:
-                df_all = df_all.concat(df_zero)
+                # df_all = df_all.concat(df_zero)
+                df_all = pd.concat([df_all, df_zero])
             m += 1
-            df_all    = df_all.concat(df_zero)
+            # df_all    = df_all.concat(df_zero)
+            df_all = pd.concat([df_all, df_zero])
             df_temp   = data1[data1['site'] == str(i) + '_MPL'].copy()
             temp_pure = df_temp[df_temp.columns[1:]]
             
             temp_pure = np.exp(MPL_scale * temp_pure)
             temp_pure.replace(1, 0, inplace = True)
             temp_pure = temp_pure.div(temp_pure.sum(axis = 1), axis = 0)
-            df_all = df_all.concat(temp_pure)
+            # df_all = df_all.concat(temp_pure)
+            df_all = pd.concat([df_all, temp_pure])
             
             #PREF
             df_temp   = data2[data2['site'] == str(i) + '_Pref'].copy()
@@ -1007,7 +1010,8 @@ def FIG3_VISUALIZATION(exp_scale = 10, sites_per_line = 35):
             temp_pure = np.exp(PREF_scale * temp_pure)
             temp_pure.replace(1, 0, inplace = True)
             temp_pure = temp_pure.div(temp_pure.sum(axis = 1), axis = 0)
-            df_all = df_all.concat(temp_pure)
+            # df_all = df_all.concat(temp_pure)
+            df_all = pd.concat([df_all, temp_pure])
         
         df_all['plot_site'] = [i for i in range(10)] + [i for i in range(10)] + [i for i in range(10)]
         plot_index = df_all['site']
