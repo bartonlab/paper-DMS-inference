@@ -63,11 +63,16 @@ The data files should be renamed as `Target-protein_DNA_codoncounts.csv`(error c
 
 
 ### Epistasis inference: 
-1. open the terminal and open the directory `cd ./epistasis_inference/`
-2. enter the command line `g++ -std=c++11 -lgslcblas -lgsl -I ./eigen-3.4.0/ get_freq.cpp -o get_freq`
-3. enter the command line `./get_freq`
-4. enter the command line `g++ -std=c++11 -lgslcblas -lgsl -I ./eigen-3.4.0/ inversion.cpp -o inversion`
-5. enter the command line `./inversion`
+
+The following instruction is coorporated with the example of the replicate #1 of YAP1 as the target protein.
+
+To use the epistasis inference, open the terminal and locate in the directory `cd ./epistasis_inference/` to access the pipeline codes. 
+
+Then enter the command line `g++ -std=c++11 -lgslcblas -lgsl -I ./eigen-3.4.0/ get_freq.cpp -o get_freq` to compile the C++ script about freqeucny extraction from the raw data files. To collect intermediate frequency data files, by entering the command line with  `./get_freq [Target-protein] [location saving the genoype counts data] [indexing file for target protein]`, which in this analysis is `./get_freq YAP1 ../outputs/epistasis/YAP1_genotype_count_rep1.csv index_matrix.csv`. This step will output several allele frequency files, such as `[Target-protein]_freq_[replicate num]_[generation_num].csv` and `[Target-protein]_multiple_allele_[replicate_num]_[generation_num].csv` within the same directory you executed the `./get_freq` command line. 
+
+After all, the internediate allele frequencies data files would be proceeded by matrix manipulation codes. First, compling the `inversion.cpp` by enetering the following command line in the terminal within the directory of `./epistasis_inference/`: `g++ -std=c++11 -lgslcblas -lgsl -I ./eigen-3.4.0/ inversion.cpp -o inversion`, then with which enter the following execution line: `./inversion [Target-protein] [location saving the genoype counts data] [indexing file for target protein]`. In this analysis, it's `./inversion YAP1 ../outputs/epistasis/YAP1_genotype_count_rep1.csv index_matrix.csv`
+
+Finally, you will have the outputs `[Target_protein]_epistasis_rep[replicate_num].txt` within `./epistasis_inference/` directory. In this example, the output file name is `YAP1_epistasis_rep1.txt`.
 
 # License
 

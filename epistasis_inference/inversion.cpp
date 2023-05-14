@@ -265,7 +265,7 @@ void printSelectionCoefficients(FILE *output, const std::vector<double> &s) {
 
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     std::cout << "Start!\n";
     //std::string raw_sequence = "FLIMVD";
     std::string raw_sequence = "DVPLPAGWEMAKTSSGQRYFLNHIDQTTTWQDPR";
@@ -274,8 +274,11 @@ int main() {
     std::string filename;
     int seq_length = raw_sequence.length();
     double regularization = 100.0;
-    const char* Index_file = "index_matrix.csv";
-    const char* Rawdata = "new_count_1.csv";
+    // const char* Index_file = "index_matrix.csv";
+    // const char* Rawdata = "new_count_1.csv";
+    const char* protein_name = argv[1];
+    const char* Rawdata = argv[2];
+    const char* Index_file = argv[3];
     const char *raw_seq = raw_sequence.c_str();
     
     int raw_seq_idx[seq_length];
@@ -295,6 +298,7 @@ int main() {
 
     get_line = fopen(Rawdata, "r");
     std::vector<std::array<int, 3>> Info_vec = get_lines_info(get_line);
+    std::cout << Info_vec[0][0]<< std::endl;
 
     int non_elements, matrix_nnz;
     double sparsity;
@@ -335,7 +339,7 @@ int main() {
 
         std::cout <<"Allele frequencies import for: Replicate = "<<Info_vec[i][0]<<", Generation = "<<Info_vec[i][1]<< std::endl;
 
-        file_name = "freq_" + std::to_string(Info_vec[i][0])+"_"+std::to_string(Info_vec[i][1])+".csv";
+        file_name = std::string(protein_name)+"_freq_" + std::to_string(Info_vec[i][0])+"_"+std::to_string(Info_vec[i][1])+".csv";
         //file_name = "test_freq.csv";
         sindou_allele_file = file_name.c_str();
 
@@ -407,7 +411,7 @@ int main() {
 
             std::cout <<"Covariance matrix import for Replicate = "<<Info_vec[i][0]<<", Generation = "<<Info_vec[i][1]<< std::endl;
 
-            file_name = "multiple_allele_" + std::to_string(Info_vec[i][0])+"_"+std::to_string(Info_vec[i][1])+".csv";
+            file_name = std::string(protein_name)+"_multiple_allele_" + std::to_string(Info_vec[i][0])+"_"+std::to_string(Info_vec[i][1])+".csv";
 
             multiple_allele_file = file_name.c_str();
 
@@ -511,7 +515,7 @@ int main() {
     }
 
     FILE *fp;  
-    fp = fopen("20220304_rep2_2.txt", "w");
+    fp = fopen(std::string(protein_name)+"_epistasis_rep"+std::to_string(Info_vec[i][0])+".txt", "w");
    	std::cout<<"write file"<<std::endl;
     for (int i=0;i<sMAP.size();i++) {
     	fprintf(fp,"%.6e\n",sMAP[i]);
