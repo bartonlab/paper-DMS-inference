@@ -18,8 +18,6 @@
 #include <gsl/gsl_vector.h>
 #include <gsl/gsl_matrix.h>
 #include <gsl/gsl_linalg.h>
-//#include </Users/zhenchenhong/Downloads/DMS_20210329/Eigen/Sparse>
-//#include </Users/zhenchenhong/Downloads/DMS_20210329/Eigen/SparseLU>
 typedef Eigen::Triplet<double> Trip;
 typedef Eigen::SparseMatrix<double> SpMat;
 typedef Eigen::SparseVector<double> SpVec;
@@ -321,16 +319,6 @@ int main(int argc, char* argv[]) {
     for(int i = 0; i<Info_vec.size(); i++){
     	for (int a=0; a < matrix_dim;a++) freq_vect_full[i*matrix_dim+a] = 0;}
 
-//xi
-    //Eigen::MatrixXd x_ = Eigen::MatrixXd::Random(3,3);
-//    Eigen::PartialPivLU<Eigen::MatrixXd> lltOfcov = m.partialPivLu(); 
-//    Eigen::VectorXd n = Eigen::VectorXd::Random(3);
-
-//    Eigen::VectorXd x= lltOfcov.solve(n);
-//    std::cout<<m<<std::endl;
-//    std::cout<<n<<std::endl;
-//    std::cout<<x<<std::endl;
-//    std::cout<<m*x<<std::endl;
 
     for(int i = 0; i<Info_vec.size(); i++){
         //std::tuple<int, int> rep_gen = std::make_tuple(Info_vec[i][0], Info_vec[i][1]);
@@ -481,20 +469,6 @@ int main(int argc, char* argv[]) {
     	totalCov[i*matrix_dim+i] += regularization;
     }
 
-    // std::cout<<freq_vect_full[0*matrix_dim+26774]<<std::endl;
-    // std::cout<<freq_vect_full[0*matrix_dim+502]<<std::endl;
-    // std::cout<<freq_vect_full[1*matrix_dim+26774]<<std::endl;
-    // std::cout<<freq_vect_full[1*matrix_dim+502]<<std::endl;
-    // std::cout<<freq_vect_full[2*matrix_dim+26774]<<std::endl;
-    // std::cout<<freq_vect_full[2*matrix_dim+502]<<std::endl;
-    // std::cout<<freq_vect_full[3*matrix_dim+26774]<<std::endl;
-    // std::cout<<freq_vect_full[3*matrix_dim+502]<<std::endl;
-    // std::cout<<totalCov[502*matrix_dim + 26774]<<std::endl;
-    // std::cout<<totalCov[26774*matrix_dim + 502]<<std::endl;
-    // std::cout<<totalCov[502*matrix_dim + 502]<<std::endl;
-    // std::cout<<totalCov[26774*matrix_dim + 26774]<<std::endl;
-    // std::cout<<dx[502]<<std::endl;
-    // std::cout<<dx[26774]<<std::endl;
 
     int status;
     std::vector<double> sMAP(matrix_dim,0);
@@ -520,77 +494,6 @@ int main(int argc, char* argv[]) {
     for (int i=0;i<sMAP.size();i++) {
     	fprintf(fp,"%.6e\n",sMAP[i]);
     }
-
-/*
-    for(int i =0;i<matrix_dim;i++){
-    	dx[i] = freq_vect_full[(Info_vec.size()-1)*matrix_dim + i] - freq_vect_full[0*matrix_dim + i];
-    	totalCov[i*matrix_dim+i] += regularization;
-    }
-
-
-    gsl_matrix_view _cov = gsl_matrix_view_array(totalCov, matrix_dim, matrix_dim);   // gsl covariance + Gaussian regularization
-    gsl_vector_view  _dx = gsl_vector_view_array(dx, matrix_dim);            // gsl dx vector
-    gsl_vector    *_sMAP = gsl_vector_alloc(matrix_dim);                     // maximum a posteriori selection coefficients for each allele
-    gsl_permutation  *_p = gsl_permutation_alloc(matrix_dim);
-    
-    gsl_linalg_LU_decomp(&_cov.matrix, _p, &status);
-    gsl_linalg_LU_solve(&_cov.matrix, _p, &_dx.vector, _sMAP);
-    
-    for (int a=0;a<L;a++) sMAP[a] = gsl_vector_get(_sMAP, a);
-*/
-   	
-/*    
-    std::cout<<"finish cumulation"<<std::endl;
-    freq_diff += freq_vect_full[std::make_tuple(1, 3)];
-    //freq_diff += freq_vect_full[std::make_tuple(1, 1)];
-    freq_diff -= freq_vect_full[std::make_tuple(1, 0)];
-    std::cout<<"finish difference"<<std::endl;
-    //dMat identity(matrix_dim, matrix_dim) = MatrixXd::Identity(4, 3);
-    for(int i = 0;i < matrix_dim; i++){
-        cov_full(i,i)+=regularization;
-    }
-    
-    freq_vect_full.clear();
-    std::ofstream file;
-    //std::cout<<cov_full(1233,4964)<<std::endl;
-    std::cout<<"record frequency_change"<<std::endl;
- 
-    file.open("frequency_change_matrix.csv");
-    file << freq_diff << std::endl;  
-    file.close(); 
-
-    std::cout<<"record covariance_matrix"<<std::endl;
-   
-    file.open("covariance_matrix.csv");
-    for(int i = 0;i < matrix_dim; i++){
-        if(i%100==0){std::cout<<i<<std::endl;}
-        for(int j=0;j<matrix_dim-1;j++){
-            file << cov_full(i,j)<<",";
-        }
-        file << cov_full(i,matrix_dim-1)<<std::endl;
-    }
-     
-    file.close(); 
-
-    //cov_full.resize(0,0); 
-
-
-    //freq_diff.resize(0,0);
-
-
-    std::cout<<"PartialPivLU..."<<std::endl;
-    Eigen::PartialPivLU<Eigen::MatrixXd> lltOfcov = cov_full.partialPivLu(); 
-
-
-    std::cout<<"solving..."<<std::endl;
-    Eigen::VectorXd x= lltOfcov.solve(freq_diff);
-
-    std::cout<<x<<std::endl;
-    //std::ofstream file;
-    file.open("result.csv");
-    file << x << std::endl;
-    file.close();
-*/
 
     return 0;
 }
