@@ -26,9 +26,10 @@ This repository includes codes for inferring selection coefficients using the ma
 
 Parts of the analysis are implemented in C++11 and the [GNU Scientific Library](https://www.gnu.org/software/gsl/). 
 
-Download Eigen package with this [link](https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip) to access to the C++ template library for linear algebra: matrices, vectors, numerical solvers, and related algorithms. Make sure that we are using the version of 3.4.0. Unzip the directory under ./epistasis_inference/. 
+Download Eigen package with this [link](https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.zip) to access to the C++ template library for linear algebra: matrices, vectors, numerical solvers, and related algorithms. Make sure that we are using the version of 3.4.0. Unzip the directory under `./epistasis_inference/`. 
 
 Figures reproduction requires one external package `logomaker` from PyPI using the pip package manager by executing the following at the commandline: `pip install logomaker`
+
 
 ### popDMS input data format
 
