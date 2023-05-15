@@ -37,7 +37,7 @@ popDMS can infer the selection coefficients by either full length sequencing dat
 
 Please check the following examples to prepare the appropriate data format used in the inference pipeline.
 
-1) If full length data available, the raw data format should be like this, all generations data within single file: https://github.com/bartonlab/paper-DMS-inference/blob/main/data/raw_data/TpoR_nucleotide_count.csv. Please refer to [MaveDB data table formats](https://www.mavedb.org/docs/mavedb/data_formats.html) for standard count table format.
+1) If full length data available, the raw data format should be like [this](https://github.com/bartonlab/paper-DMS-inference/blob/main/data/raw_data/TpoR_nucleotide_count.csv), all generations data within single file. Please refer to [MaveDB data table formats](https://www.mavedb.org/docs/mavedb/data_formats.html) for standard count table format.
 
 - The first column is only for row/genotype indexing. 
 
@@ -52,7 +52,7 @@ Please check the following examples to prepare the appropriate data format used 
 <!-- The data file should be renamed as `Target-protein_nucleotide_count.csv` -->
 
 
-2) If only short reads data available(single allele available), the raw data format should be like this, pre and post generation data in seperated files: https://github.com/bartonlab/paper-DMS-inference/blob/main/data/raw_data/BG505_DNA_codoncounts.csv. Please refer to [Deep mutational scanning counts file](http://jbloomlab.github.io/dms_tools/fileformats.html#deep-mutational-scanning-counts-file) for standard count table format.
+2) If only short reads data available(single allele available), the raw data format should be like [this](https://github.com/bartonlab/paper-DMS-inference/blob/main/data/raw_data/BG505_DNA_codoncounts.csv), pre-selection and post-selection data in seperated files. Please refer to [Deep mutational scanning counts file](http://jbloomlab.github.io/dms_tools/fileformats.html#deep-mutational-scanning-counts-file) for standard count table format.
 
 - The first column is the site index.
 
