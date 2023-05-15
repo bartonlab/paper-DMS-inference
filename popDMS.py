@@ -997,18 +997,18 @@ def correlation_hist(**func_para):
 
 # codes for full genome data
 
-def full_genome_pipeline(TARGET_PROTEIN, REPLICATES, SITE_START, SITE_END, INPUT_DIR, OUTPUT_DIR, EPISTASIS, REGULARIZATION_PERCENT):
+def full_length_pipeline(TARGET_PROTEIN, REPLICATES, SITE_START, SITE_END, INPUT_DIR, OUTPUT_DIR, EPISTASIS, REGULARIZATION_PERCENT):
     INPUT_FILE_PREFIX, FLAG_LIST, SITES = initialization(SITE_START, SITE_END, INPUT_DIR, OUTPUT_DIR, EPISTASIS)
 
-    FREQUENCY_DIFF, COVARIANCE_MATRIX, MAX_READ = MPL_full_genome_elements(FLAG_LIST, INPUT_DIR, REPLICATES, INPUT_FILE_PREFIX, SITES)
+    FREQUENCY_DIFF, COVARIANCE_MATRIX, MAX_READ = MPL_full_length_elements(FLAG_LIST, INPUT_DIR, REPLICATES, INPUT_FILE_PREFIX, SITES)
     REGULARIZATION_LIST = [np.power(10, float(i)) for i in range(int(np.log10(1/MAX_READ)-1), 4)]
-    CORRELATION_LIST = optimize_regularization_full_genome(REGULARIZATION_LIST, SITES, COVARIANCE_MATRIX, FREQUENCY_DIFF, REPLICATES)
+    CORRELATION_LIST = optimize_regularization_full_length(REGULARIZATION_LIST, SITES, COVARIANCE_MATRIX, FREQUENCY_DIFF, REPLICATES)
 
     plot_reg_corr(REGULARIZATION_LIST, CORRELATION_LIST, TARGET_PROTEIN)
 
     REGULARIZATION_SELECTED = find_best_regularization(REGULARIZATION_LIST, CORRELATION_LIST, REGULARIZATION_PERCENT)
 
-    FINAL_SELECTION = output_final_selection_full_genome(REGULARIZATION_SELECTED, SITES, COVARIANCE_MATRIX, FREQUENCY_DIFF, REPLICATES)
+    FINAL_SELECTION = output_final_selection_full_length(REGULARIZATION_SELECTED, SITES, COVARIANCE_MATRIX, FREQUENCY_DIFF, REPLICATES)
     
     if os.path.exists(OUTPUT_DIR):
         FINAL_SELECTION.to_csv(OUTPUT_DIR+TARGET_PROTEIN+'_'+'%d.csv.gz' %int(np.log10(REGULARIZATION_SELECTED)), index = False, compression = 'gzip')
@@ -1016,7 +1016,7 @@ def full_genome_pipeline(TARGET_PROTEIN, REPLICATES, SITE_START, SITE_END, INPUT
         os.makedirs(OUTPUT_DIR)
         FINAL_SELECTION.to_csv(OUTPUT_DIR+TARGET_PROTEIN+'_'+'%d.csv.gz' %int(np.log10(REGULARIZATION_SELECTED)), index = False, compression = 'gzip')
 
-def MPL_full_genome_elements(flag_list, Input_dir, replicates, Input_file_prefix, sites):
+def MPL_full_length_elements(flag_list, Input_dir, replicates, Input_file_prefix, sites):
     df_counts_dict = {}
     max_read_final = 0
 
@@ -1039,7 +1039,7 @@ def MPL_full_genome_elements(flag_list, Input_dir, replicates, Input_file_prefix
     
     return df_frequency_change_dict, cov_matx, max_read_final
 
-def output_final_selection_full_genome(gamma, sites, cov_matx, df_frequency_change_dict, replicates):
+def output_final_selection_full_length(gamma, sites, cov_matx, df_frequency_change_dict, replicates):
     copy_cov_matx = copy.deepcopy(cov_matx['amino_acid'])
     q = len(AA)
     L = len(sites)
@@ -1089,7 +1089,7 @@ def output_final_selection_full_genome(gamma, sites, cov_matx, df_frequency_chan
     
     return df_selection_coefficients
 
-def optimize_regularization_full_genome(regularization_list, sites, cov_matx, df_frequency_change_dict, replicates):
+def optimize_regularization_full_length(regularization_list, sites, cov_matx, df_frequency_change_dict, replicates):
     correlation_list = []
     
     for gamma in regularization_list:
