@@ -39,26 +39,26 @@ Please check the following examples to prepare the appropriate data format used 
 
 1) If full length data available, the raw data format should be like this, all generations data within single file: https://github.com/bartonlab/paper-DMS-inference/blob/main/data/raw_data/TpoR_nucleotide_count.csv. Please refer to [MaveDB data table formats](https://www.mavedb.org/docs/mavedb/data_formats.html) for standard count table format.
 
-The first column is only for row/genotype indexing. 
+- The first column is only for row/genotype indexing. 
 
-The second column is the nucleotide variant, describing variants with respect to the nucleotide target sequence. Please refer to [MAVE-HGVS format](https://www.mavedb.org/docs/mavehgvs/), especially [MAVE-HGVS substitution](https://www.mavedb.org/docs/mavehgvs/spec.html#substitution). 
-- If only one site mutates, the format should be c.site_index WT_nucleotide>Mutant_nucleotide. For example, if the site 93 has the wild type nucleotide as T and this genotype has the mutation G at site 93, the value of the second column of this genotype is c.93T>G. 
-- If more than one site mutates, the mutations should be included within the square brackets, seperated by semicolon, c.[site_index1 WT_nucleotide1>Mutant_nucleotide1; site_index2 WT_nucleotide2>Mutant_nucleotide2; ...]. For example, if the site 8 has the wild type nucleotide as C and this genotype has the mutation T at site 8, and on the same genotype, the site 9 has the wild type nucleotide as C and this genotype has the mutation G at site 9,  the value of the second column of this genotype is c.[8C>T;9C>G]. 
+- The second column is the nucleotide variant, describing variants with respect to the nucleotide target sequence. Please refer to [MAVE-HGVS format](https://www.mavedb.org/docs/mavehgvs/), especially [MAVE-HGVS substitution](https://www.mavedb.org/docs/mavehgvs/spec.html#substitution). 
+	- If only one site mutates, the format should be c.site_index WT_nucleotide>Mutant_nucleotide. For example, if the site 93 has the wild type nucleotide as T and this genotype has the mutation G at site 93, the value of the second column of this genotype is c.93T>G. 
+	- If more than one site mutates, the mutations should be included within the square brackets, seperated by semicolon, c.[site_index1 WT_nucleotide1>Mutant_nucleotide1; site_index2 WT_nucleotide2>Mutant_nucleotide2; ...]. For example, if the site 8 has the wild type nucleotide as C and this genotype has the mutation T at site 8, and on the same genotype, the site 9 has the wild type nucleotide as C and this genotype has the mutation G at site 9,  the value of the second column of this genotype is c.[8C>T;9C>G]. 
 
-The third column is the amino acid variant, describing variants with respect to the amino acid target sequence. The idea is similar to the second column, but the wildtype and mutation nucleotide notation would be replaced by amino acid three letters code. 
+- The third column is the amino acid variant, describing variants with respect to the amino acid target sequence. The idea is similar to the second column, but the wildtype and mutation nucleotide notation would be replaced by amino acid three letters code. 
 
-Starting from thr forth column, the counts of each genotype are recorded for each generation. 
+- Starting from thr forth column, the counts of each genotype are recorded for each generation. 
 
 <!-- The data file should be renamed as `Target-protein_nucleotide_count.csv` -->
 
 
 2) If only short reads data available(single allele available), the raw data format should be like this, pre and post generation data in seperated files: https://github.com/bartonlab/paper-DMS-inference/blob/main/data/raw_data/BG505_DNA_codoncounts.csv. Please refer to [Deep mutational scanning counts file](http://jbloomlab.github.io/dms_tools/fileformats.html#deep-mutational-scanning-counts-file) for standard count table format.
 
-The first column is the site index.
+- The first column is the site index.
 
-The second column is the wildtype codon of this site.
+- The second column is the wildtype codon of this site.
 
-The following columns record the codon counts observed according to the codon name listed in the first row.
+- The following columns record the codon counts observed according to the codon name listed in the first row.
 
 <!-- The data files should be renamed as `Target-protein_DNA_codoncounts.csv`(error correction data), `Target-protein_mutDNA_codoncounts.csv`(pre-selection count data) and `Target-protein_mutvirus_codoncounts.csv`(post-selection count data) -->
 
