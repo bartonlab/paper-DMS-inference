@@ -33,23 +33,26 @@ Figures reproduction requires one external package `logomaker` from PyPI using t
 
 ### popDMS input data format
 
-popDMS can infer the selection coefficients by either full genome sequencing data or short reads sequencing data. Full genome sequencing data means the genotype counts at each generation are available, while short reads sequencing data means only single allele counts at each generation are available.
+popDMS can infer the selection coefficients by either full length sequencing data or short reads sequencing data. Full length sequencing data means the genotype counts at each generation are available, while short reads sequencing data means only single allele counts at each generation are available. 
 
-Please check the following examples to prepare the appropriate data format used in the inference pipeline. 
-1) If full genome data available, the raw data format should be like this, all generations data within single file: https://github.com/bartonlab/paper-DMS-inference/blob/main/data/raw_data/TpoR_nucleotide_count.csv. 
+Please check the following examples to prepare the appropriate data format used in the inference pipeline.
 
-The first column is only for indexing. 
+1) If full length data available, the raw data format should be like this, all generations data within single file: https://github.com/bartonlab/paper-DMS-inference/blob/main/data/raw_data/TpoR_nucleotide_count.csv. Please refer to [MaveDB data table formats](https://www.mavedb.org/docs/mavedb/data_formats.html) for standard count table format.
 
-The second column is the nucleotide variant, describing variants with respect to the nucleotide target sequence. If only one site mutates, the format should be c.site_index WT_nucleotide>Mutant_nucleotide. For example, if the site 93 has the wild type nucleotide as T and this genotype has the mutation G at site 93, the value of the second column of this genotype is c.93T>G. If more than one site mutates, the mutations should be included within the square brackets, seperated by semicolon, c.[site_index1 WT_nucleotide1>Mutant_nucleotide1; site_index2 WT_nucleotide2>Mutant_nucleotide2; ...]. For example, if the site 8 has the wild type nucleotide as C and this genotype has the mutation T at site 8, and on the same genotype, the site 9 has the wild type nucleotide as C and this genotype has the mutation G at site 9,  the value of the second column of this genotype is c.[8C>T;9C>G]. 
+The first column is only for row/genotype indexing. 
 
-The third column is the amino acid variant, describing variants with respect to the amino acid target sequence. The idea is similar to the second column, but the wildtype and mutation notation would be replaced by amino acid three letters code. 
+The second column is the nucleotide variant, describing variants with respect to the nucleotide target sequence. Please refer to [MAVE-HGVS format](https://www.mavedb.org/docs/mavehgvs/), especially [MAVE-HGVS substitution](https://www.mavedb.org/docs/mavehgvs/spec.html#substitution). 
+- If only one site mutates, the format should be c.site_index WT_nucleotide>Mutant_nucleotide. For example, if the site 93 has the wild type nucleotide as T and this genotype has the mutation G at site 93, the value of the second column of this genotype is c.93T>G. 
+- If more than one site mutates, the mutations should be included within the square brackets, seperated by semicolon, c.[site_index1 WT_nucleotide1>Mutant_nucleotide1; site_index2 WT_nucleotide2>Mutant_nucleotide2; ...]. For example, if the site 8 has the wild type nucleotide as C and this genotype has the mutation T at site 8, and on the same genotype, the site 9 has the wild type nucleotide as C and this genotype has the mutation G at site 9,  the value of the second column of this genotype is c.[8C>T;9C>G]. 
+
+The third column is the amino acid variant, describing variants with respect to the amino acid target sequence. The idea is similar to the second column, but the wildtype and mutation nucleotide notation would be replaced by amino acid three letters code. 
 
 Starting from thr forth column, the counts of each genotype are recorded for each generation. 
 
-The data file should be renamed as `Target-protein_nucleotide_count.csv`
+<!-- The data file should be renamed as `Target-protein_nucleotide_count.csv` -->
 
 
-2) If only short reads data available(single allele available), the raw data format should be like this, pre and post generation data in seperated files: https://github.com/bartonlab/paper-DMS-inference/blob/main/data/raw_data/BG505_DNA_codoncounts.csv
+2) If only short reads data available(single allele available), the raw data format should be like this, pre and post generation data in seperated files: https://github.com/bartonlab/paper-DMS-inference/blob/main/data/raw_data/BG505_DNA_codoncounts.csv. Please refer to [Deep mutational scanning counts file](http://jbloomlab.github.io/dms_tools/fileformats.html#deep-mutational-scanning-counts-file) for standard count table format.
 
 The first column is the site index.
 
@@ -57,9 +60,7 @@ The second column is the wildtype codon of this site.
 
 The following columns record the codon counts observed according to the codon name listed in the first row.
 
-popDMS can also do the error correction with wildtype sequencing data. 
-
-The data files should be renamed as `Target-protein_DNA_codoncounts.csv`(error correction data), `Target-protein_mutDNA_codoncounts.csv`(pre-selection count data) and `Target-protein_mutvirus_codoncounts.csv`(post-selection count data)
+<!-- The data files should be renamed as `Target-protein_DNA_codoncounts.csv`(error correction data), `Target-protein_mutDNA_codoncounts.csv`(pre-selection count data) and `Target-protein_mutvirus_codoncounts.csv`(post-selection count data) -->
 
 
 
@@ -69,9 +70,9 @@ The following instruction is coorporated with the example of the replicate #1 of
 
 To use the epistasis inference, open the terminal and locate in the directory `cd ./epistasis_inference/` to access the pipeline codes. 
 
-Then enter the command line `g++ -std=c++11 -lgslcblas -lgsl -I ./eigen-3.4.0/ get_freq.cpp -o get_freq` to compile the C++ script about freqeucny extraction from the raw data files. To collect intermediate frequency data files, by entering the command line with  `./get_freq [Target-protein] [location saving the genoype counts data] [indexing file for target protein]`, which in this analysis is `./get_freq YAP1 ../outputs/epistasis/YAP1_genotype_count_rep1.csv index_matrix.csv`. This step will output several allele frequency files, such as `[Target-protein]_freq_[replicate num]_[generation_num].csv` and `[Target-protein]_multiple_allele_[replicate_num]_[generation_num].csv` within the same directory you executed the `./get_freq` command line. 
+Then enter the command line `g++ -std=c++11 -lgslcblas -lgsl -I ./eigen-3.4.0/ get_freq.cpp -o get_freq` to compile the C++ script about freqeucny extraction from the raw data files. To collect intermediate frequency data files, by entering the command line with  `./get_freq [Target-protein] [genoype counts data file name] [target protein indexing file name]`, which in this analysis is `./get_freq YAP1 ../outputs/epistasis/YAP1_genotype_count_rep1.csv index_matrix.csv`. This step will output several allele frequency files, such as `[Target-protein]_freq_[replicate num]_[generation_num].csv` and `[Target-protein]_multiple_allele_[replicate_num]_[generation_num].csv` within the same directory you executed the `./get_freq` command line. 
 
-After all, the internediate allele frequencies data files would be proceeded by matrix manipulation codes. First, compling the `inversion.cpp` by enetering the following command line in the terminal within the directory of `./epistasis_inference/`: `g++ -std=c++11 -lgslcblas -lgsl -I ./eigen-3.4.0/ inversion.cpp -o inversion`, then with which enter the following execution line: `./inversion [Target-protein] [location saving the genoype counts data] [indexing file for target protein]`. In this analysis, it's `./inversion YAP1 ../outputs/epistasis/YAP1_genotype_count_rep1.csv index_matrix.csv`
+After all, the internediate allele frequencies data files would be proceeded by matrix manipulation codes. First, compling the `inversion.cpp` by enetering the following command line in the terminal within the directory of `./epistasis_inference/`: `g++ -std=c++11 -lgslcblas -lgsl -I ./eigen-3.4.0/ inversion.cpp -o inversion`, then with which enter the following execution line: `./inversion [Target-protein] [genoype counts data file] [target protein indexing file name]`. In this analysis, it's `./inversion YAP1 ../outputs/epistasis/YAP1_genotype_count_rep1.csv index_matrix.csv`
 
 Finally, you will have the outputs `[Target_protein]_epistasis_rep[replicate_num].txt` within `./epistasis_inference/` directory. In this example, the output file name is `YAP1_epistasis_rep1.txt`.
 
