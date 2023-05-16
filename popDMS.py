@@ -1,4 +1,5 @@
 import sys, os
+import re
 from importlib import reload
 import copy
 import itertools
@@ -149,22 +150,266 @@ for i in range(len(CODONS)):
     codon_to_aa_num[i] = aminoacid_num
 
 
-# codes for short read data
+# Get frequency intermediate data file from raw variant table
 
-def short_read_pipeline(DNACODON, TARGET_PROTEIN, MPL_DIR, MPL_RAW_DIR, REPLICATES, SITE_START, SITE_END, INPUT_DIR, OUTPUT_DIR, EPISTASIS, REGULARIZATION_PERCENT):
-    estimate_selection, regularization_list = MPL_short_read_inference(TARGET_PROTEIN, DNACODON, REPLICATES, MPL_DIR, MPL_RAW_DIR, INPUT_DIR)
-    correlation_list = optimize_regularization_short_read(estimate_selection, REPLICATES, regularization_list)
+def nucleotide_file_to_counts_single_allele(nucleotide_file_name, reference_sequence, site_start, site_end, timepoints, rep, table_col_name, save_path):
+    codon_length = 3
+    df_data = pd.read_csv(nucleotide_file_name, skiprows=4)
+    df_data = df_data.fillna(0)
+    df_data.reset_index(drop=True, inplace=True)
+    df_data = df_data.drop(df_data.columns[0], axis = 1)
+    
+    if 'TpoR' in nucleotide_file_name:
+        df_data = df_data.drop(['hgvs_splice'], axis=1)
+      
+    df_data[df_data['hgvs_nt'].str.contains('X', regex=False)]
+    df_data = df_data[~df_data.hgvs_nt.str.contains('X', regex=False)]
+    
+    df_frequency = df_data.loc[:,df_data.columns[2]:].astype('float')
+    df_frequency.loc[:,df_frequency.columns[2]:] = df_frequency.loc[:,df_frequency.columns[2]:].div(df_frequency.sum(axis=1),axis=0)
+    site_list = list(range(site_start, site_end+1))
+    raw_codon = [reference_sequence[i:i+codon_length] for i in range(0, len(reference_sequence), codon_length)]
+    allele_counts_columns = ['replicate', 'generation', 'site', 'codon', 'counts']
+    allele_counts_table = df_data[table_col_name]
+
+    temp = allele_counts_table.columns.tolist()[0]
+    allele_counts_table = allele_counts_table.rename(columns={temp: 'variants'})
+    count_table_columns = allele_counts_table.columns.tolist()
+    allele_counts_table[allele_counts_table['variants'] == '_wt']
+
+    allele_counts_table_no_wt = allele_counts_table.drop(allele_counts_table.index[allele_counts_table['variants'] == '_wt'])
+
+    total_count = []
+    total_mut = []
+    total_wt  = []
+    
+    for i in range(len(timepoints)):
+        counts_all = allele_counts_table[count_table_columns[i+1]].tolist()
+        temp = [int(integer) for integer in counts_all]
+        counts_all = temp
+        summation_all = sum(counts_all)
+        total_count.append(summation_all)
+        counts_mut = allele_counts_table_no_wt[count_table_columns[i+1]].tolist()
+        temp = [int(integer) for integer in counts_mut]
+        counts_mut = temp
+        summation_mut = sum(counts_mut)
+        total_mut.append(summation_mut)
+        summation_wt = summation_all - summation_mut
+        total_wt.append(summation_wt)
+    
+    codon_allele_dict = {}
+    for gen in timepoints:
+        codon_allele_dict[gen] = {}
+        for idx in site_list:
+            codon_allele_dict[gen][idx] = {}
+            for codon in CODONS:
+                codon_allele_dict[gen][idx][codon] = 0
+
+            codon_allele_dict[gen][idx][raw_codon[site_list.index(idx)]] = total_count[timepoints.index(gen)]
+    
+    reference_list = list(reference_sequence)
+    for i in range(allele_counts_table_no_wt.shape[0]):
+        print("Progress {:2.1%}".format(i / allele_counts_table_no_wt.shape[0]), end="\r")
+        variants_allele = allele_counts_table_no_wt.iloc[i].variants
+        mutation_number = allele_counts_table_no_wt.iloc[i].tolist()[1:]
+        temp = [int(integer) for integer in mutation_number]
+        mutation_number = temp
+        nucleotide = [x for x in variants_allele if x.isalpha()]
+        variant_site = re.findall("(\d+)", variants_allele)
+        nucleotide = nucleotide[1:]
+        variant_list = reference_list.copy()
+        for j in range(len(variant_site)):
+            variant_list[int(variant_site[j])-1] = nucleotide[2 * j + 1]
+        variant_sequence = ''.join(variant_list)
+        variant_codon = [variant_sequence[i:i+codon_length] for i in range(0, len(variant_sequence), codon_length)]
+        for r, n, idx in zip(raw_codon, variant_codon, site_list):
+            if r != n:
+                for gen in timepoints:
+                    codon_allele_dict[gen][idx][r] -= mutation_number[timepoints.index(gen)]
+                    codon_allele_dict[gen][idx][n] += mutation_number[timepoints.index(gen)]
+
+    allele_counts_list = []
+    for gen, site_codon_counts in codon_allele_dict.items():
+        for site, codon_counts in site_codon_counts.items():
+            for codon, counts in codon_counts.items():
+                allele_counts_list.append([rep, gen, site, codon, counts])
+
+    codon_counts_table = pd.DataFrame(data = allele_counts_list, columns = allele_counts_columns)
+    codon_counts_table.to_csv(save_path, sep = ',', index = False, compression = 'gzip')
+    return df_frequency
+
+
+def nucleotide_file_to_counts_double_allele(nucleotide_file_name, reference_sequence, site_start, site_end, timepoints, rep, table_col_name, save_path):
+    codon_length = 3
+    df_data = pd.read_csv(nucleotide_file_name, skiprows=4)
+    df_data = df_data.fillna(0)
+    df_data.reset_index(drop=True, inplace=True)
+    df_data = df_data.drop(df_data.columns[0], axis = 1)
+    
+    if 'TpoR' in nucleotide_file_name:
+        df_data = df_data.drop(['hgvs_splice'], axis=1)
+
+    df_data[df_data['hgvs_nt'].str.contains('X', regex=False)]
+    df_data = df_data[~df_data.hgvs_nt.str.contains('X', regex=False)]
+    
+    df_frequency = df_data.loc[:,df_data.columns[2]:].astype('float')
+    df_frequency.loc[:,df_frequency.columns[2]:] = df_frequency.loc[:,df_frequency.columns[2]:].div(df_frequency.sum(axis=1),axis=0)
+    site_list = list(range(site_start, site_end+1))
+    raw_codon = [reference_sequence[i:i+codon_length] for i in range(0, len(reference_sequence), codon_length)]
+    allele_counts_columns = ['replicate', 'generation', 'site_1', 'codon_1', 'site_2', 'codon_2', 'counts']
+    allele_counts_table = df_data[table_col_name]
+
+    temp = allele_counts_table.columns.tolist()[0]
+    allele_counts_table = allele_counts_table.rename(columns={temp: 'variants'})
+    count_table_columns = allele_counts_table.columns.tolist()
+    allele_counts_table[allele_counts_table['variants'] == '_wt']
+
+    allele_counts_table_no_wt = allele_counts_table.drop(allele_counts_table.index[allele_counts_table['variants'] == '_wt'])
+
+    total_count = []
+    total_mut = []
+    total_wt  = []
+    for i in range(len(timepoints)):
+        counts_all = allele_counts_table[count_table_columns[i+1]].tolist()
+        temp = [int(integer) for integer in counts_all]
+        counts_all = temp
+        summation_all = sum(counts_all)
+        total_count.append(summation_all)
+        counts_mut = allele_counts_table_no_wt[count_table_columns[i+1]].tolist()
+        temp = [int(integer) for integer in counts_mut]
+        counts_mut = temp
+        summation_mut = sum(counts_mut)
+        total_mut.append(summation_mut)
+        summation_wt = summation_all - summation_mut
+        total_wt.append(summation_wt)
+
+    length_site_list = len(site_list)
+    length_codon_list = len(CODONS)
+    codon_allele_dict = {}
+    for gen in timepoints:
+        codon_allele_dict[gen] = {}
+        for idx_i in range(length_site_list):
+            codon_allele_dict[gen][site_list[idx_i]] = {}
+            codon_allele_dict[gen][site_list[idx_i]][raw_codon[idx_i]] = {}
+            for idx_j in range(idx_i+1, length_site_list):
+                codon_allele_dict[gen][site_list[idx_i]][raw_codon[idx_i]][site_list[idx_j]] = {}
+                codon_allele_dict[gen][site_list[idx_i]][raw_codon[idx_i]][site_list[idx_j]][raw_codon[idx_j]] = total_count[timepoints.index(gen)]
+
+    reference_list = list(reference_sequence)
+
+    for i in range(allele_counts_table_no_wt.shape[0]):
+        print("Progress {:2.1%}".format(i / allele_counts_table_no_wt.shape[0]), end="\r")
+        variants_allele = allele_counts_table_no_wt.iloc[i].variants
+        mutation_number = allele_counts_table_no_wt.iloc[i].tolist()[1:]
+        temp = [int(integer) for integer in mutation_number]
+        mutation_number = temp
+        nucleotide = [x for x in variants_allele if x.isalpha()]
+        variant_site = re.findall("(\d+)", variants_allele)
+        nucleotide = nucleotide[1:]
+        variant_list = reference_list.copy()
+        for j in range(len(variant_site)):
+            variant_list[int(variant_site[j])-1] = nucleotide[2 * j + 1]
+        variant_sequence = ''.join(variant_list)
+        variant_codon = [variant_sequence[i:i+codon_length] for i in range(0, len(variant_sequence), codon_length)]
+        variant_site = []
+
+        for r, n, idx in zip(raw_codon, variant_codon, site_list):
+            if r != n:
+                variant_site.append(idx)
+
+        double_variant = []
+        for v_site in variant_site:
+            v_site_index = site_list.index(v_site)
+            for j in range(v_site_index):
+                double_variant.append([site_list[j], v_site])
+            for j in range(v_site_index+1, len(site_list)):
+                double_variant.append([v_site, site_list[j]])
+
+        for d_v in double_variant:
+            site_i = d_v[0]
+            site_j = d_v[1]
+            idx_i = site_list.index(site_i)
+            idx_j = site_list.index(site_j)
+            codon_i = variant_codon[idx_i]
+            codon_j = variant_codon[idx_j]
+
+            for gen in timepoints:
+                codon_allele_dict[gen][site_i][raw_codon[idx_i]][site_j][raw_codon[idx_j]] -= mutation_number[timepoints.index(gen)]
+                if codon_i not in codon_allele_dict[gen][site_i].keys():
+                    codon_allele_dict[gen][site_i][codon_i] = {}
+                    codon_allele_dict[gen][site_i][codon_i][site_j] = {}
+                    codon_allele_dict[gen][site_i][codon_i][site_j][codon_j] = mutation_number[timepoints.index(gen)]
+                else:
+                    if site_j not in codon_allele_dict[gen][site_i][codon_i].keys():
+                        codon_allele_dict[gen][site_i][codon_i][site_j] = {}
+                        codon_allele_dict[gen][site_i][codon_i][site_j][codon_j] = mutation_number[timepoints.index(gen)]
+                    else:
+                        if codon_j not in codon_allele_dict[gen][site_i][codon_i][site_j].keys():
+                            codon_allele_dict[gen][site_i][codon_i][site_j][codon_j] = mutation_number[timepoints.index(gen)]
+                        else:
+                            codon_allele_dict[gen][site_i][codon_i][site_j][codon_j] += mutation_number[timepoints.index(gen)]
+
+        if len(variant_site)>1:
+            error_deletion = list(combinations(variant_site, 2))
+            for item in error_deletion:
+                site_i = item[0]
+                site_j = item[1]
+                idx_i = site_list.index(site_i)
+                idx_j = site_list.index(site_j)
+                codon_i = variant_codon[idx_i]
+                codon_j = variant_codon[idx_j]
+                for gen in timepoints:
+                    codon_allele_dict[gen][site_i][raw_codon[idx_i]][site_j][raw_codon[idx_j]] += mutation_number[timepoints.index(gen)]
+                    codon_allele_dict[gen][site_i][codon_i][site_j][codon_j] -= mutation_number[timepoints.index(gen)]
+
+
+    allele_counts_list = []
+    for gen, site_codon_counts in codon_allele_dict.items():
+        for site_i, codoni_sitej_codonj_countj in site_codon_counts.items():
+            for codon_i, sitej_codonj_countj in codoni_sitej_codonj_countj.items():
+                for site_j, codonj_countj in sitej_codonj_countj.items():
+                    for codon_j, count_j in codonj_countj.items():
+                        allele_counts_list.append([rep, gen, site_i, codon_i, site_j, codon_j, count_j])
+
+
+    codon_counts_table = pd.DataFrame(data = allele_counts_list, columns = allele_counts_columns)
+    codon_counts_table.to_csv(save_path, sep = ',', index = False, compression = 'gzip')
+    return df_frequency
+
+
+def output_save_allele(TARGET_NAME, REFER_SEQ_FILE, FILE_NAME, REP, COUNT_PATH, START, END, GEN, TABLE_COL):
+    with open(REFER_SEQ_FILE,"r") as raw_seq:
+        REFER_SEQ = raw_seq.read()
+    for rep in REP:
+        print(TARGET_NAME + ', replicate '+str(rep)+', single allele collecting')
+        SAVE_PATH = COUNT_PATH + TARGET_NAME + '_single_allele_rep' + str(rep) + '.csv.gzip' 
+        nucleotide_file_to_counts_single_allele(FILE_NAME, REFER_SEQ, START, END, GEN, rep, TABLE_COL[rep], SAVE_PATH)
+        print(TARGET_NAME + ', replicate '+str(rep)+', single allele finished')
+        print(TARGET_NAME + ', replicate '+str(rep)+', double allele collecting')
+        SAVE_PATH = COUNT_PATH + TARGET_NAME + '_double_allele_rep' + str(rep) + '.csv.gzip'
+        nucleotide_file_to_counts_double_allele(FILE_NAME, REFER_SEQ, START, END, GEN, rep, TABLE_COL[rep], SAVE_PATH)
+        print(TARGET_NAME + ', replicate '+str(rep)+', double allele finished')
+
+
+# codes for independent site data
+
+def independent_site_pipeline(TARGET_PROTEIN, REPLICATES, OUTPUT_DIR, DNACODON_FILE, PRE_FILES, POST_FILES, EPISTASIS, REGULARIZATION_PERCENT):
+    estimate_selection, regularization_list = MPL_independent_site_inference(TARGET_PROTEIN, REPLICATES, DNACODON_FILE, PRE_FILES, POST_FILES)
+    correlation_list = optimize_regularization_independent_site(estimate_selection, REPLICATES, regularization_list)
     plot_reg_corr(regularization_list, correlation_list, TARGET_PROTEIN)
     REGULARIZATION_SELECTED = find_best_regularization(regularization_list, correlation_list, REGULARIZATION_PERCENT)
-    FINAL_SELECTION = output_final_selection_short_read(REGULARIZATION_SELECTED, SITE_END, SITE_START, estimate_selection, REPLICATES)
-    
+    FINAL_SELECTION = output_final_selection_independent_site(REGULARIZATION_SELECTED, DNACODON_FILE, estimate_selection, REPLICATES)
     if os.path.exists(OUTPUT_DIR):
-        FINAL_SELECTION.to_csv(OUTPUT_DIR+TARGET_PROTEIN+'_'+'%d.csv.gz' %int(np.log10(REGULARIZATION_SELECTED)), index = False, compression = 'gzip')
+        FINAL_SELECTION.to_csv(OUTPUT_DIR+TARGET_PROTEIN+'.csv.gz', index = False, compression = 'gzip')
     else:
         os.makedirs(OUTPUT_DIR)
-        FINAL_SELECTION.to_csv(OUTPUT_DIR+TARGET_PROTEIN+'_'+'%d.csv.gz' %int(np.log10(REGULARIZATION_SELECTED)), index = False, compression = 'gzip')
+        FINAL_SELECTION.to_csv(OUTPUT_DIR+TARGET_PROTEIN+'.csv.gz', index = False, compression = 'gzip')
+    with open(OUTPUT_DIR+TARGET_PROTEIN + '_supplementary.log', 'w') as f:
+        f.write('Optimized regularization = %.6f' %REGULARIZATION_SELECTED)
+    # reg =  %int(np.log10(REGULARIZATION_SELECTED))
 
-def optimize_regularization_short_read(estimate_selection, REPLICATES, REGULARIZATION_LIST):
+
+def optimize_regularization_independent_site(estimate_selection, REPLICATES, REGULARIZATION_LIST):
     correlation_list = []
     for regular in REGULARIZATION_LIST:
         temp_sele=[]
@@ -218,11 +463,13 @@ def cov_inverse(cov, L, q, regular):
 
     return cov_temp
 
-def output_final_selection_short_read(REGULARIZATION_SELECTED, SITE_END, SITE_START, estimate_selection, REPLICATES):
+def output_final_selection_independent_site(REGULARIZATION_SELECTED, DNACODON_FILE, estimate_selection, REPLICATES):
+    
+    df_0 = pd.read_csv('%s' %DNACODON_FILE, comment = '#', memory_map = True)
     site_list = []
-    for site in range(SITE_END-SITE_START+1):
-        site_list+=[site]*21
-    AA_list = AA*(SITE_END-SITE_START+1)
+    for site in df_0['site']:
+        site_list+=[site]*21  
+    AA_list = AA*len(df_0['site'])
     rep_list = []
     for replicate in REPLICATES:
         rep_list.append('rep_'+str(replicate))
@@ -234,31 +481,28 @@ def output_final_selection_short_read(REGULARIZATION_SELECTED, SITE_END, SITE_ST
     df_selection['joint'] = estimate_selection['joint'][REGULARIZATION_SELECTED]
     return df_selection   
         
-def MPL_short_read_inference(TARGET_PROTEIN, DNACODON, REPLICATES, MPL_DIR, MPL_RAW_DIR, INPUT_DIR):
+def MPL_independent_site_inference(TARGET_PROTEIN, REPLICATES, DNACODON_FILE, PRE_FILE, POST_FILE):
     print('------ Calculating single replicate selection coefficients for %s ------' %TARGET_PROTEIN)
-    print("\nCalculating error probability from %s...\n" %DNACODON)
+    print("\nCalculating error probability from %s...\n" %DNACODON_FILE)
 
-    err = err_correct(INPUT_DIR, DNACODON)
+    err = err_correct(DNACODON_FILE)
     estimate_selection = {}
     
     minimum = sys.float_info.max
     
-
+    file_idx = 0
     for run_name in REPLICATES:
         run_name = str(run_name)
         estimate_selection[run_name]={}
         func_para = {
-            'MPL_DIR':      MPL_DIR,                                             # MPL directory
-            'DMS_DIR':      INPUT_DIR,                                             # DMS directory
-            'PRE_FILE':     'mutDNA-' + run_name + '_codoncounts.csv',           # Pre-count data file
-            'POST_FILE':    'mutvirus-' + run_name + '_codoncounts.csv',         # Post-count data filr
-            'MPL_RAW_DIR':  MPL_RAW_DIR,                                         # MPL raw selection coefficients directory
+            'PRE_FILE':     PRE_FILE[file_idx],           
+            'POST_FILE':    POST_FILE[file_idx],        
             'run_name':     run_name,                                            # Replicate serial number
             'homolog':      TARGET_PROTEIN,                                      # Homolog name
             'err':          err                                                  # Error probability for this homolog
         }
-        
-        FREQUENCY_DIFF, COVARIANCE_MATRIX, L, q, max_read = MPL_short_read_elements(**func_para)
+        file_idx += 1
+        FREQUENCY_DIFF, COVARIANCE_MATRIX, L, q, max_read = MPL_independent_site_elements(**func_para)
         if run_name == str(REPLICATES[0]):
             joint_freq_diff = np.array(FREQUENCY_DIFF)
             joint_cov_mat = np.array(COVARIANCE_MATRIX)
@@ -280,9 +524,9 @@ def MPL_short_read_inference(TARGET_PROTEIN, DNACODON, REPLICATES, MPL_DIR, MPL_
 
 
 
-def err_correct(DMS_DIR, DNACODON):
+def err_correct(DNACODON_FILE):
 
-    df_0 = pd.read_csv('%s%s' % (DMS_DIR, DNACODON), comment = '#', memory_map = True)     # Read raw data file
+    df_0 = pd.read_csv('%s' %DNACODON_FILE, comment = '#', memory_map = True)     # Read raw data file
 
     r    = len(CODONS)              # How many codon 
     L    = len(df_0)                # How long the sequence is
@@ -307,266 +551,18 @@ def err_correct(DMS_DIR, DNACODON):
 
     return err
 
-
-def joint_replicates_list(**func_para):
-    
-    MPL_DIR       = func_para['MPL_DIR']
-    DMS_DIR       = func_para['DMS_DIR']
-    DATA_DIR      = func_para['DATA_DIR']
-    MPL_RAW_DIR   = func_para['MPL_RAW_DIR']
-    MPL_RAW_FILES = func_para['MPL_RAW_FILES']
-    PRE_FILES     = func_para['PRE_FILES']
-    POST_FILES    = func_para['POST_FILES']
-    homolog       = func_para['homolog']
-    regular_list  = func_para['regular_list']
-    runname_index = func_para['runname_index']
-    DNACODON      = func_para['DNACODON']
-
-    print('------ Calculating joint selection coefficients for %s ------' %homolog)
-
-    df_0 = pd.read_csv('%s/%s%s' % (DMS_DIR, DATA_DIR, PRE_FILES[0]), comment = '#', memory_map = True)
-    q    = len(AA)
-    L    = len(df_0)
-    size = q * L
-    dx   = np.zeros(size)
-    dmut = np.zeros(size)
-    cov  = np.zeros((size, size))
-
-    print("\nCalculating error probability from %s...\n" %DNACODON)
-    err = err_correct(DMS_DIR, DATA_DIR, DNACODON)
-
-    for run_name in runname_index:     # If we have more experiment replicates, the result will be more accurate.
-        print("Cumulating replicate_%s data of %s..." %(run_name, homolog))
-        index = runname_index.index(run_name)
-        df_0 = pd.read_csv('%s/%s%s' % (DMS_DIR, DATA_DIR, PRE_FILES[index]),  comment = '#', memory_map = True)
-        df_1 = pd.read_csv('%s/%s%s' % (DMS_DIR, DATA_DIR, POST_FILES[index]), comment = '#', memory_map = True)
-
-        x_0  = np.zeros(size)
-        x_1  = np.zeros(size)
-
-        # Get wildtype sequence
-        wt = []
-        for i in range(L):
-            wt.append(str(df_0.iloc[i].wildtype))
-        print("Correcting reads and computing allele frequency difference and mutational contribution...")
-        # Compute the total number of reads for each site after error correction      
-        norm_0 = np.zeros(L)
-        norm_1 = np.zeros(L)
-        for i in range(L):
-            temp_1_wt = df_1.iloc[i][wt[i]]
-            temp_0_wt = df_0.iloc[i][wt[i]]
-            wt_index = CODONS.index(wt[i])
-            
-            x = df_0.iloc[i][CODONS].tolist() - temp_0_wt * err[i]
-            y = df_1.iloc[i][CODONS].tolist() - temp_1_wt * err[i]
-            
-            x = [np.max([x_i,0]) for x_i in x]
-            y = [np.max([y_i,0]) for y_i in y]
-
-            x[wt_index] = temp_0_wt*err[i][wt_index]
-            y[wt_index] = temp_1_wt*err[i][wt_index]
-            norm_0[i] = sum(x)
-            norm_1[i] = sum(y)
-
-            x_0_c = [x_i/norm_0[i] for x_i in x]
-            x_1_c = [x_i/norm_1[i] for x_i in y]
-            
-            for c in CODONS:    
-                aa    = codon2aa(c)
-                aaidx = AA.index(aa)
-                
-                x_0[(q * i) + aaidx] += x_0_c[CODONS.index(c)]
-                x_1[(q * i) + aaidx] += x_1_c[CODONS.index(c)]
-                dx[(q * i) + aaidx]  += x_1_c[CODONS.index(c)] - x_0_c[CODONS.index(c)]
-
-                for c_i in range(3):
-                    for n in NUC:
-                        if n!=c[c_i]:
-                            m_aa    = codon2aa([c[k] if k !=c_i else n for k in range(3)])
-                            m_aaidx = AA.index(m_aa)
-                            dmut[(q * i) + aaidx]   -= x_0_c[CODONS.index(c)] * MU[c[c_i]+n]
-                            dmut[(q * i) + m_aaidx] += x_0_c[CODONS.index(c)] * MU[c[c_i]+n]
-
-        # Get wildtype sequence for amino acid
-        wt = []
-        for i in range(L):
-            wt.append(AA.index(codon2aa(df_0.iloc[i].wildtype)))
-
-        # Compute average frequencies for all states, and non-WT frequencies for each site
-        x_avg = np.zeros(size)
-        x_mut = np.zeros(L)
-        for i in range(L):
-            for a in range(q):
-                x_avg[(q * i) + a] = (x_0[(q * i) + a] + x_1[(q * i) + a])/2
-
-                if a!=wt[i]:
-                    x_mut[i] += x_avg[(q * i) + a]
-
-        # Compute covariance
-        for i in range(L):
-            for a in range(q):
-
-                # diagonal terms
-                cov[(q * i) + a, (q * i) + a] += x_avg[(q * i) + a] * (1 - x_avg[(q * i) + a])
-                #cov[(q * i) + a, (q * i) + a] += (1/regular)/3  # diagonal regularization
-
-                # off-diagonal, same site
-                for b in range(a+1, q):
-                    cov[(q * i) + a, (q * i) + b] += -x_avg[(q * i) + a] * x_avg[(q * i) + b]
-                    cov[(q * i) + b, (q * i) + a] += -x_avg[(q * i) + a] * x_avg[(q * i) + b]
+def MPL_independent_site_elements(**func_para):
  
-    for regular in regular_list:
-        print('Calculating joint selection coefficients with regularization term = %d' %regular)
-        cov_temp = cov.copy()
-        for i in range(L):
-            cov_block = np.zeros((q, q))
-            for a in range(q):
-                cov_temp[(q * i) + a, (q * i) + a] += (1/regular)  # diagonal regularization
-                for b in range(q):
-                    cov_block[a, b] = cov_temp[(q * i) + a, (q * i) + b]
-
-            cov_block = np.linalg.inv(cov_block)
-
-            for a in range(q):
-                for b in range(q):
-                    cov_temp[(q * i) + a, (q * i) + b] = cov_block[a, b]
-
-        s_MPL = np.dot(cov_temp, dx - dmut)
-        print("Saving joint selection coefficients in %s/%s/%s as %s..." %(MPL_DIR, MPL_RAW_DIR, homolog, MPL_RAW_FILES[regular_list.index(regular)]))
-        np.savetxt('%s/%s/%s/%s' % (MPL_DIR, MPL_RAW_DIR, homolog, MPL_RAW_FILES[regular_list.index(regular)]), s_MPL)
-
-def single_replicate(**func_para):
- 
-    MPL_DIR      = func_para['MPL_DIR'] 
-    DMS_DIR      = func_para['DMS_DIR']
-    DATA_DIR     = func_para['DATA_DIR']
     PRE_FILE     = func_para['PRE_FILE']
     POST_FILE    = func_para['POST_FILE']
-    MPL_RAW_DIR  = func_para['MPL_RAW_DIR']
-    MPL_RAW_FILE = func_para['MPL_RAW_FILE']
-    run_name     = func_para['run_name']
-    homolog      = func_para['homolog']
-    regular      = func_para['regular']
-    err          = func_para['err']
-
-    print("Calculating selection coefficients for replicate_%s of %s:" %(run_name,homolog))
-
-    df_0 = pd.read_csv('%s/%s%s' % (DMS_DIR, DATA_DIR, PRE_FILE),  comment = '#', memory_map = True)
-    df_1 = pd.read_csv('%s/%s%s' % (DMS_DIR, DATA_DIR, POST_FILE), comment = '#', memory_map = True)
-    q    = len(AA)
-    L    = len(df_0)
-    size = q * L
-    x_0  = np.zeros(size)
-    x_1  = np.zeros(size)
-    dx   = np.zeros(size)
-    dmut = np.zeros(size)
-    cov  = np.zeros((size, size))
-
-    wt = []
-    for i in range(L):
-        wt.append(str(df_0.iloc[i].wildtype))
-
-    print("Correcting reads and computing allele frequency difference and mutational contribution...")
-    norm_0 = np.zeros(L)
-    norm_1 = np.zeros(L)
-    for i in range(L):
-        temp_1_wt = df_1.iloc[i][wt[i]]
-        temp_0_wt = df_0.iloc[i][wt[i]]
-        wt_index = CODONS.index(wt[i])
-        
-        x = df_0.iloc[i][CODONS].tolist() - temp_0_wt * err[i]
-        y = df_1.iloc[i][CODONS].tolist() - temp_1_wt * err[i]
-        
-        x = [np.max([x_i,0]) for x_i in x]
-        y = [np.max([y_i,0]) for y_i in y]
-
-        x[wt_index] = temp_0_wt*err[i][wt_index]
-        y[wt_index] = temp_1_wt*err[i][wt_index]
-        norm_0[i] = sum(x)
-        norm_1[i] = sum(y)
-
-        x_0_c = [x_i/norm_0[i] for x_i in x]
-        x_1_c = [x_i/norm_1[i] for x_i in y]
-        
-        for c in CODONS:    
-            aa    = codon2aa(c)
-            aaidx = AA.index(aa)
-            
-            x_0[(q * i) + aaidx] += x_0_c[CODONS.index(c)]
-            x_1[(q * i) + aaidx] += x_1_c[CODONS.index(c)]
-            dx[(q * i) + aaidx]  += x_1_c[CODONS.index(c)] - x_0_c[CODONS.index(c)]
-
-            for c_i in range(3):
-                for n in NUC:
-                    if n!=c[c_i]:
-                        m_aa    = codon2aa([c[k] if k !=c_i else n for k in range(3)])
-                        m_aaidx = AA.index(m_aa)
-                        dmut[(q * i) + aaidx]   -= x_0_c[CODONS.index(c)] * MU[c[c_i]+n]
-                        dmut[(q * i) + m_aaidx] += x_0_c[CODONS.index(c)] * MU[c[c_i]+n]
-
-    # Get wildtype sequence for amino acid
-    wt = []
-    for i in range(L):
-        wt.append(AA.index(codon2aa(df_0.iloc[i].wildtype)))
-
-    # Compute average frequencies for all states, and non-WT frequencies for each site
-    x_avg = np.zeros(size)
-    x_mut = np.zeros(L)
-    for i in range(L):
-        for a in range(q):
-            x_avg[(q * i) + a] = (x_0[(q * i) + a] + x_1[(q * i) + a])/2
-
-            if a!=wt[i]:
-                x_mut[i] += x_avg[(q * i) + a]
-
-    # Compute covariance
-    for i in range(L):
-        print("Computing covariance matrix...%.1f%%/100%% completed"%(float((i+1)/L)*100),end='\r')
-        for a in range(q):
-
-            # diagonal terms
-            cov[(q * i) + a, (q * i) + a]  = x_avg[(q * i) + a] * (1 - x_avg[(q * i) + a])
-            cov[(q * i) + a, (q * i) + a] += 1/regular  # diagonal regularization
-
-            # off-diagonal, same site
-            for b in range(a+1, q):
-                cov[(q * i) + a, (q * i) + b] = -x_avg[(q * i) + a] * x_avg[(q * i) + b]
-                cov[(q * i) + b, (q * i) + a] = -x_avg[(q * i) + a] * x_avg[(q * i) + b]
-
-    cov_temp = cov.copy()
-    for i in range(L):
-        cov_block = np.zeros((q, q))
-        for a in range(q):
-            for b in range(q):
-                cov_block[a, b] = cov_temp[(q * i) + a, (q * i) + b]
-
-        cov_block = np.linalg.inv(cov_block)
-
-        for a in range(q):
-            for b in range(q):
-                cov_temp[(q * i) + a, (q * i) + b] = cov_block[a, b]
-
-    s_MPL = np.dot(cov_temp, dx - dmut)
-    print("Saving selection coefficients in %s/%s/%s as %s"% (MPL_DIR, MPL_RAW_DIR, homolog, MPL_RAW_FILE))
-    np.savetxt('%s/%s/%s/%s' % (MPL_DIR, MPL_RAW_DIR, homolog, MPL_RAW_FILE), s_MPL)
-    print("Replicate_%s of %s completed...\n"%(run_name, homolog))
-
-
-def MPL_short_read_elements(**func_para):
- 
-    MPL_DIR      = func_para['MPL_DIR'] 
-    DMS_DIR      = func_para['DMS_DIR']
-    PRE_FILE     = func_para['PRE_FILE']
-    POST_FILE    = func_para['POST_FILE']
-    MPL_RAW_DIR  = func_para['MPL_RAW_DIR']
     run_name     = func_para['run_name']
     homolog      = func_para['homolog']
     err          = func_para['err']
 
     print("Calculating selection coefficients for replicate_%s of %s:" %(run_name,homolog))
 
-    df_0 = pd.read_csv('%s%s' % (DMS_DIR, PRE_FILE),  comment = '#', memory_map = True)
-    df_1 = pd.read_csv('%s%s' % (DMS_DIR, POST_FILE), comment = '#', memory_map = True)
+    df_0 = pd.read_csv('%s' % PRE_FILE,  comment = '#', memory_map = True)
+    df_1 = pd.read_csv('%s' % POST_FILE, comment = '#', memory_map = True)
 
     q    = len(AA)
     L    = len(df_0)
@@ -653,354 +649,14 @@ def MPL_short_read_elements(**func_para):
     cov_temp = cov.copy()
     return dx - dmut, cov_temp, L, q, max_read
 
-def enrichment_ratio(**func_para):
- 
-    MPL_DIR      = func_para['MPL_DIR'] 
-    DMS_DIR      = func_para['DMS_DIR']
-    # DATA_DIR     = func_para['DATA_DIR']
-    PRE_FILE     = func_para['PRE_FILE']
-    POST_FILE    = func_para['POST_FILE']
-    MPL_RAW_DIR  = func_para['MPL_RAW_DIR']
-    run_name     = func_para['run_name']
-    homolog      = func_para['homolog']
-    err          = func_para['err']
-
-    print("Calculating selection coefficients for replicate_%s of %s:" %(run_name,homolog))
-
-    df_0 = pd.read_csv('%s%s' % (DMS_DIR, PRE_FILE),  comment = '#', memory_map = True)
-    df_1 = pd.read_csv('%s%s' % (DMS_DIR, POST_FILE), comment = '#', memory_map = True)
-
-    q    = len(AA)
-    L    = len(df_0)
-    size = q * L
-    x_0  = np.zeros(size)
-    x_1  = np.zeros(size)
-    enrich_ratio = np.zeros(size)
-    dmut = np.zeros(size)
-    cov  = np.zeros((size, size))
-
-    wt = []
-    for i in range(L):
-        wt.append(str(df_0.iloc[i].wildtype))
-
-    print("Correcting reads and computing allele frequency difference and mutational contribution...")
-    norm_0 = np.zeros(L)
-    norm_1 = np.zeros(L)
-    for i in range(L):
-        temp_1_wt = df_1.iloc[i][wt[i]]
-        temp_0_wt = df_0.iloc[i][wt[i]]
-        wt_index = CODONS.index(wt[i])
-        
-        x = df_0.iloc[i][CODONS].tolist() - temp_0_wt * err[i]
-        y = df_1.iloc[i][CODONS].tolist() - temp_1_wt * err[i]
-        
-        x = [np.max([x_i,0]) for x_i in x]
-        y = [np.max([y_i,0]) for y_i in y]
-
-        x[wt_index] = temp_0_wt*err[i][wt_index]
-        y[wt_index] = temp_1_wt*err[i][wt_index]
-        norm_0[i] = sum(x)
-        norm_1[i] = sum(y)
-
-        x_0_c = [x_i/norm_0[i] for x_i in x]
-        x_1_c = [x_i/norm_1[i] for x_i in y]
-        
-        for c in CODONS:    
-            aa    = codon2aa(c)
-            aaidx = AA.index(aa)
-            x_0[(q * i) + aaidx] += x_0_c[CODONS.index(c)]
-            x_1[(q * i) + aaidx] += x_1_c[CODONS.index(c)]
-
-    for i in range(len(x_1)):
-        if x_0[i] != 0:
-            enrich_ratio[i] += x_1[i]/x_0[i]
-        else:
-            enrich_ratio[i] += -1
-
-    return enrich_ratio
-
-def checksum(**func_para):
-
-    MPL_DIR       = func_para['MPL_DIR']
-    MPL_RAW_DIR   = func_para['MPL_RAW_DIR']
-    MPL_RAW_FILES = func_para['MPL_RAW_FILES']
-    homolog       = func_para['homolog']
-    regular_list  = func_para['regular_list']
-    runname_index = func_para['runname_index']
-    threshold     = func_para['threshold']
-
-    print('--- Check summation of selection coefficients on each site, and the expectation should be close to 0---\n')
-    print('%s test (threshold=%.1e, R is regularization term):' % (homolog, threshold))
-    for regular in regular_list:
-        s_i = np.loadtxt('%s/%s/%s/%s' %(MPL_DIR, MPL_RAW_DIR, homolog, MPL_RAW_FILES[regular_list.index(regular)]))
-        file_length = len(s_i)
-        sequence_length = int(file_length/21)
-        counts = 0
-
-        for site in range(sequence_length):
-            if np.sum(s_i[site * 21: (site + 1) * 21]) < threshold:
-                counts += 1
-
-        if runname_index == 'joint':
-            print("Joint selection coefficients (R = %d) summation on (%d out of %d) sites are close to 0" % (regular, counts, sequence_length))
-        else:
-            for run_i in runname_index:
-                print("Replicate %s selection coefficients (R = %d) summation on (%d out of %d) sites are close to 0" % (run_i, regular, counts, sequence_length))
-    print('\n')
 
 
-
-def correlation_plot(**func_para):
-
-    MPL_DIR       = func_para['MPL_DIR']
-    DMS_DIR       = func_para['DMS_DIR']
-    PREFS_DIR     = func_para['PREFS_DIR']
-    RES_FILE      = func_para['RES_FILE']
-    MPL_RAW_DIR   = func_para['MPL_RAW_DIR']
-    MPL_RAW_FILES = func_para['MPL_RAW_FILES']
-    homolog       = func_para['homolog']
-    regular_list  = func_para['regular_list']
-
-    s_i = pd.read_csv('%s/%s/%s' %(DMS_DIR, PREFS_DIR, RES_FILE), comment = '#', memory_map = True)
-    v_i = []
-    col = list(s_i.columns)
-    col.remove('site')
-    for ii in range(len(s_i)):
-        for c in col:
-            v_i.append(float(s_i.iloc[ii][c]))
-    v_i = np.array(v_i)
-
-    pearson_value = []
-    spearman_value = []
-
-    for regular in regular_list:
-        s_j = []
-        #s_MPL = np.loadtxt('MPL/raw_selection_coefficients/BG505/joint_sMPL_1.dat')
-        s_MPL = np.loadtxt('%s/%s/%s/%s' %(MPL_DIR, MPL_RAW_DIR, homolog, MPL_RAW_FILES[regular_list.index(regular)]))
-        s_j = np.delete(s_MPL, np.arange(20, len(s_MPL), 21))
-
-        pearson_value.append(st.pearsonr(v_i, s_j)[0])
-        spearman_value.append(st.spearmanr(v_i, s_j)[0])
-
-    plt.scatter(regular_list, pearson_value, alpha = 0.5, label = '%s: Pearson' %homolog)
-    regular_list_new = np.linspace(min(regular_list), max(regular_list), 1000)
-    a_BSpline = interpolate.make_interp_spline(regular_list, pearson_value)
-    pearson_value_new = a_BSpline(regular_list_new)
-    plt.plot(regular_list_new, pearson_value_new, alpha = 0.5)
-
-    plt.scatter(regular_list, spearman_value, alpha = 0.5, label = '%s: Spearman' %homolog)
-    regular_list_new = np.linspace(min(regular_list), max(regular_list), 1000)
-    a_BSpline = interpolate.make_interp_spline(regular_list, spearman_value)
-    spearman_value_new = a_BSpline(regular_list_new)
-    plt.plot(regular_list_new, spearman_value_new, alpha = 0.5)
-
-
-
-def data_merge(**func_para):
-
-    file_columns =  func_para['file_columns']
-    replicates   =  func_para['replicates']
-    MPL_DIR      =  func_para['MPL_DIR']
-    DMS_DIR      =  func_para['DMS_DIR']
-    PREFS_DIR    =  func_para['PREFS_DIR']
-    MPL_RAW_DIR  =  func_para['MPL_RAW_DIR']
-    homolog      =  func_para['homolog']
-    beta         =  func_para['beta']
-    regular      =  func_para['regular']
-    COM_DIR      =  func_para['COM_DIR']
-    COM_FILE     =  func_para['COM_FILE']
-
-    decimal_digits = 6
-    av_i_res       = []
-    av_i           = []
-    as_j_nor       = []
-    as_j           = []
-    aamino_acid_list = []
-    areplicate_list  = []
-    asite_list       = []
-
-    for replicate in replicates:
-        v_i_res = []
-        v_i     = []
-        s_j_nor = []
-        s_j     = []
-        amino_acid_list = []
-        replicate_list  = []
-        site_list       = []
-
-        if replicate != 'Average/Joint':
-            s_i_res = pd.read_csv('%s/%s/rescaled_%s-%s_prefs.csv' %(DMS_DIR, PREFS_DIR, homolog, replicate), comment = '#', memory_map = True)
-            s_i = pd.read_csv('%s/%s/%s-%s_prefs.csv' %(DMS_DIR, PREFS_DIR, homolog, replicate), comment = '#', memory_map = True)
-            s_MPL = np.loadtxt('%s/%s/%s/%s_sMPL_%d.dat' %(MPL_DIR, MPL_RAW_DIR, homolog, replicate, regular))
-
-        else:
-            s_i_res = pd.read_csv('%s/%s/rescaled_%s_avgprefs.csv' %(DMS_DIR, PREFS_DIR, homolog), comment = '#', memory_map = True)
-            s_i = pd.read_csv('%s/%s/%s_avgprefs.csv' %(DMS_DIR, PREFS_DIR, homolog), comment = '#', memory_map = True)
-            s_MPL = np.loadtxt('%s/%s/%s/joint_sMPL_%d.dat'%(MPL_DIR, MPL_RAW_DIR, homolog, regular))
-        
-        col = list(s_i.columns)
-        site_index = s_i_res['site'].tolist()
-        col.remove('site')
-        for ii in range(len(s_i_res)):
-            for c in col:
-                v_i_res.append(float(s_i_res.iloc[ii][c]))
-                v_i.append(float(s_i.iloc[ii][c]))
-                replicate_list.append(replicate)
-                amino_acid_list.append(c)
-                site_list.append(site_index[ii])
-        v_i_res = np.array(v_i_res)
-        v_i = np.array(v_i)
-        s_j = np.append(s_j, np.delete(s_MPL, np.arange(20, len(s_MPL), 21)))
-
-        for i in range(int(len(s_j)/20)):
-            summation=0
-            for j in range(20):
-                summation+=math.exp(s_j[i*20+j]*beta)
-            for j in range(20):
-                s_j_nor.append(math.exp(s_j[i*20+j]*beta)/summation)  
-
-        av_i_res = np.append(av_i_res, v_i_res)
-        av_i     = np.append(av_i, v_i)
-        as_j_nor = np.append(as_j_nor, s_j_nor)
-        as_j  = np.append(as_j, s_j)
-        aamino_acid_list  = np.append(aamino_acid_list, amino_acid_list)
-        areplicate_list   = np.append(areplicate_list, replicate_list)
-        asite_list  = np.append(asite_list, site_list)
-
-    av_i_res = [round(val, decimal_digits) for val in av_i_res]
-    av_i  = [round(val, decimal_digits) for val in av_i]
-    as_j_nor = [round(val, decimal_digits) for val in as_j_nor]
-    as_j  = [round(val, decimal_digits) for val in as_j]
-
-    with open('%s/%s.csv' %(COM_DIR, COM_FILE) , mode = 'w') as file:
-
-        file_writer = csv.writer(file, delimiter = ',', quotechar = '"', quoting = csv.QUOTE_MINIMAL)
-        file_writer.writerow(file_columns)
-        
-        for i in range(len(asite_list)):
-            file_writer.writerow([areplicate_list[i], asite_list[i], aamino_acid_list[i],
-                                av_i[i], av_i_res[i], as_j[i], as_j_nor[i]])
-        file.close()    
-
-def corrfunc_heat(x, y, **kws):
-    r, _ = st.pearsonr(x, y)
-    ax   = plt.gca()
-    ax.annotate("R = {:.2f}".format(r),
-                xy=(.1, .9), xycoords = ax.transAxes)
-
-def pairgrid_scatter(**func_para):
-    method        = func_para['method']
-    homologs      = func_para['homologs']
-    runname_index = func_para['runname_index']
-    df_dmswithmpl = func_para['df_dmswithmpl']
-    alpha         = func_para['alpha']
-    s             = func_para['dot_size']
-    color         = func_para['color']
-    xticks        = func_para['xticks']
-    yticks        = func_para['yticks']
-    xlim          = func_para['xlim']
-    ylim          = func_para['ylim']
-
-    pairgrid_data = {}
-    pairgrid_key  = []
-
-    for homolog in homologs:
-        for replicate in runname_index:
-            key_name = homolog + '-' + replicate
-            pairgrid_key.append(key_name)
-            col_name = method + '_' + homolog
-            df_prefs_temp = df_dmswithmpl.loc[df_dmswithmpl['replicate'] == replicate, col_name].tolist()
-            pairgrid_data.update({key_name: df_prefs_temp})
-
-    df_prefs_pairgrid = pd.DataFrame(data = pairgrid_data)
-
-    g = sns.PairGrid(df_prefs_pairgrid, vars = pairgrid_key)
-    g.map(plt.scatter, alpha = alpha, s = s, linewidth = 0, edgecolors = 'None', color = color)
-    for i, j in zip(*np.triu_indices_from(g.axes, 1)):
-        g.axes[i, j].set_visible(False)
-    for i, j in zip(*np.triu_indices_from(g.axes, 0)):
-        g.axes[i, i].set_visible(False)
-    g.set(xticks = xticks, yticks = yticks, xlim = xlim, ylim = ylim)
-    g.map_lower(corrfunc_heat)
-
-def pairgrid_heatmap(**func_para):
-
-    homologs      = func_para['homologs']
-    runname_index = func_para['runname_index']
-    df_dmswithmpl = func_para['df_dmswithmpl']
-    color         = func_para['color']
-    space         = func_para['space']
-    shrink        = func_para['shrink']
-
-    pairgrid_data = {}
-    pairgrid_key  = []
-    for homolog in homologs:
-        for replicate in runname_index:
-            key_name = homolog + '-' + replicate
-            pairgrid_key.append(key_name)
-            col_name = 'preference_' + homolog
-            df_prefs_temp = df_dmswithmpl.loc[df_dmswithmpl['replicate'] == replicate, col_name].tolist()
-            pairgrid_data.update({key_name: df_prefs_temp})
-
-    df_prefs_pairgrid = pd.DataFrame(data = pairgrid_data)
-    matrix_0 = np.tril(df_prefs_pairgrid.corr())
-
-    pairgrid_data = {}
-    pairgrid_key = []
-    for homolog in homologs:
-        for replicate in runname_index:
-            key_name = homolog + '-' + replicate
-            pairgrid_key.append(key_name)
-            col_name = 'selection_coefficient_' + homolog
-            df_sele_temp = df_dmswithmpl.loc[df_dmswithmpl['replicate'] == replicate, col_name].tolist()
-            pairgrid_data.update({key_name: df_sele_temp})
-
-    df_sele_temp = pd.DataFrame(data = pairgrid_data)
-    matrix_1 = np.triu(df_sele_temp.corr())
-
-    plt.figure(figsize = (8, 8))
-    sns.heatmap(df_sele_temp.corr(),      annot = True, vmin = 0.35, vmax = 1, square = True, mask = matrix_0, cmap = color, cbar_kws = {"shrink": shrink}, linewidths = space)
-    sns.heatmap(df_prefs_pairgrid.corr(), annot = True, vmin = 0.35, vmax = 1, square = True, mask = matrix_1, cmap = color, cbar = False, linewidths = space)
-    plt.yticks(rotation = 0)
-    plt.xticks(rotation = 0)
-    plt.show()
-
-def correlation_hist(**func_para):
-
-    PREFS_COL  = func_para['PREFS_COL']
-    SELEC_COL  = func_para['SELEC_COL']
-    df         = func_para['df']
-    bins       = func_para['bins']
-    alpha      = func_para['alpha']
-    homolog    = func_para['homolog']
-    legend_pos = func_para['legend_pos']
-
-    pearson_values  = []
-    spearman_values = []
- 
-    preference_list = df.loc[df['replicate'] == 'Average/Joint', '%s' %PREFS_COL].tolist()
-    selection_coefficient_list = df.loc[df['replicate'] == 'Average/Joint', '%s' %SELEC_COL].tolist()
-    preference_list = [x for x in preference_list if ~np.isnan(x)]
-    selection_coefficient_list = [x for x in selection_coefficient_list if ~np.isnan(x)]
-
-    for i in range(int(len(preference_list)/20)):
-        pearson_values.append(st.pearsonr(preference_list[i * 20: i * 20 + 19], selection_coefficient_list[i * 20: i * 20 + 19])[0])
-        spearman_values.append(st.spearmanr(preference_list[i * 20: i * 20 + 19], selection_coefficient_list[i * 20: i * 20 + 19])[0])
-  
-    low_lim = np.min([np.min(spearman_values), np.min(pearson_values)]) - 0.1
-    plt.hist(pearson_values,  bins = bins, alpha = alpha, label = 'Pearson',  range = [low_lim, 1], histtype = u'step', fill = True)
-    plt.hist(spearman_values, bins = bins, alpha = alpha, label = 'Spearman', range = [low_lim, 1], histtype = u'step', fill = True)
-    plt.legend(loc = '%s' %legend_pos, fontsize = 13)
-    plt.title('%s' %homolog)
-    plt.show()
-
-
-# codes for full genome data
+# codes for full length data
 
 def full_length_pipeline(TARGET_PROTEIN, REPLICATES, SITE_START, SITE_END, INPUT_DIR, OUTPUT_DIR, EPISTASIS, REGULARIZATION_PERCENT):
-    INPUT_FILE_PREFIX, FLAG_LIST, SITES = initialization(SITE_START, SITE_END, INPUT_DIR, OUTPUT_DIR, EPISTASIS)
+    INPUT_FILE_PREFIX, FLAG_LIST, SITES = initialization(SITE_START, SITE_END, EPISTASIS)
 
-    FREQUENCY_DIFF, COVARIANCE_MATRIX, MAX_READ = MPL_full_length_elements(FLAG_LIST, INPUT_DIR, REPLICATES, INPUT_FILE_PREFIX, SITES)
+    FREQUENCY_DIFF, COVARIANCE_MATRIX, MAX_READ = MPL_full_length_elements(TARGET_PROTEIN, FLAG_LIST, INPUT_DIR, REPLICATES, INPUT_FILE_PREFIX, SITES)
     REGULARIZATION_LIST = [np.power(10, float(i)) for i in range(int(np.log10(1/MAX_READ)-1), 4)]
     CORRELATION_LIST = optimize_regularization_full_length(REGULARIZATION_LIST, SITES, COVARIANCE_MATRIX, FREQUENCY_DIFF, REPLICATES)
 
@@ -1011,18 +667,22 @@ def full_length_pipeline(TARGET_PROTEIN, REPLICATES, SITE_START, SITE_END, INPUT
     FINAL_SELECTION = output_final_selection_full_length(REGULARIZATION_SELECTED, SITES, COVARIANCE_MATRIX, FREQUENCY_DIFF, REPLICATES)
     
     if os.path.exists(OUTPUT_DIR):
-        FINAL_SELECTION.to_csv(OUTPUT_DIR+TARGET_PROTEIN+'_'+'%d.csv.gz' %int(np.log10(REGULARIZATION_SELECTED)), index = False, compression = 'gzip')
+        FINAL_SELECTION.to_csv(OUTPUT_DIR+TARGET_PROTEIN+'.csv.gz', index = False, compression = 'gzip')
     else:
         os.makedirs(OUTPUT_DIR)
-        FINAL_SELECTION.to_csv(OUTPUT_DIR+TARGET_PROTEIN+'_'+'%d.csv.gz' %int(np.log10(REGULARIZATION_SELECTED)), index = False, compression = 'gzip')
+        FINAL_SELECTION.to_csv(OUTPUT_DIR+TARGET_PROTEIN+'.csv.gz', index = False, compression = 'gzip')
 
-def MPL_full_length_elements(flag_list, Input_dir, replicates, Input_file_prefix, sites):
+    with open(OUTPUT_DIR+TARGET_PROTEIN + '_supplementary.log', 'w') as f:
+        f.write('Optimized regularization = %.6f' %REGULARIZATION_SELECTED)
+    # reg =  %int(np.log10(REGULARIZATION_SELECTED))
+
+def MPL_full_length_elements(Target_protein, flag_list, Input_dir, replicates, Input_file_prefix, sites):
     df_counts_dict = {}
     max_read_final = 0
 
     for flag in flag_list:
         print('Reading %s allele counts files from:' %flag)
-        df_counts_dict[flag] = get_counts(Input_dir, replicates, Input_file_prefix, flag)
+        df_counts_dict[flag] = get_counts(Target_protein, Input_dir, replicates, Input_file_prefix, flag)
 
     df_frequency_dict = {}
 
@@ -1134,7 +794,7 @@ def optimize_regularization_full_length(regularization_list, sites, cov_matx, df
 
 
 
-def get_counts(Input_dir, replicates, Input_file_prefix, flag):
+def get_counts(Target_protein, Input_dir, replicates, Input_file_prefix, flag):
 
     Input_file_single = []
     df_allele_counts = {}
@@ -1142,9 +802,9 @@ def get_counts(Input_dir, replicates, Input_file_prefix, flag):
     if flag == 'single':
         for replicate in replicates:
             df_allele_counts[replicate] = {}
-            Input_file = Input_dir + Input_file_prefix[flag] + str(replicate) + '.csv.zip'
+            Input_file = Input_dir+Target_protein+'_' + Input_file_prefix[flag] + str(replicate) + '.csv.gzip'
             print(' ', Input_file)
-            table = pd.read_csv(Input_file)
+            table = pd.read_csv(Input_file, compression='gzip')
             original_rows = table.shape[0]
             indexNames = table[table['counts'] <= 0].index
             table.drop(indexNames , inplace = True)
@@ -1164,9 +824,9 @@ def get_counts(Input_dir, replicates, Input_file_prefix, flag):
     if flag == 'double':
         for replicate in replicates:
             df_allele_counts[replicate] = {}
-            Input_file = Input_dir + Input_file_prefix[flag] + str(replicate) + '.csv.zip'
+            Input_file = Input_dir+Target_protein+'_' + Input_file_prefix[flag] + str(replicate) + '.csv.gzip'
             print(' ', Input_file)
-            table = pd.read_csv(Input_file)
+            table = pd.read_csv(Input_file, compression='gzip')
             original_rows = table.shape[0]
             indexNames = table[table['counts'] <= 0].index
             table.drop(indexNames , inplace = True)
@@ -1327,7 +987,7 @@ def covariance_matrix(df_frequency_dict, flag_list, sites):
         covariance_matrix_dict['amino_acid'][rep][generations[-1]]={}
     return covariance_matrix_dict
     
-def initialization(site_start, site_end, Input_dir, Output_dir, epistasis):
+def initialization(site_start, site_end, epistasis):
     Input_file_prefix = {}
 
     if epistasis is False:
