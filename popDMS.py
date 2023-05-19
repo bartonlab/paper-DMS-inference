@@ -152,9 +152,9 @@ for i in range(len(CODONS)):
 
 # Get frequency intermediate data file from raw variant table
 
-def nucleotide_file_to_counts_single_allele(nucleotide_file_name, reference_sequence, site_start, site_end, timepoints, rep, table_col_name, save_path):
+def nucleotide_file_to_counts_single_allele(nucleotide_file_name, reference_sequence, timepoints, rep, table_col_name, save_path):
     codon_length = 3
-    df_data = pd.read_csv(nucleotide_file_name, skiprows=4)
+    df_data = pd.read_csv(nucleotide_file_name, compression='gzip')
     df_data = df_data.fillna(0)
     df_data.reset_index(drop=True, inplace=True)
     df_data = df_data.drop(df_data.columns[0], axis = 1)
@@ -167,9 +167,10 @@ def nucleotide_file_to_counts_single_allele(nucleotide_file_name, reference_sequ
     
     df_frequency = df_data.loc[:,df_data.columns[2]:].astype('float')
     df_frequency.loc[:,df_frequency.columns[2]:] = df_frequency.loc[:,df_frequency.columns[2]:].div(df_frequency.sum(axis=1),axis=0)
-    site_list = list(range(site_start, site_end+1))
+    site_list = sorted(df_data['hgvs_pro'].str.extractall('(\d+)')[0].astype(int).unique())
+    
     raw_codon = [reference_sequence[i:i+codon_length] for i in range(0, len(reference_sequence), codon_length)]
-    allele_counts_columns = ['replicate', 'generation', 'site', 'codon', 'counts']
+    allele_counts_columns = ['generation', 'site', 'codon', 'counts']
     allele_counts_table = df_data[table_col_name]
 
     temp = allele_counts_table.columns.tolist()[0]
@@ -182,7 +183,7 @@ def nucleotide_file_to_counts_single_allele(nucleotide_file_name, reference_sequ
     total_count = []
     total_mut = []
     total_wt  = []
-    
+
     for i in range(len(timepoints)):
         counts_all = allele_counts_table[count_table_columns[i+1]].tolist()
         temp = [int(integer) for integer in counts_all]
@@ -232,16 +233,16 @@ def nucleotide_file_to_counts_single_allele(nucleotide_file_name, reference_sequ
     for gen, site_codon_counts in codon_allele_dict.items():
         for site, codon_counts in site_codon_counts.items():
             for codon, counts in codon_counts.items():
-                allele_counts_list.append([rep, gen, site, codon, counts])
+                allele_counts_list.append([gen, site, codon, counts])
 
     codon_counts_table = pd.DataFrame(data = allele_counts_list, columns = allele_counts_columns)
     codon_counts_table.to_csv(save_path, sep = ',', index = False, compression = 'gzip')
-    return df_frequency
+    return site_list
 
 
-def nucleotide_file_to_counts_double_allele(nucleotide_file_name, reference_sequence, site_start, site_end, timepoints, rep, table_col_name, save_path):
+def nucleotide_file_to_counts_double_allele(nucleotide_file_name, reference_sequence, timepoints, rep, table_col_name, save_path):
     codon_length = 3
-    df_data = pd.read_csv(nucleotide_file_name, skiprows=4)
+    df_data = pd.read_csv(nucleotide_file_name, compression='gzip')
     df_data = df_data.fillna(0)
     df_data.reset_index(drop=True, inplace=True)
     df_data = df_data.drop(df_data.columns[0], axis = 1)
@@ -254,9 +255,9 @@ def nucleotide_file_to_counts_double_allele(nucleotide_file_name, reference_sequ
     
     df_frequency = df_data.loc[:,df_data.columns[2]:].astype('float')
     df_frequency.loc[:,df_frequency.columns[2]:] = df_frequency.loc[:,df_frequency.columns[2]:].div(df_frequency.sum(axis=1),axis=0)
-    site_list = list(range(site_start, site_end+1))
+    site_list = sorted(df_data['hgvs_pro'].str.extractall('(\d+)')[0].astype(int).unique())
     raw_codon = [reference_sequence[i:i+codon_length] for i in range(0, len(reference_sequence), codon_length)]
-    allele_counts_columns = ['replicate', 'generation', 'site_1', 'codon_1', 'site_2', 'codon_2', 'counts']
+    allele_counts_columns = ['generation', 'site_1', 'codon_1', 'site_2', 'codon_2', 'counts']
     allele_counts_table = df_data[table_col_name]
 
     temp = allele_counts_table.columns.tolist()[0]
@@ -369,34 +370,38 @@ def nucleotide_file_to_counts_double_allele(nucleotide_file_name, reference_sequ
             for codon_i, sitej_codonj_countj in codoni_sitej_codonj_countj.items():
                 for site_j, codonj_countj in sitej_codonj_countj.items():
                     for codon_j, count_j in codonj_countj.items():
-                        allele_counts_list.append([rep, gen, site_i, codon_i, site_j, codon_j, count_j])
+                        allele_counts_list.append([gen, site_i, codon_i, site_j, codon_j, count_j])
 
 
     codon_counts_table = pd.DataFrame(data = allele_counts_list, columns = allele_counts_columns)
     codon_counts_table.to_csv(save_path, sep = ',', index = False, compression = 'gzip')
-    return df_frequency
+    return True
 
-
-def output_save_allele(TARGET_NAME, REFER_SEQ_FILE, FILE_NAME, REP, COUNT_PATH, START, END, GEN, TABLE_COL):
-    with open(REFER_SEQ_FILE,"r") as raw_seq:
+# TARGET_PROTEIN_NAME, REFERENCE_SEQUENCE, RAW_HAPLOTYPE, TRANSFORMED_HAPLOTYPE, REPLICATES, INPUT_COUNTS_DIR, GENERATIONS, HAPLOTYPE_REP_GEN_COL
+def output_save_allele(TARGET_PROTEIN_NAME, REFERENCE_SEQUENCE, RAW_HAPLOTYPE, TRANSFORMED_HAPLOTYPE, REPLICATES, GENERATIONS, INPUT_COUNTS_DIR, HAPLOTYPE_REP_GEN_COL):
+    with open(REFERENCE_SEQUENCE,"r") as raw_seq:
         REFER_SEQ = raw_seq.read()
-    for rep in REP:
-        print(TARGET_NAME + ', replicate '+str(rep)+', single allele collecting')
-        SAVE_PATH = COUNT_PATH + TARGET_NAME + '_single_allele_rep' + str(rep) + '.csv.gzip' 
-        nucleotide_file_to_counts_single_allele(FILE_NAME, REFER_SEQ, START, END, GEN, rep, TABLE_COL[rep], SAVE_PATH)
-        print(TARGET_NAME + ', replicate '+str(rep)+', single allele finished')
-        print(TARGET_NAME + ', replicate '+str(rep)+', double allele collecting')
-        SAVE_PATH = COUNT_PATH + TARGET_NAME + '_double_allele_rep' + str(rep) + '.csv.gzip'
-        nucleotide_file_to_counts_double_allele(FILE_NAME, REFER_SEQ, START, END, GEN, rep, TABLE_COL[rep], SAVE_PATH)
-        print(TARGET_NAME + ', replicate '+str(rep)+', double allele finished')
+    REP_LIST = [i+1 for i in range(REPLICATES)]
+    df_count = pd.read_csv(RAW_HAPLOTYPE, skiprows=4)
+    df_count.to_csv(TRANSFORMED_HAPLOTYPE, compression='gzip', index = False)
+    for REP in REP_LIST:
+        print(TARGET_PROTEIN_NAME + ', replicate '+str(REP)+', single allele collecting')
+        SAVE_PATH = INPUT_COUNTS_DIR + TARGET_PROTEIN_NAME + '_single_allele_rep' + str(REP) + '.csv.gzip' 
+        site_list = nucleotide_file_to_counts_single_allele(TRANSFORMED_HAPLOTYPE, REFER_SEQ, GENERATIONS, REP, HAPLOTYPE_REP_GEN_COL[REP], SAVE_PATH)
+        print(TARGET_PROTEIN_NAME + ', replicate '+str(REP)+', single allele finished')
+        print(TARGET_PROTEIN_NAME + ', replicate '+str(REP)+', double allele collecting')
+        SAVE_PATH = INPUT_COUNTS_DIR + TARGET_PROTEIN_NAME + '_double_allele_rep' + str(REP) + '.csv.gzip'
+        nucleotide_file_to_counts_double_allele(TRANSFORMED_HAPLOTYPE, REFER_SEQ, GENERATIONS, REP, HAPLOTYPE_REP_GEN_COL[REP], SAVE_PATH)
+        print(TARGET_PROTEIN_NAME + ', replicate '+str(REP)+', double allele finished')
 
+    return site_list
 
 # codes for independent site data
 
 def independent_site_pipeline(TARGET_PROTEIN, REPLICATES, OUTPUT_DIR, DNACODON_FILE, PRE_FILES, POST_FILES, EPISTASIS, REGULARIZATION_PERCENT):
     estimate_selection, regularization_list = MPL_independent_site_inference(TARGET_PROTEIN, REPLICATES, DNACODON_FILE, PRE_FILES, POST_FILES)
     correlation_list = optimize_regularization_independent_site(estimate_selection, REPLICATES, regularization_list)
-    plot_reg_corr(regularization_list, correlation_list, TARGET_PROTEIN)
+    PLOT_REGULARIZATION_CORRELATION(regularization_list, correlation_list, TARGET_PROTEIN)
     REGULARIZATION_SELECTED = find_best_regularization(regularization_list, correlation_list, REGULARIZATION_PERCENT)
     FINAL_SELECTION = output_final_selection_independent_site(REGULARIZATION_SELECTED, DNACODON_FILE, estimate_selection, REPLICATES)
     if os.path.exists(OUTPUT_DIR):
@@ -421,7 +426,7 @@ def optimize_regularization_independent_site(estimate_selection, REPLICATES, REG
         correlation_list.append(np.mean(temp_corr))
     return correlation_list
 
-def plot_reg_corr(regularization_list, correlation_list, protein_name):
+def PLOT_REGULARIZATION_CORRELATION(regularization_list, correlation_list, protein_name):
     plt.plot(regularization_list, correlation_list)
     plt.xscale('log')
     plt.xlabel('Regularization')
@@ -653,64 +658,51 @@ def MPL_independent_site_elements(**func_para):
 
 # codes for full length data
 
-def full_length_pipeline(TARGET_PROTEIN, REPLICATES, SITE_START, SITE_END, INPUT_DIR, OUTPUT_DIR, EPISTASIS, REGULARIZATION_PERCENT):
-    INPUT_FILE_PREFIX, FLAG_LIST, SITES = initialization(SITE_START, SITE_END, EPISTASIS)
-
-    FREQUENCY_DIFF, COVARIANCE_MATRIX, MAX_READ = MPL_full_length_elements(TARGET_PROTEIN, FLAG_LIST, INPUT_DIR, REPLICATES, INPUT_FILE_PREFIX, SITES)
+# TARGET_PROTEIN_NAME, SITE_LIST, REPLICATES, INPUT_COUNTS_DIR, OUTPUT_SELECTION_DIR, REGULARIZATION_PERCENT
+# TARGET_PROTEIN_NAME, SITE_LIST, REPLICATES, INPUT_COUNTS_DIR, OUTPUT_SELECTION_DIR, REGULARIZATION_PERCENT
+def full_length_pipeline(TARGET_PROTEIN_NAME, REPLICATE, INPUT_COUNTS_DIR, OUTPUT_SELECTION_DIR, REGULARIZATION_PERCENT):
+    EPISTASIS = False
+    INPUT_FILE_PREFIX, FLAG_LIST, REPLICATES = initialization(REPLICATE, EPISTASIS)
+    FREQUENCY_DIFF, COVARIANCE_MATRIX, MAX_READ, SITE_LIST = MPL_full_length_elements(TARGET_PROTEIN_NAME, FLAG_LIST, INPUT_COUNTS_DIR, REPLICATES, INPUT_FILE_PREFIX)
     REGULARIZATION_LIST = [np.power(10, float(i)) for i in range(int(np.log10(1/MAX_READ)-1), 4)]
-    CORRELATION_LIST = optimize_regularization_full_length(REGULARIZATION_LIST, SITES, COVARIANCE_MATRIX, FREQUENCY_DIFF, REPLICATES)
-
-    plot_reg_corr(REGULARIZATION_LIST, CORRELATION_LIST, TARGET_PROTEIN)
-
+    CORRELATION_LIST = optimize_regularization_full_length(REGULARIZATION_LIST, SITE_LIST, COVARIANCE_MATRIX, FREQUENCY_DIFF, REPLICATES)
+    PLOT_REGULARIZATION_CORRELATION(REGULARIZATION_LIST, CORRELATION_LIST, TARGET_PROTEIN_NAME)
     REGULARIZATION_SELECTED = find_best_regularization(REGULARIZATION_LIST, CORRELATION_LIST, REGULARIZATION_PERCENT)
-
-    FINAL_SELECTION = output_final_selection_full_length(REGULARIZATION_SELECTED, SITES, COVARIANCE_MATRIX, FREQUENCY_DIFF, REPLICATES)
-    
-    if os.path.exists(OUTPUT_DIR):
-        FINAL_SELECTION.to_csv(OUTPUT_DIR+TARGET_PROTEIN+'.csv.gz', index = False, compression = 'gzip')
+    FINAL_SELECTION = output_final_selection_full_length(REGULARIZATION_SELECTED, SITE_LIST, COVARIANCE_MATRIX, FREQUENCY_DIFF, REPLICATES)
+    if os.path.exists(OUTPUT_SELECTION_DIR):
+        FINAL_SELECTION.to_csv(OUTPUT_SELECTION_DIR + TARGET_PROTEIN_NAME + '.csv.gz', index = False, compression = 'gzip')
     else:
-        os.makedirs(OUTPUT_DIR)
-        FINAL_SELECTION.to_csv(OUTPUT_DIR+TARGET_PROTEIN+'.csv.gz', index = False, compression = 'gzip')
+        os.makedirs(OUTPUT_SELECTION_DIR)
+        FINAL_SELECTION.to_csv(OUTPUT_SELECTION_DIR + TARGET_PROTEIN_NAME + '.csv.gz', index = False, compression = 'gzip')
 
-    with open(OUTPUT_DIR+TARGET_PROTEIN + '_supplementary.log', 'w') as f:
-        f.write('Optimized regularization = %.6f' %REGULARIZATION_SELECTED)
-    # reg =  %int(np.log10(REGULARIZATION_SELECTED))
+    with open(OUTPUT_SELECTION_DIR+TARGET_PROTEIN_NAME + '_supplementary.log', 'w') as f:
+        f.write('Optimized regularization = %.e' %REGULARIZATION_SELECTED)
 
-def MPL_full_length_elements(Target_protein, flag_list, Input_dir, replicates, Input_file_prefix, sites):
+def MPL_full_length_elements(Target_protein, flag_list, Input_dir, replicates, Input_file_prefix):
     df_counts_dict = {}
+    df_frequency_dict = {}
+    df_frequency_change_dict = {}
     max_read_final = 0
-
     for flag in flag_list:
         print('Reading %s allele counts files from:' %flag)
-        df_counts_dict[flag] = get_counts(Target_protein, Input_dir, replicates, Input_file_prefix, flag)
-
-    df_frequency_dict = {}
-
+        df_counts_dict[flag], site_list = get_counts(Target_protein, Input_dir, replicates, Input_file_prefix, flag)
     for flag in flag_list:
-        df_frequency_dict[flag], max_read = counts_to_frequency(df_counts_dict, replicates, flag, sites)
+        df_frequency_dict[flag], max_read = counts_to_frequency(df_counts_dict, replicates, flag, site_list)
         max_read_final = max(max_read_final, max_read)
-
-    df_frequency_change_dict = {}
-
     for flag in flag_list:
         df_frequency_change_dict[flag] = frequency_change(df_frequency_dict, flag)
-
-    cov_matx = covariance_matrix(df_frequency_dict, flag_list, sites)
-    
-    return df_frequency_change_dict, cov_matx, max_read_final
+    cov_matx = covariance_matrix(df_frequency_dict, flag_list, site_list)   
+    return df_frequency_change_dict, cov_matx, max_read_final, site_list
 
 def output_final_selection_full_length(gamma, sites, cov_matx, df_frequency_change_dict, replicates):
     copy_cov_matx = copy.deepcopy(cov_matx['amino_acid'])
     q = len(AA)
     L = len(sites)
     estimate_selection = {}
-    
     joint_freq_change = np.array([0]*(q*L))
     joint_cov_mat = np.array([[0]*(q*L)]*(q*L))
-
     for rep in list(copy_cov_matx.keys()):
         invert_matrix = np.zeros((q * L, q * L))
-
         for i in range(len(list(copy_cov_matx[rep].keys())) - 1):
             time_i = list(copy_cov_matx[rep].keys())[i]
             time_i_post = list(copy_cov_matx[rep].keys())[i+1]
@@ -724,8 +716,7 @@ def output_final_selection_full_length(gamma, sites, cov_matx, df_frequency_chan
         estimate_selection[rep] = np.inner(invert_matrix, df_frequency_change_dict['single']['amino_acid'][rep])
     for k in range(q * L):
         joint_cov_mat[k,k] += gamma
-    joint_selection = np.inner(np.linalg.inv(joint_cov_mat), joint_freq_change)
-        
+    joint_selection = np.inner(np.linalg.inv(joint_cov_mat), joint_freq_change)   
     df_column = ['site', 'amino_acid'] + ['rep_' + str(k) for k in replicates]
     df_selection_coefficients = pd.DataFrame(columns = df_column)
     column_site = []
@@ -735,18 +726,15 @@ def output_final_selection_full_length(gamma, sites, cov_matx, df_frequency_chan
         column_sc.append([])
     for site_name in sites:
         for aa in AA:
-            column_site.append(site_name+1)
+            column_site.append(site_name)
             column_aa.append(aa)
     for rep in replicates:
         column_sc[replicates.index(rep)].append(estimate_selection[rep])
-
     df_selection_coefficients['site'] = column_site
     df_selection_coefficients['amino_acid'] = column_aa
     for rep in replicates:
-        df_selection_coefficients['rep_' + str(rep)] = column_sc[replicates.index(rep)][0]
-
-    df_selection_coefficients['joint'] = joint_selection    
-    
+        df_selection_coefficients['rep_' + str(rep)] = ['{:.2E}'.format(i) for i in column_sc[replicates.index(rep)][0]]
+    df_selection_coefficients['joint'] = ['{:.2E}'.format(i) for i in joint_selection]   
     return df_selection_coefficients
 
 def optimize_regularization_full_length(regularization_list, sites, cov_matx, df_frequency_change_dict, replicates):
@@ -805,10 +793,10 @@ def get_counts(Target_protein, Input_dir, replicates, Input_file_prefix, flag):
             Input_file = Input_dir+Target_protein+'_' + Input_file_prefix[flag] + str(replicate) + '.csv.gzip'
             print(' ', Input_file)
             table = pd.read_csv(Input_file, compression='gzip')
+            site_list = sorted(table['site'].unique())
             original_rows = table.shape[0]
             indexNames = table[table['counts'] <= 0].index
             table.drop(indexNames , inplace = True)
-            table.drop('replicate', axis = 1, inplace = True)
             current_rows = table.shape[0]
             
             table['codon_counts_position'] = table['codon'].apply(lambda a: CODONS.index(a))
@@ -827,10 +815,10 @@ def get_counts(Target_protein, Input_dir, replicates, Input_file_prefix, flag):
             Input_file = Input_dir+Target_protein+'_' + Input_file_prefix[flag] + str(replicate) + '.csv.gzip'
             print(' ', Input_file)
             table = pd.read_csv(Input_file, compression='gzip')
+            site_list = sorted(np.unique(table[['site_1', 'site_2']].values))
             original_rows = table.shape[0]
             indexNames = table[table['counts'] <= 0].index
             table.drop(indexNames , inplace = True)
-            table.drop('replicate', axis = 1, inplace = True)
             current_rows = table.shape[0]
             table['codon_counts_position_1'] = table['codon_1'].apply(lambda a: CODONS.index(a))
             table.drop('codon_1', axis = 1, inplace = True)
@@ -848,7 +836,7 @@ def get_counts(Target_protein, Input_dir, replicates, Input_file_prefix, flag):
     table = None
     temp = None
     indexNames = None
-    return df_allele_counts
+    return df_allele_counts, site_list
 
 def counts_to_frequency(df_allele_counts_original, replicates, flag, sites):
     
@@ -987,8 +975,9 @@ def covariance_matrix(df_frequency_dict, flag_list, sites):
         covariance_matrix_dict['amino_acid'][rep][generations[-1]]={}
     return covariance_matrix_dict
     
-def initialization(site_start, site_end, epistasis):
+def initialization(replicate, epistasis):
     Input_file_prefix = {}
+    replicates = [i+1 for i in range(replicate)]
 
     if epistasis is False:
         flag_list = ['single', 'double']
@@ -999,7 +988,5 @@ def initialization(site_start, site_end, epistasis):
     for flag in flag_list:
         Input_file_prefix[flag] = flag + '_allele_rep'
 
-    sites = list(range(site_start, site_end+1))
-
-    return Input_file_prefix, flag_list, sites
+    return Input_file_prefix, flag_list, replicates
 
