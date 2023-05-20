@@ -398,7 +398,8 @@ def output_save_allele(TARGET_PROTEIN_NAME, REFERENCE_SEQUENCE, RAW_HAPLOTYPE, T
 
 # codes for independent site data
 
-def independent_site_pipeline(TARGET_PROTEIN, REPLICATES, OUTPUT_DIR, DNACODON_FILE, PRE_FILES, POST_FILES, EPISTASIS, REGULARIZATION_PERCENT):
+def independent_site_pipeline(TARGET_PROTEIN, REPLICATE, OUTPUT_DIR, DNACODON_FILE, PRE_FILES, POST_FILES, EPISTASIS, REGULARIZATION_PERCENT):
+    REPLICATES = [i+1 for i in range(REPLICATE)]
     estimate_selection, regularization_list = MPL_independent_site_inference(TARGET_PROTEIN, REPLICATES, DNACODON_FILE, PRE_FILES, POST_FILES)
     correlation_list = optimize_regularization_independent_site(estimate_selection, REPLICATES, regularization_list)
     PLOT_REGULARIZATION_CORRELATION(regularization_list, correlation_list, TARGET_PROTEIN)
