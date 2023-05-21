@@ -110,12 +110,14 @@ name2name = {
     'HIV_BF520': 'Env BF520',
     'HIV_CD4_human': 'BF520 hu',
     'HIV_CD4_rhesus': 'BF520 rhm',
-    'HIV_bnAbs_VRC34': 'VRC34',
-    'HIV_bnAbs_FP16': 'FP16-02',
-    'HIV_bnAbs_FP20': 'FP20-01',
-    'Flu_MS': 'NP MS',
-    'Flu_MxA': 'NP MxA',
-    'Flu_MxAneg': 'NP MxA',
+    'ZIKV': 'ZIKV',
+    'Perth2009': 'Perth2009',
+    # 'HIV_bnAbs_VRC34': 'VRC34',
+    # 'HIV_bnAbs_FP16': 'FP16-02',
+    # 'HIV_bnAbs_FP20': 'FP20-01',
+    # 'Flu_MS': 'NP MS',
+    # 'Flu_MxA': 'NP MxA',
+    # 'Flu_MxAneg': 'NP MxA',
     'Flu_MatrixM1': 'M1',
     'Flu_Aichi68C': 'Aichi68',
     'Flu_PR8': 'PR8',
@@ -379,16 +381,18 @@ def FIG2_METHODS_COMPARISON():
                        'Flu_Aichi68C':    ['Aichi68C',              '-2', 2],#
                        'Flu_PR8':         ['PR8' ,                  '-3', 2],#
                        'Flu_MatrixM1':    ['Matrix_M1',             '-2', 3],#
-                       'Flu_MS':          ['MS',                    '-3', 2],#
-                       'Flu_MxA':         ['MxA',                   '-3', 2],#
-                       'Flu_MxAneg':      ['MxAneg',                '-3', 2],#
+                       'ZIKV':            ['ZIKV',                  '-2', 3],
+                       'Perth2009':       ['Perth2009',             '-3', 4],
+                       # 'Flu_MS':          ['MS',                    '-3', 2],#
+                       # 'Flu_MxA':         ['MxA',                   '-3', 2],#
+                       # 'Flu_MxAneg':      ['MxAneg',                '-3', 2],#
                        'HIV_BG505':       ['HIV Env BG505' ,        '-3', 3],#
                        'HIV_BF520':       ['HIV Env BF520' ,        '-3', 3],#
                        'HIV_CD4_human':   ['HIV BF520 human host',  '-3', 2],#
                        'HIV_CD4_rhesus':  ['HIV BF520 rhesus host', '-2', 2],#
-                       'HIV_bnAbs_FP16':  ['HIV bnAbs FP16',        '-2', 2],
-                       'HIV_bnAbs_FP20':  ['HIV bnAbs FP20',        '-2', 2],
-                       'HIV_bnAbs_VRC34': ['HIV bnAbs VRC34',       '-2', 2],
+                       # 'HIV_bnAbs_FP16':  ['HIV bnAbs FP16',        '-2', 2],
+                       # 'HIV_bnAbs_FP20':  ['HIV bnAbs FP20',        '-2', 2],
+                       # 'HIV_bnAbs_VRC34': ['HIV bnAbs VRC34',       '-2', 2],
                        }
     
     FIG2_A_HUMAN_RESULT_DIR = {
@@ -398,8 +402,8 @@ def FIG2_METHODS_COMPARISON():
                        'WWdomain_YAP1':  ['YAP1',          '-3', 2],
                        'Ubiq_Ube4b':     ['Ube4b',         '-4', 2],
                        'HDR_DBR1':       ['DBR1',          '1',  2],
-                       'Thrombo_TpoR_1': ['TpoR_MPL',      '-1', 6],
-                       'Thrombo_TpoR_2': ['TpoR_S505NMPL', '-1', 6],
+                       'Thrombo_TpoR_1': ['TpoR',          '-1', 6],
+                       'Thrombo_TpoR_2': ['TpoR_S505N',    '-1', 6],
                        }
 
     FIG2_B_REPLICATE_NUM = 3
@@ -421,7 +425,7 @@ def FIG2_METHODS_COMPARISON():
     FIG2_A_PREF_AVG = {}
     FIG2_A_MPL_AVG  = {}
     for target_protein, info in FIG2_A_VIRUS_RESULT_DIR.items():
-        path = FIG2_SELE_DIR +  info[0] + '_' + info[1] + '.csv.gz'
+        path = FIG2_SELE_DIR +  info[0] + '.csv.gz'
         df_temp = pd.read_csv(path)
         df_temp = df_temp[(df_temp['rep_1'] != 0) & (df_temp['rep_2'] != 0)]
         df_corr = df_temp[df_temp.columns[2:]]
@@ -513,7 +517,7 @@ def FIG2_METHODS_COMPARISON():
 #                 correlation_average = (df_corr.corr().sum().sum() - df_corr.shape[1])/(df_corr.shape[1]**2 - df_corr.shape[1])
 #                 FIG2_A_MPL_AVG[target_protein] = correlation_average
     for target_protein, info in FIG2_A_HUMAN_RESULT_DIR.items():
-        path = FIG2_SELE_DIR +  info[0] + '_' + info[1] + '.csv.gz'
+        path = FIG2_SELE_DIR +  info[0] + '.csv.gz'
         df_temp = pd.read_csv(path)
         df_temp = df_temp[(df_temp['rep_1'] != 0) & (df_temp['rep_2'] != 0)]
         df_corr = df_temp[df_temp.columns[2:]]
@@ -607,7 +611,7 @@ def FIG2_METHODS_COMPARISON():
 #             for rep in range(1, FIG2_B_REPLICATE_NUM + 1):
 #                 SELECTION_LIST.append(df_temp['rep_' + str(rep)].tolist())
 
-    df_temp = pd.read_csv(FIG2_B_SAMPLE_DIR+'HIV Env BF520_-3.csv.gz')
+    df_temp = pd.read_csv(FIG2_B_SAMPLE_DIR+'HIV Env BF520.csv.gz')
     df_temp = df_temp[(df_temp['rep_1'] != 0)&(df_temp['rep_2'] != 0)]
     for rep in range(1, FIG2_B_REPLICATE_NUM + 1):
         SELECTION_LIST.append(df_temp['rep_' + str(rep)].tolist())
