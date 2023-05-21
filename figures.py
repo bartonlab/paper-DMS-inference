@@ -768,7 +768,7 @@ SERIAL_FONT = {
     'size'  : TEXT_FONTSIZE + 2,
     'weight': 'bold'}
 OFFSET_LETTER  = 0
-SELECTION_FILE = './outputs/human_protein/' + 'YAP1/selection_coefficients/YAP1_-4.csv.gz'
+SELECTION_FILE = './outputs/selection_coefficients/YAP1.csv.gz'
 EPISTASIS_FILE = './outputs/epistasis/YAP1_100.txt'
 INDEX_FILE     = './outputs/epistasis/index_matrix.csv'
 SEQUENCE       = "DVPLPAGWEMAKTSSGQRYFLNHIDQTTTWQDPR"
