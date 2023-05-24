@@ -164,19 +164,35 @@ def fig_methods_comparison():
     pref_avg = {}
     pop_avg  = {}
     for target_protein, info in input_files.items():
-        path = POP_DIR +  info[0] + '.csv.gz'
-        df_temp = pd.read_csv(path)
-        df_corr = df_temp[df_temp.columns[2:-1]]
-        df_corr = df_corr[~(df_corr == 0).any(axis=1)]
-        correlation_average = (df_corr.corr().sum().sum() - df_corr.shape[1])/(df_corr.shape[1]**2 - df_corr.shape[1])
-        pop_avg[target_protein] = correlation_average
+        reps = info[1]
+        rep_list = ['rep_'+str(i+1) for i in range(reps)]
+        path = POP_DIR + info[0] + '.csv.gz'
+        df_sele = pd.read_csv(path)        
 
         path = PREF_DIR +  info[0] + '.csv.gz'
-        df_temp = pd.read_csv(path)
-        df_corr = df_temp[df_temp.columns[2:-1]]
-        df_corr = df_corr[~(df_corr == 0).any(axis=1)]
-        correlation_average = (df_corr.corr().sum().sum() - df_corr.shape[1])/(df_corr.shape[1]**2 - df_corr.shape[1])
+        df_pref = pd.read_csv(path)
+
+        df_merged = pd.merge(df_pref, df_sele, on=['site', 'amino_acid'])
+        df_corr_pref = df_merged[[i+'_x' for i in rep_list]]
+        df_corr_sele = df_merged[[i+'_y' for i in rep_list]]
+        correlation_average = (df_corr_pref.corr().sum().sum() - df_corr_pref.shape[1])/(df_corr_pref.shape[1]**2 - df_corr_pref.shape[1])
         pref_avg[target_protein] = correlation_average
+        correlation_average = (df_corr_sele.corr().sum().sum() - df_corr_sele.shape[1])/(df_corr_sele.shape[1]**2 - df_corr_sele.shape[1])
+        pop_avg[target_protein] = correlation_average
+        
+        # path = POP_DIR + info[0] + '.csv.gz'
+        # df_temp = pd.read_csv(path)
+        # df_corr = df_temp[rep_list]
+        # # df_corr = df_corr[~(df_corr == 0).any(axis=1)]
+        # correlation_average = (df_corr.corr().sum().sum() - df_corr.shape[1])/(df_corr.shape[1]**2 - df_corr.shape[1])
+        # pop_avg[target_protein] = correlation_average
+
+        # path = PREF_DIR +  info[0] + '.csv.gz'
+        # df_temp = pd.read_csv(path)
+        # df_corr = df_temp[rep_list]
+        # # df_corr = df_corr[~(df_corr == 0).any(axis=1)]
+        # correlation_average = (df_corr.corr().sum().sum() - df_corr.shape[1])/(df_corr.shape[1]**2 - df_corr.shape[1])
+        # pref_avg[target_protein] = correlation_average
                 
     # for protein, info_list in input_files.items():
     #     pref_list = []
