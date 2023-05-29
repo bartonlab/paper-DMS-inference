@@ -140,16 +140,16 @@ def fig_methods_comparison():
                    'Flu_MatrixM1':    ['Matrix_M1',             3],#
                    'ZIKV':            ['ZIKV',                  3],
                    'Perth2009':       ['Perth2009',             4],
-                   # 'Flu_MS':          ['MS',                    2],#
+                   'Flu_MS':          ['MS',                    2],#
                    # 'Flu_MxA':         ['MxA',                   2],#
-                   # 'Flu_MxAneg':      ['MxAneg',                2],#
+                   'Flu_MxAneg':      ['MxAneg',                2],#
                    'HIV_BG505':       ['HIV Env BG505' ,        3],#
                    'HIV_BF520':       ['HIV Env BF520' ,        3],#
                    'HIV_CD4_human':   ['HIV BF520 human host',  2],#
                    'HIV_CD4_rhesus':  ['HIV BF520 rhesus host', 2],#
-                   # 'HIV_bnAbs_FP16':  ['HIV bnAbs FP16',        2],
-                   # 'HIV_bnAbs_FP20':  ['HIV bnAbs FP20',        2],
-                   # 'HIV_bnAbs_VRC34': ['HIV bnAbs VRC34',       2],
+                   'HIV_bnAbs_FP16':  ['HIV bnAbs FP16',        2],
+                   'HIV_bnAbs_FP20':  ['HIV bnAbs FP20',        2],
+                   'HIV_bnAbs_VRC34': ['HIV bnAbs VRC34',       2],
                    'HDR_Y2H_1':       ['Y2H_1',                 3],
                    'HDR_Y2H_2':       ['Y2H_2',                 3],
                    'HDR_E3':          ['E3',                    6],
