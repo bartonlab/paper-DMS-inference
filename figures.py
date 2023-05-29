@@ -179,48 +179,6 @@ def fig_methods_comparison():
         pref_avg[target_protein] = correlation_average
         correlation_average = (df_corr_sele.corr().sum().sum() - df_corr_sele.shape[1])/(df_corr_sele.shape[1]**2 - df_corr_sele.shape[1])
         pop_avg[target_protein] = correlation_average
-        
-        # path = POP_DIR + info[0] + '.csv.gz'
-        # df_temp = pd.read_csv(path)
-        # df_corr = df_temp[rep_list]
-        # # df_corr = df_corr[~(df_corr == 0).any(axis=1)]
-        # correlation_average = (df_corr.corr().sum().sum() - df_corr.shape[1])/(df_corr.shape[1]**2 - df_corr.shape[1])
-        # pop_avg[target_protein] = correlation_average
-
-        # path = PREF_DIR +  info[0] + '.csv.gz'
-        # df_temp = pd.read_csv(path)
-        # df_corr = df_temp[rep_list]
-        # # df_corr = df_corr[~(df_corr == 0).any(axis=1)]
-        # correlation_average = (df_corr.corr().sum().sum() - df_corr.shape[1])/(df_corr.shape[1]**2 - df_corr.shape[1])
-        # pref_avg[target_protein] = correlation_average
-                
-    # for protein, info_list in input_files.items():
-    #     pref_list = []
-    #     n_reps    = info_list[1]
-
-    #     # if 'HIV_bnAbs' in protein or 'Flu_MS' in protein or 'Flu_Mx' in protein:
-    #     #     path = PREF_DIR + info_list[0] + '_enrichment.csv.gz'
-    #     #     temp_df = pd.read_csv(path)
-    #     #     correlation_average = (temp_df.corr().sum().sum() - temp_df.shape[1])/(temp_df.shape[1]**2 - temp_df.shape[1])
-    #     #     pref_avg[protein]   = correlation_average
-    #     # else:
-    #     #     for rep in range(n_reps):
-    #     #         path = PREF_DIR + info_list[0] + '-' + str(rep+1) + '_prefs.csv'
-    #     #         temp_df = pd.read_csv(path, index_col = 0)
-    #     #         if 'hgvs_pro' in temp_df.columns:
-    #     #             temp_df = temp_df[~temp_df['hgvs_pro'].str.contains('\[')]
-    #     #         pref_list.append(list(temp_df.values.flatten()))
-
-    #     #     correlation_average = 0
-    #     #     for i in range(len(pref_list)):
-    #     #         for j in range(i+1, len(pref_list)):
-    #     #             correlation_average += st.pearsonr(pref_list[i], pref_list[j])[0]
-    #     #     if correlation_average == 0:
-    #     #         pref_avg[protein] = correlation_average
-    #     #     else:
-    #     #         correlation_average /= len(pref_list)*(len(pref_list) - 1)/2
-    #     #         pref_avg[protein] = correlation_average
-
     
     # variables
     w = DOUBLE_COLUMN
@@ -409,6 +367,241 @@ def fig_methods_comparison():
     fig.savefig(FIG_DIR + fig_title, dpi = 400, **FIGPROPS)
     plt.show()
 
+
+def plot_selection(ax, wt, df_pop):
+    """ Plot selection heatmap. """
+
+    # process stored data
+    
+    df_index = pd.read_csv('%s/processed/%s-SU-%s-index.csv' % (HIV_DIR, patient, region), comment='#', memory_map=True)
+    df_poly  = pd.read_csv('%s/analysis/%s-poly.csv' % (HIV_DIR, tag), comment='#', memory_map=True)
+    df_sub   = df_poly[df_poly.HXB2_index.str.isnumeric()]
+    df_sub   = df_sub[(df_sub.nucleotide!=df_sub.TF) & (df_sub.HXB2_index.astype('int32')>=6702) & (df_sub.HXB2_index.astype('int32')<=6737)]
+    
+    c_vals   = [C_MPL, C_NEU]
+    var_c    = []
+    var_tag  = []
+    var_smpl = []
+    var_sind = []
+    var_traj = []
+    for df_iter, df_entry in df_sub.iterrows():
+        var_tag.append(str(int(df_entry.polymorphic_index))+df_entry.nucleotide)
+        var_traj.append([df_entry['f_at_%d' % t] for t in times])
+        var_smpl.append(df_entry.s_MPL)
+        var_sind.append(df_entry.s_SL)
+        df_temp = df_index[df_index.alignment==df_entry.alignment_index].iloc[0]
+        if df_temp.SU==df_entry.nucleotide:
+            var_c.append(c_vals[0])
+        else:
+            var_c.append(c_vals[-1])
+
+    # print fraction synonymous
+    df = df_poly[df_poly.nucleotide!=df_poly.TF]
+    top1         = int(np.round(0.01*len(df)))
+    s_MPL_sorted = np.argsort(df.s_MPL)[::-1]
+    s_SL_sorted  = np.argsort(df.s_SL)[::-1]
+    print('synonymous:\t%d (MPL)\t%d (SL)\t of %d total' %
+          (np.sum(df.iloc[s_MPL_sorted[:top1]].nonsynonymous==0), np.sum(df.iloc[s_SL_sorted[:top1]].nonsynonymous==0), top1))
+
+    # PLOT FIGURE
+
+    ## set up figure grid
+
+    w       = SINGLE_COLUMN # SLIDE_WIDTH
+    hshrink = 0.91
+    goldh   = 1.9 * w * hshrink
+    fig     = plot.figure(figsize=(w, goldh))
+
+    box_top  = 0.95
+    dy       = 0.11 / 2
+    y0       = 0.10 / hshrink
+    y1       = 0.4444444444444445 / hshrink
+    y2       = 0.88 * (2.2 / (36 + 11 * 0.3)) / hshrink
+
+    box_traj = dict(left=0.16, right=0.94, bottom=box_top-y0, top=box_top)
+    box_circ = dict(left=0.08, right=0.92, bottom=box_top-y0-y1-(1.2*dy), top=box_top-y0-(1.2*dy))
+    box_smpl = dict(left=0.06, right=0.94, bottom=box_top-y0-y1-y2-(3.05*dy), top=box_top-y0-y1-(3.05*dy))
+
+    gs_traj = gridspec.GridSpec(1, 1, width_ratios=[1.0], height_ratios=[1.0], **box_traj)
+    gs_circ = gridspec.GridSpec(1, 1, width_ratios=[1.0], height_ratios=[1.0], **box_circ)
+    gs_smpl = gridspec.GridSpec(1, 1, width_ratios=[1.0], height_ratios=[1.0], **box_smpl)
+
+    ax_traj = plot.subplot(gs_traj[0, 0])
+    ax_circ = plot.subplot(gs_circ[0, 0])
+    ax_smpl = plot.subplot(gs_smpl[0, 0])
+
+    #dx = -0.08
+    dy =  0.02/hshrink
+
+    ## a -- trajectory plot
+
+    pprops = { 'xticks':      [30, 190, 350, 510, 670],
+               'yticks':      [0, 1],
+               'yminorticks': [0.25, 0.5, 0.75],
+               'nudgey':      1.1,
+               'xlabel':      'Time (days)',
+               'ylabel':      'Variant frequency\nin VRC26 epitope',
+               'plotprops':   {'lw': 1.5*SIZELINE, 'ls': '-', 'alpha': 0.75 },
+               'axoffset':    0.1,
+               'theme':       'open' }
+
+    for i in range(len(var_tag)-1):
+        xdat = [times]
+        ydat = [var_traj[i]]
+        mp.line(ax=ax_traj, x=xdat, y=ydat, colors=[var_c[i]], **pprops)
+
+    xdat = [times]
+    ydat = [var_traj[len(var_tag)-1]]
+    mp.plot(type='line', ax=ax_traj, x=xdat, y=ydat, colors=[var_c[len(var_tag)-1]], **pprops)
+
+    ax_traj.text(0.06, box_traj['top']+dy, 'a'.lower(), transform=fig.transFigure, **DEF_SUBLABELPROPS)
+
+    invt = ax_traj.transData.inverted()
+    xy1  = invt.transform((  0, 0))
+    xy2  = invt.transform((7.5, 9))
+    xy3  = invt.transform((3.0, 9))
+
+    legend_dx1 = 1*(xy1[0]-xy2[0])
+    legend_dx2 = 1*(xy1[0]-xy3[0])
+    legend_dy  = 1*(xy1[1]-xy2[1])
+
+    traj_legend_x =  80
+    traj_legend_y =  0.95
+    traj_legend_d = -0.05
+    traj_legend_t = ['Superinfecting\nvariant', 'Other']
+    traj_legend_c = [C_MPL, C_NEU]
+    for k in range(len(traj_legend_t)):
+        mp.line(ax=ax_traj, x=[[traj_legend_x + legend_dx1, traj_legend_x + legend_dx2]],
+                y=[[traj_legend_y + (1.5 * k * legend_dy), traj_legend_y + (1.5 * k * legend_dy)]],
+                colors=[traj_legend_c[k]], plotprops=dict(lw=1.5*SIZELINE, ls='-', clip_on=False))
+        ax_traj.text(traj_legend_x, traj_legend_y + (1.5 * k * legend_dy), traj_legend_t[k], ha='left', va='center', **DEF_LABELPROPS)
+
+    ## b -- circle plot
+
+    epitope_range = [[6702, 6737]]
+    epitope_label = ['VRC26 epitope']
+    cov_label     = 'VRC26 epitope'
+    label2ddr     = { 'tat exon 2': 0.13,
+                      'rev exon 2': 0.10,
+                      'DG9':        0.06,
+                      'KF9':        0.06,
+                      'DI9':        0.13  }
+
+#    # _ SLIDES
+#    w       = 8
+#    fig     = plot.figure(figsize=(w, w))
+#    ax_circ = plot.subplot(111)
+#    # ^ SLIDES
+
+    sig_s, sig_site_real, sig_nuc_idx, epitope_start, epitope_end = plot_circle(ax_circ, tag, epitope_range, epitope_label, cov_label, label2ddr)
+
+#    # _ SLIDES
+#    plot.savefig('%s/new-slides-cap256-circle.pdf' % FIG_DIR, dpi=1000, **FIGPROPS)
+#    plot.savefig('%s/new-slides-cap256-circle.png' % FIG_DIR, dpi=1000, **FIGPROPS)
+#    plot.close(fig)
+#    w       = 8
+#    fig     = plot.figure(figsize=(w, 2.85))
+#    ax_smpl = plot.subplot(311)
+#    # ^ SLIDES
+
+    dx =  0.04
+    dy = -0.02
+    ax_circ.text(0.06, box_circ['top']+dy, 'b'.lower(), transform=fig.transFigure, **DEF_SUBLABELPROPS)
+
+    ## c -- selection in the VRC26 epitope
+
+    site_rec_props  = dict(height=1, width=1, ec=None, lw=AXWIDTH/2, clip_on=False)
+    codon_rec_props = dict(height=4, width=3, ec=BKCOLOR, fc='none', lw=AXWIDTH/2, clip_on=False)
+    cBG             = '#F5F5F5'
+    rec_patches     = []
+    TF_dots_x       = [ 0.5]
+    TF_dots_y       = [-3.5]
+
+    sig_s         = np.array(sig_s)
+    sig_site_real = np.array(sig_site_real)
+    sig_nuc_idx   = np.array(sig_nuc_idx)
+    eidx          = 0
+    sub_box       = 0
+    sub_dx        = 3 + 0.3
+    for i in range(epitope_start[eidx], epitope_end[eidx]+1, 3):
+        for sub_i in range(3):
+            TF_dots_x.append(sub_box*sub_dx + sub_i + 0.5)
+            TF_dots_y.append(4-NUC.index(df_index.iloc[i+sub_i].TF)+0.5)
+            idxs     = sig_site_real==i+sub_i
+            temp_s   = sig_s[idxs]
+            temp_nuc = sig_nuc_idx[idxs]
+            for j in range(len(NUC)-1):
+                if df_index.iloc[i+sub_i].TF==NUC[j+1]:
+                    continue
+                c = cBG
+                if j in temp_nuc:
+                    t = temp_s[list(temp_nuc).index(j)] / 0.05
+                    if np.fabs(t)>1:
+                        t /= np.fabs(t)
+                    if t>0:
+                        c = hls_to_rgb(0.02, 0.53 * t + 1. * (1 - t), 0.83)
+                    else:
+                        c = hls_to_rgb(0.58, 0.53 * np.fabs(t) + 1. * (1 - np.fabs(t)), 0.60)
+                rec = matplotlib.patches.Rectangle(xy=(sub_box*sub_dx + sub_i, 3-j), fc=c, **site_rec_props)
+                rec_patches.append(rec)
+        rec = matplotlib.patches.Rectangle(xy=(sub_box*sub_dx, 0), **codon_rec_props)
+        rec_patches.append(rec)
+        sub_box += 1
+
+    for i in range(-5, 5+1, 1):
+        c = cBG
+        t = i/5
+        if t>0:
+            c = hls_to_rgb(0.02, 0.53 * t + 1. * (1 - t), 0.83)
+        else:
+            c = hls_to_rgb(0.58, 0.53 * np.fabs(t) + 1. * (1 - np.fabs(t)), 0.60)
+        rec = matplotlib.patches.Rectangle(xy=(sub_box*sub_dx - 6.5 + i, -4), fc=c, **site_rec_props)
+        rec_patches.append(rec)
+
+    invt = ax_smpl.transData.inverted()
+    xy1  = invt.transform((0,0))
+    xy2  = invt.transform((0,9))
+    coef_legend_dy = (xy1[1]-xy2[1]) # multiply by 3 for slides/poster
+    c   = cBG
+    rec = matplotlib.patches.Rectangle(xy=(0, -4 + 4*coef_legend_dy), fc=c, **site_rec_props) # paper
+#    rec = matplotlib.patches.Rectangle(xy=(0, -4 + 6*coef_legend_dy), fc=c, **site_rec_props) # slides
+    rec_patches.append(rec)
+
+    for patch in rec_patches:
+        ax_smpl.add_artist(patch)
+
+    pprops = { 'colors': [BKCOLOR],
+               'xlim': [0, epitope_end[eidx]-epitope_start[eidx] + (sub_box * (sub_dx - 3)) + 1],
+               'ylim': [0, 4.1],
+               'xticks': [],
+               'yticks': [],
+               'plotprops': dict(lw=0, s=0.2*SMALLSIZEDOT, marker='o', clip_on=False),
+               'ylabel': '',
+               'theme': 'open',
+               'hide' : ['top', 'bottom', 'left', 'right'] }
+
+    mp.plot(type='scatter', ax=ax_smpl, x=[TF_dots_x], y=[TF_dots_y], **pprops)
+
+    ax_smpl.text(0.06, box_smpl['top']+0.02, 'c'.lower(), transform=fig.transFigure, **DEF_SUBLABELPROPS)
+
+    txtprops = dict(ha='center', va='center', color=BKCOLOR, family=FONTFAMILY, size=SIZELABEL)
+    for i in range(len(NUC)-1):
+        ax_smpl.text(-0.85, 3-i+0.5, NUC[i+1], clip_on=False, **txtprops)
+
+    txtprops['ha'] = 'left'
+    ax_smpl.text(1.3, -3.5, 'TF nucleotide', clip_on=False, **txtprops)
+    ax_smpl.text(1.3, -3.5 + 4*coef_legend_dy, 'Not observed', clip_on=False, **txtprops) # paper
+#    ax_smpl.text(1.3, -3.5 + 6*coef_legend_dy, 'Not observed', clip_on=False, **txtprops) # slides
+
+    txtprops['ha'] = 'center'
+    txtprops['va'] = 'top'
+    for i in range((epitope_end[eidx]-epitope_start[eidx]+1)//3):
+        ax_smpl.text(1.5+i*sub_dx, -0.5, 160+i, clip_on=False, **txtprops)
+
+    ax_smpl.text(sub_box*sub_dx - 11, -4.5, -5, clip_on=False, **txtprops)
+    ax_smpl.text(sub_box*sub_dx -  6, -4.5,  0, clip_on=False, **txtprops)
+    ax_smpl.text(sub_box*sub_dx -  1, -4.5,  5, clip_on=False, **txtprops)
+    ax_smpl.text(sub_box*sub_dx -  5.5, -6.0, 'Inferred selection\ncoefficient, $\hat{s}$ (%)', clip_on=False, **txtprops)
 
 
 ######################
