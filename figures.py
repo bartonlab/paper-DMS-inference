@@ -111,7 +111,7 @@ NAME2NAME = {
     'HIV_bnAbs_FP20': 'FP20-01',
     'Flu_MS': 'NP MS',
     'Flu_MxA': 'NP MxA',
-    'Flu_MxAneg': 'NP MxA',
+    'Flu_MxAneg': 'NP MxAneg',
     'Flu_MatrixM1': 'M1',
     'Flu_Aichi68C': 'Aichi68',
     'Flu_PR8': 'PR8',
@@ -141,7 +141,7 @@ def fig_methods_comparison():
                    'ZIKV':            ['ZIKV',                  3],
                    'Perth2009':       ['Perth2009',             4],
                    'Flu_MS':          ['MS',                    2],#
-                   # 'Flu_MxA':         ['MxA',                   2],#
+                   'Flu_MxA':         ['MxA',                   2],#
                    'Flu_MxAneg':      ['MxAneg',                2],#
                    'HIV_BG505':       ['HIV Env BG505' ,        3],#
                    'HIV_BF520':       ['HIV Env BF520' ,        3],#
