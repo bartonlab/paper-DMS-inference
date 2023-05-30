@@ -94,7 +94,7 @@ matplotlib.rc('font', **DEF_TEXTPROPS)
 
 FIG_DIR  = './figures/'
 PREF_DIR = './output/merged_preference/'
-POP_DIR  = './output/gauged_selection_coefficients/'
+POP_DIR  = './output/selection_coefficients/'
 
 NAME2NAME = {
     'Flu_WSN':  'WSN',
@@ -806,7 +806,7 @@ def FIG2_METHODS_COMPARISON():
     FIG2_A_TAGBOX       = dict(boxstyle='round', facecolor = 'white')
 
     FIG2_PREF_DIR = './data/prefs/'
-    POP_DIR = './output/gauged_selection_coefficients/'
+    POP_DIR = './output/selection_coefficients/'
     FIG2_A_INDEPENDENT_SITE_RESULT_DIR = {
                        'Flu_WSN':         ['WSN',                   '-2', 3],#
                        'Flu_A549':        ['A549',                  '-3', 2],#
