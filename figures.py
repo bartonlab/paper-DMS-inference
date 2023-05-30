@@ -94,7 +94,7 @@ matplotlib.rc('font', **DEF_TEXTPROPS)
 
 FIG_DIR  = './figures/'
 PREF_DIR = './output/merged_preference/'
-POP_DIR  = './output/selection_coefficients/'
+POP_DIR  = './output/gauged_selection_coefficients/'
 
 NAME2NAME = {
     'Flu_WSN':  'WSN',
@@ -274,13 +274,12 @@ def fig_methods_comparison():
     n_reps   = 3
 
     df_temp  = pd.read_csv(POP_DIR + data_set + '.csv.gz')
-    df_temp  = df_temp[~(df_temp == 0).any(axis=1)]
+    # df_temp  = df_temp[~(df_temp == 0).any(axis=1)]
     # df_temp  = df_temp[(df_temp['rep_1']!=0) & (df_temp['rep_2']!=0)]
     pop_list = []
     for rep in range(1, n_reps+1):
         pop_list.append(df_temp['rep_' + str(rep)].tolist())
         
-    
     df_temp   = pd.read_csv(PREF_DIR + data_set + '.csv.gz')
     df_temp  = df_temp[~(df_temp == 0).any(axis=1)]
     pref_list = []
@@ -807,7 +806,7 @@ def FIG2_METHODS_COMPARISON():
     FIG2_A_TAGBOX       = dict(boxstyle='round', facecolor = 'white')
 
     FIG2_PREF_DIR = './data/prefs/'
-    POP_DIR = './output/selection_coefficients/'
+    POP_DIR = './output/gauged_selection_coefficients/'
     FIG2_A_INDEPENDENT_SITE_RESULT_DIR = {
                        'Flu_WSN':         ['WSN',                   '-2', 3],#
                        'Flu_A549':        ['A549',                  '-3', 2],#
@@ -817,16 +816,16 @@ def FIG2_METHODS_COMPARISON():
                        'Flu_MatrixM1':    ['Matrix_M1',             '-2', 3],#
                        'ZIKV':            ['ZIKV',                  '-2', 3],
                        'Perth2009':       ['Perth2009',             '-3', 4],
-                       # 'Flu_MS':          ['MS',                    '-3', 2],#
-                       # 'Flu_MxA':         ['MxA',                   '-3', 2],#
-                       # 'Flu_MxAneg':      ['MxAneg',                '-3', 2],#
+                       'Flu_MS':          ['MS',                    '-3', 2],#
+                       'Flu_MxA':         ['MxA',                   '-3', 2],#
+                       'Flu_MxAneg':      ['MxAneg',                '-3', 2],#
                        'HIV_BG505':       ['HIV Env BG505' ,        '-3', 3],#
                        'HIV_BF520':       ['HIV Env BF520' ,        '-3', 3],#
                        'HIV_CD4_human':   ['HIV BF520 human host',  '-3', 2],#
                        'HIV_CD4_rhesus':  ['HIV BF520 rhesus host', '-2', 2],#
-                       # 'HIV_bnAbs_FP16':  ['HIV bnAbs FP16',        '-2', 2],
-                       # 'HIV_bnAbs_FP20':  ['HIV bnAbs FP20',        '-2', 2],
-                       # 'HIV_bnAbs_VRC34': ['HIV bnAbs VRC34',       '-2', 2],
+                       'HIV_bnAbs_FP16':  ['HIV bnAbs FP16',        '-2', 2],
+                       'HIV_bnAbs_FP20':  ['HIV bnAbs FP20',        '-2', 2],
+                       'HIV_bnAbs_VRC34': ['HIV bnAbs VRC34',       '-2', 2],
                        }
     
     FIG2_A_FULL_LENGTH_RESULT_DIR = {
