@@ -761,13 +761,13 @@ def FIG2_METHODS_COMPARISON():
         ENRICH_LIST    = []
         replicate      = info_list[2]
         if 'HIV_bnAbs' in protein or 'Flu_MS' in protein or 'Flu_Mx' in protein:
-            FILE_PATH = PREF_DIR + info_list[0] + '_enrichment.csv.gz'
+            FILE_PATH = PREF_DIR + info_list[0] + '.csv.gz'
             temp_df   = pd.read_csv(FILE_PATH)
             correlation_average      = (temp_df.corr().sum().sum() - temp_df.shape[1])/(temp_df.shape[1]**2 - temp_df.shape[1])
             FIG2_A_PREF_AVG[protein] = correlation_average
         else:
             for rep in range(replicate):
-                FILE_PATH = PREF_DIR + info_list[0] + '-' + str(rep+1) + '_prefs.csv'
+                FILE_PATH = PREF_DIR + info_list[0] + '.csv.gz'
                 temp_df   = pd.read_csv(FILE_PATH, index_col = 0)
                 ENRICH_LIST.append(list(temp_df.values.flatten()))
 
