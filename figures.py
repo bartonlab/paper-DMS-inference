@@ -1090,7 +1090,7 @@ def FIG3_VISUALIZATION(exp_scale = 10, sites_per_line = 35):
 
     matplotlib.rcParams.update({'font.size': SIZELABEL})
     OFFSET_LETTER  = 0
-    SELECTION_FILE = './output/selection_coefficients/YAP1.csv.gz'
+    SELECTION_FILE = './output/selection_coefficients/YAP1_fig3.csv.gz'
     EPISTASIS_FILE = './output/epistasis/YAP1_100.txt'
     INDEX_FILE     = './output/epistasis/index_matrix.csv'
     SEQUENCE       = "DVPLPAGWEMAKTSSGQRYFLNHIDQTTTWQDPR"
