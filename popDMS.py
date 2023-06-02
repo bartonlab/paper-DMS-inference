@@ -515,6 +515,13 @@ def MPL_independent_site_inference(TARGET_PROTEIN, REPLICATES, DNACODON_FILE, PR
         else:
             joint_freq_diff = np.add(joint_freq_diff, FREQUENCY_DIFF)
             joint_cov_mat = np.add(joint_cov_mat, COVARIANCE_MATRIX)
+        # print('rank of integrated cov matrix: ', np.linalg.matrix_rank(COVARIANCE_MATRIX))
+        # test_matrix = COVARIANCE_MATRIX.copy()
+        # test_matrix = test_matrix[~(test_matrix==0).all(1)]
+        # test_matrix = test_matrix.T[~(test_matrix==0).T.all(1)].T
+        # # test_matrix = test_matrix[~(test_matrix==0).all(0)]
+        # print(len(test_matrix), len(test_matrix[0]))
+        
         if minimum > 1e50:
             minimum = max_read
             regularization_list = [np.power(10, float(i)) for i in range(int(np.log10(1/minimum)-1), 4)]
@@ -711,10 +718,18 @@ def output_final_selection_full_length(gamma, sites, cov_matx, df_frequency_chan
             invert_matrix += time_interval * copy_cov_matx[rep][time_i]
         joint_freq_change = np.add(joint_freq_change, df_frequency_change_dict['single']['amino_acid'][rep])
         joint_cov_mat = np.add(joint_cov_mat, invert_matrix)
+        # print('rank of integrated cov matrix: ', np.linalg.matrix_rank(invert_matrix))
+        # test_matrix = invert_matrix.copy()
+        # test_matrix = test_matrix[~(test_matrix==0).all(1)]
+        # test_matrix = test_matrix.T[~(test_matrix==0).T.all(1)].T
+        # # test_matrix = test_matrix[~(test_matrix==0).all(0)]
+        # print(len(test_matrix), len(test_matrix[0]))
         for k in range(q * L):
             invert_matrix[k,k] += gamma
         invert_matrix = np.linalg.inv(invert_matrix)
         estimate_selection[rep] = np.inner(invert_matrix, df_frequency_change_dict['single']['amino_acid'][rep])
+    print('rank of joint cov matrix: ', np.linalg.matrix_rank(joint_cov_mat))
+    print('length of sequence: ',L)
     for k in range(q * L):
         joint_cov_mat[k,k] += gamma
     joint_selection = np.inner(np.linalg.inv(joint_cov_mat), joint_freq_change)   

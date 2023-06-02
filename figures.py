@@ -140,7 +140,8 @@ NAME2NAME = {
 def fig_methods_comparison():
     ''' FUTURE: PASS FIGURE NAME AND OTHER RELATIVE PARAMETERS INTO THE FUNCTION '''
 
-    input_files = {'Flu_WSN':         ['WSN',                   3],#
+    input_files = {
+                   'Flu_WSN':         ['WSN',                   3],#
                    'Flu_A549':        ['A549',                  2],#
                    'Flu_CCL141':      ['CCL141',                3],#
                    'Flu_Aichi68C':    ['Aichi68C',              2],#
@@ -165,7 +166,8 @@ def fig_methods_comparison():
                    'Ubiq_Ube4b':      ['Ube4b',                 2],
                    'HDR_DBR1':        ['DBR1',                  2],
                    'Thrombo_TpoR_1':  ['TpoR',                  6],
-                   'Thrombo_TpoR_2':  ['TpoR_S505N',            6]  }
+                   'Thrombo_TpoR_2':  ['TpoR_S505N',            6]  
+                   }
 
     fig_title = 'fig-1-overview.pdf'
 
@@ -180,14 +182,20 @@ def fig_methods_comparison():
         path = PREF_DIR +  info[0] + '.csv.gz'
         df_pref = pd.read_csv(path)
 
-        df_merged = pd.merge(df_pref, df_sele, on=['site', 'amino_acid'])
+        df_corr_pref = df_pref[[i for i in rep_list]]
+        df_corr_pref = df_corr_pref.dropna()
+        df_corr_sele = df_sele[[i for i in rep_list]]
+        df_corr_sele = df_corr_sele.loc[~(df_corr_sele==0).all(axis=1)]
+
+        df_merged = pd.merge(df_pref, df_sele, on=['site', 'amino_acid'], how='inner')
         df_corr_pref = df_merged[[i+'_x' for i in rep_list]]
         df_corr_sele = df_merged[[i+'_y' for i in rep_list]]
-        correlation_average = (df_corr_pref.corr().sum().sum() - df_corr_pref.shape[1])/(df_corr_pref.shape[1]**2 - df_corr_pref.shape[1])
+
+        correlation_average = (df_corr_pref.corr().sum().sum() - info[1])/(info[1]**2 - info[1])
         pref_avg[target_protein] = correlation_average
-        correlation_average = (df_corr_sele.corr().sum().sum() - df_corr_sele.shape[1])/(df_corr_sele.shape[1]**2 - df_corr_sele.shape[1])
+        correlation_average = (df_corr_sele.corr().sum().sum() - info[1])/(info[1]**2 - info[1])
         pop_avg[target_protein] = correlation_average
-    
+     
     # variables
     w = DOUBLE_COLUMN
     h = DOUBLE_COLUMN * 1.1 / GOLDR
@@ -231,7 +239,6 @@ def fig_methods_comparison():
     pref_list = pref_avg.items()
     x_, y_ = zip(*pref_list)
     ax.scatter(x_, np.array(y_)**2, color=C_PREF, s=SMALLSIZEDOT*2)
-    # print([NAME2NAME[label] for label in x])
     # ax.xaxis.set_ticks([NAME2NAME[label] for label in x])
     ax.set_xticklabels([NAME2NAME[label] for label in x], rotation = 45, ha = 'right')
     
