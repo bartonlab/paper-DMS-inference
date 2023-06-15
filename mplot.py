@@ -58,13 +58,13 @@ sizedot      = 8.
 sizeline     = 0.8
 textcolor    = defcolor
 
-## paper
-#fontfamily   = 'Arial'
-#sizesublabel = 8+1
-#sizetext     = 6
-#sizelabel    = 6
-#sizetick     = 6
-#smallsizedot = 6.
+# paper
+fontfamily   = 'Arial'
+sizesublabel = 8
+sizetext     = 6
+sizelabel    = 6
+sizetick     = 6
+smallsizedot = 6.
 
 ## grant
 #fontfamily   = 'Arial'
@@ -75,15 +75,15 @@ textcolor    = defcolor
 #smallsizedot = 6. * 2
 #sizeline     = 1
 
-#slides/poster
-fontfamily   = 'Avenir'
-sizesublabel = 18 #24 #18
-sizetext     = 18 #24 #18
-sizelabel    = 18 #24 #18
-sizetick     = 18 #24 #18
-smallsizedot = 6. * 4
-axwidth      = 1.5
-sizeline     = 3.0
+##slides/poster
+#fontfamily   = 'Avenir'
+#sizesublabel = 18 #24 #18
+#sizetext     = 18 #24 #18
+#sizelabel    = 18 #24 #18
+#sizetick     = 18 #24 #18
+#smallsizedot = 6. * 4
+#axwidth      = 1.5
+#sizeline     = 3.0
 
 def_labelprops = {
     'family' : fontfamily,
@@ -489,9 +489,9 @@ def plot(**pdata):
         pdata['xminorticks'] = [k for k in pdata['yminorticks']]
         pdata['yminorticks'] = [k for k in temp]
 
-    if pdata['theme']=='open':
-        adjustlim(pdata['xlim'], logscale=pdata['logx'])
-        adjustlim(pdata['ylim'], logscale=pdata['logy'])
+#    if pdata['theme']=='open':
+#        adjustlim(pdata['xlim'], logscale=pdata['logx'])
+#        adjustlim(pdata['ylim'], logscale=pdata['logy'])
     if 'nudgex' in pdata: pdata['xlim'][1] *= pdata['nudgex']
     if 'nudgey' in pdata: pdata['ylim'][1] *= pdata['nudgey']
     setappearance(**pdata)
