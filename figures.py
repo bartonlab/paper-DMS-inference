@@ -1698,7 +1698,8 @@ def FIG3_VISUALIZATION(exp_scale = 10, sites_per_line = 35):
         df_WT_epi['site_2'] += 8
         df_WT_epi_ = df_WT_epi.copy()
         df_WT_epi_ = df_WT_epi_.rename(columns={"site_1":"site_2", "site_2":"site_1"})
-        df_WT_epi  = df_WT_epi.append(df_WT_epi_, ignore_index=True, sort=False)
+        # df_WT_epi  = df_WT_epi.append(df_WT_epi_, ignore_index=True, sort=False)
+        df_WT_epi = pd.concat([df_WT_epi, df_WT_epi_])
         flights = df_WT_epi.pivot("site_1", "site_2", "absolute_s")
         hm = ax4.imshow(flights,cmap='Greys', aspect = 'equal', vmin = 0)
         ax4.set_xlabel('Site', labelpad = 7)
@@ -1883,7 +1884,8 @@ def SUPPFIG1_EPISTASIS():
     end_site = df_index1['variant_2'].max()
     df_i = []
     for i in range(end_site+1):
-        df_i.append(df_index1[(df_index1['variant_1'] == i) & (df_index1['variant_2'] == i)].index.values[0])
+        # df_i.append(df_index1[(df_index1['variant_1'] == i) & (df_index1['variant_2'] == i)].index.values[0])
+        df_i = pd.concat([df_i, df_index1[(df_index1['variant_1'] == i) & (df_index1['variant_2'] == i)].index.values[0]])
     index_list = df_index1['index'].tolist()
     selection_list = []
     for index in index_list:
@@ -1901,7 +1903,8 @@ def SUPPFIG1_EPISTASIS():
     end_site = df_index2['variant_2'].max()
     df_i = []
     for i in range(end_site+1):
-        df_i.append(df_index2[(df_index2['variant_1'] == i) & (df_index2['variant_2'] == i)].index.values[0])
+        # df_i.append(df_index2[(df_index2['variant_1'] == i) & (df_index2['variant_2'] == i)].index.values[0])
+        df_i = pd.concat([df_i, df_index2[(df_index2['variant_1'] == i) & (df_index2['variant_2'] == i)].index.values[0]])
     index_list = df_index2['index'].tolist()
     selection_list = []
     for index in index_list:
