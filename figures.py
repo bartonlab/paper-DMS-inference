@@ -1342,7 +1342,7 @@ def FIG3_VISUALIZATION(exp_scale = 10, sites_per_line = 35):
 
     matplotlib.rcParams.update({'font.size': SIZELABEL})
     OFFSET_LETTER  = 0
-    SELECTION_FILE = './output/selection_coefficients/YAP1_fig3.csv.gz'
+    SELECTION_FILE = './output/selection_coefficients/YAP1.csv.gz'
     EPISTASIS_FILE = './output/epistasis/YAP1_100.txt'
     INDEX_FILE     = './output/epistasis/index_matrix.csv'
     SEQUENCE       = "DVPLPAGWEMAKTSSGQRYFLNHIDQTTTWQDPR"
@@ -1536,8 +1536,10 @@ def FIG3_VISUALIZATION(exp_scale = 10, sites_per_line = 35):
         df_AA['site'] = site_list
         df_AA['amino_acid'] = amino_acid_list
         df_AA['pref'] = pref_list
-        data2 = pd.pivot_table(df_AA, values = 'pref', index = ['site'], columns = ['amino_acid']).reset_index()
+        df_AA = pd.read_csv('./output/merged_preference/YAP1.csv.gz')[['site', 'amino_acid', 'average']]
+        data2 = pd.pivot_table(df_AA, values = 'average', index = ['site'], columns = ['amino_acid']).reset_index()
         data2['site'] = [str(i) + '_Pref' for i in data2['site'].tolist()]
+        data2 = data2.fillna(0)
 
         data = pd.read_csv(SELECTION_FILE)
         site_list = data['site'].unique().tolist()
@@ -1546,9 +1548,9 @@ def FIG3_VISUALIZATION(exp_scale = 10, sites_per_line = 35):
         sites_per_line = 35
         exp_scale = 10
         plt.figure()
-        data1 = data[['site', 'amino_acid', 'rep_1']]
+        data1 = data[['site', 'amino_acid', 'joint']].copy()
 
-        data1 = pd.pivot_table(data1, values = rep, index=['site'], columns = ['amino_acid']).reset_index()
+        data1 = pd.pivot_table(data1, values = 'joint', index=['site'], columns = ['amino_acid']).reset_index()
         data1 = data1.drop(['*'], axis = 1)
         data1['site'] = [str(i) + '_MPL' for i in data1['site'].tolist()]
 
@@ -1557,9 +1559,12 @@ def FIG3_VISUALIZATION(exp_scale = 10, sites_per_line = 35):
         df_zero = data1[0: 1].copy()
         for col in df_zero.columns:
             df_zero[col].values[:] = 0
-        selected_rows = [10, 16, 27, 
-                         4,  13, 28,
-                         29, 30, 20]
+        # selected_rows = [10, 16, 27, 
+        #                  4,  13, 28,
+        #                  29, 30, 20]
+        selected_rows = [9,  15, 26, 
+                         3,  12, 27,
+                         28, 29, 19]
         k = 10 * len(selected_rows)
         m = 0
         for i in selected_rows:
@@ -1593,6 +1598,7 @@ def FIG3_VISUALIZATION(exp_scale = 10, sites_per_line = 35):
         df_all = df_all.drop(['site'], axis = 1)
 
         df_all.set_index('plot_site', inplace = True)
+        df_all = df_all.drop('*', axis = 1)
         total_line_num = len(df_all.columns)
         sites_per_line = int(df_all.shape[0]/3)
         num_line = int(total_line_num/sites_per_line) + 1
@@ -1756,7 +1762,7 @@ def FIG3_VISUALIZATION(exp_scale = 10, sites_per_line = 35):
         clb = fig.colorbar(hm, ax = ax4, orientation = 'vertical', pad = 0.07, shrink = 0.6)
         clb.ax.set_xlabel(r'$\sum$|epistasis|', fontsize = SIZELABEL)
         
-    plt.savefig(FIG_DIR + 'Fig3_realdata.pdf', dpi=200)
+    fig.savefig(FIG_DIR + 'Fig3_realdata.pdf', dpi=200)
     plt.show()
 
 
