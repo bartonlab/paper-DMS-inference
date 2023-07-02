@@ -1503,57 +1503,76 @@ def FIG3_VISUALIZATION(exp_scale = 10, sites_per_line = 35):
 
         # Comparison Logoplot
         inner = gridspec.GridSpecFromSubplotSpec(3, 1,subplot_spec = ax3, wspace = 0.1, hspace = 0.5)
-        df_enrich   = pd.read_csv('./data/prefs/YAP1_prefs.csv.gz')
-        df_enrich['hgvs_pro'].astype(str)
-        df_enrich   = df_enrich[~df_enrich['hgvs_pro'].str.contains('\[')]
-        df_enrich   = df_enrich[ df_enrich['hgvs_pro'].str.contains('p.')]
-        mutant_list = df_enrich['hgvs_pro'].tolist()
-        pref_list   = df_enrich['score_101208'].tolist()
-        AA_dict     = {}
-        for aa in AA:
-            if aa != '*':
-                AA_dict[aa] = [0] * 34
-        site_lll = set()
-        for i in range(len(mutant_list)):
-            if mutant_list[i][-1] != '?':
-                mutants = mutant_list[i][-3:]
-                site_lll.add(int(mutant_list[i][5: -3]))
-                short_AA = Amino_acid_dict[mutants]
-                if short_AA != '*':
-                    if mutant_list[i][5:-3] != '':
-                        site = int(mutant_list[i][5: -3]) - 1
-                    AA_dict[short_AA][site] = pref_list[i]
+        # df_enrich   = pd.read_csv('./data/prefs/YAP1_prefs.csv.gz')
+        # df_enrich['hgvs_pro'].astype(str)
+        # df_enrich   = df_enrich[~df_enrich['hgvs_pro'].str.contains('\[')]
+        # df_enrich   = df_enrich[ df_enrich['hgvs_pro'].str.contains('p.')]
+        # mutant_list = df_enrich['hgvs_pro'].tolist()
+        # pref_list   = df_enrich['score_101208'].tolist()
+        # AA_dict     = {}
+        # for aa in AA:
+        #     if aa != '*':
+        #         AA_dict[aa] = [0] * 34
+        # site_lll = set()
+        # for i in range(len(mutant_list)):
+        #     if mutant_list[i][-1] != '?':
+        #         mutants = mutant_list[i][-3:]
+        #         site_lll.add(int(mutant_list[i][5: -3]))
+        #         short_AA = Amino_acid_dict[mutants]
+        #         if short_AA != '*':
+        #             if mutant_list[i][5:-3] != '':
+        #                 site = int(mutant_list[i][5: -3]) - 1
+        #             AA_dict[short_AA][site] = pref_list[i]
 
-        df_AA = pd.DataFrame(columns = ['site', 'amino_acid', 'pref'])
-        site_list = []
-        amino_acid_list = []
-        pref_list = []
-        for aa, pref in AA_dict.items():
-            for i in range(len(pref)):
-                site_list.append(i + 2)
-                pref_list.append(pref[i])
-                amino_acid_list.append(aa)
-        df_AA['site'] = site_list
-        df_AA['amino_acid'] = amino_acid_list
-        df_AA['pref'] = pref_list
+        # df_AA = pd.DataFrame(columns = ['site', 'amino_acid', 'pref'])
+        # site_list = []
+        # amino_acid_list = []
+        # pref_list = []
+        # for aa, pref in AA_dict.items():
+        #     for i in range(len(pref)):
+        #         site_list.append(i + 2)
+        #         pref_list.append(pref[i])
+        #         amino_acid_list.append(aa)
+        # df_AA['site'] = site_list
+        # df_AA['amino_acid'] = amino_acid_list
+        # df_AA['pref'] = pref_list
+        # df_AA = pd.read_csv('./output/merged_preference/YAP1.csv.gz')[['site', 'amino_acid', 'average']]
+        # data2 = pd.pivot_table(df_AA, values = 'average', index = ['site'], columns = ['amino_acid']).reset_index()
+        # data2['site'] = [str(i) + '_Pref' for i in data2['site'].tolist()]
+        # data2 = data2.fillna(0)
+
+        # data = pd.read_csv(SELECTION_FILE)
+        # site_list = data['site'].unique().tolist()
+        # rep_list = data.columns[2:]
+
+        # sites_per_line = 35
+        # exp_scale = 10
+        # plt.figure()
+        # data1 = data[['site', 'amino_acid', 'joint']].copy()
+
+        # data1 = pd.pivot_table(data1, values = 'joint', index=['site'], columns = ['amino_acid']).reset_index()
+        # data1 = data1.drop(['*'], axis = 1)
+        # data1['site'] = [str(i) + '_MPL' for i in data1['site'].tolist()]
         df_AA = pd.read_csv('./output/merged_preference/YAP1.csv.gz')[['site', 'amino_acid', 'average']]
         data2 = pd.pivot_table(df_AA, values = 'average', index = ['site'], columns = ['amino_acid']).reset_index()
         data2['site'] = [str(i) + '_Pref' for i in data2['site'].tolist()]
-        data2 = data2.fillna(0)
+        # data2 = data2.fillna(0)
+        data2 = data2.drop(['*'], axis = 1)
 
-        data = pd.read_csv(SELECTION_FILE)
+        data = pd.read_csv('./output/selection_coefficients/YAP1.csv.gz')
         site_list = data['site'].unique().tolist()
         rep_list = data.columns[2:]
 
         sites_per_line = 35
         exp_scale = 10
+        MPL_scale  = 8
+        PREF_scale = 2
         plt.figure()
         data1 = data[['site', 'amino_acid', 'joint']].copy()
-
+        data1 = data1[data1['joint'] != 0]
         data1 = pd.pivot_table(data1, values = 'joint', index=['site'], columns = ['amino_acid']).reset_index()
-        data1 = data1.drop(['*'], axis = 1)
+        # data1 = data1.drop(['*'], axis = 1)
         data1['site'] = [str(i) + '_MPL' for i in data1['site'].tolist()]
-
 
         df_all  = data1[0: 0].copy()
         df_zero = data1[0: 1].copy()
