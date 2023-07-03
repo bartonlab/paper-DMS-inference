@@ -5,7 +5,9 @@ import re
 import time
 import matplotlib.pyplot as plt
 from collections import Counter
+import json
 from itertools import combinations
+import sys
 
 def codon2aa(c, noq=False):              # Returns the amino acid character corresponding to the input codon.
         
@@ -75,13 +77,20 @@ def codon2aa(c, noq=False):              # Returns the amino acid character corr
     else:                                  return 'X'
 
 
-df_data = pd.read_csv('../data/raw_data/YAP1_nucleotide_variant.csv', low_memory=False)
+
+filename = sys.argv[-1]
+
+with open('./YAP1.json', 'r') as f:
+    file_json = json.load(f)
+
+df_data = pd.read_csv(file_json['raw_counts_file'], compression = 'gzip')
+
+with open(file_json['raw_sequence_file'], 'r') as file:
+    reference_sequence = file.read().replace('\n', '')
+
 df_data = df_data.fillna(0)
-df_data = df_data.drop([0, 1, 2], axis = 0)
 df_data = df_data.drop(df_data.columns[0], axis = 1)
 df_data.reset_index(drop=True, inplace=True)
-df_data.columns = df_data.iloc[0]
-df_data = df_data.drop([0], axis = 0)
 
 CODONS = ['AAA', 'AAC', 'AAG', 'AAT', 'ACA', 'ACC', 'ACG', 'ACT',   # Tri-nucleotide units table
           'AGA', 'AGC', 'AGG', 'AGT', 'ATA', 'ATC', 'ATG', 'ATT',
@@ -92,26 +101,26 @@ CODONS = ['AAA', 'AAC', 'AAG', 'AAT', 'ACA', 'ACC', 'ACG', 'ACT',   # Tri-nucleo
           'TAA', 'TAC', 'TAG', 'TAT', 'TCA', 'TCC', 'TCG', 'TCT',
           'TGA', 'TGC', 'TGG', 'TGT', 'TTA', 'TTC', 'TTG', 'TTT']   
 
-df_data[df_data['hgvs_nt'].str.contains('X', regex=False)]
+df_data[df_data[file_json['variant_column']].str.contains('X', regex=False)]
 
 df_data = df_data[~df_data.hgvs_nt.str.contains('X', regex=False)]
 
-reference_sequence = 'GACGTTCCACTGCCGGCTGGTTGGGAAATGGCTAAAACTAGTTCTGGTCAGCGTTACTTCCTGAACCACATCGACCAGACCACCACGTGGCAGGACCCGCGT'
 reference_list = list(reference_sequence)
-site_start = 1
-site_end = 34
+site_start = file_json['site_start']
+site_end = file_json['site_end']
 site_list = list(range(site_start, site_end+1))
 
-timepoints = [0, 1, 2, 3]
+timepoints = file_json['timepoint_list']
 
 codon_length = 3
 
 raw_codon = [reference_sequence[i:i+codon_length] for i in range(0, len(reference_sequence), codon_length)]
 
-reps = [1, 2]
-allele_counts_table = [df_data[['hgvs_nt','101208_c_0', '101208_c_1', '101208_c_2', '101208_c_3']], 
-                       df_data[['hgvs_nt','110307_c_0', '110307_c_1', '110307_c_2', '110307_c_3']]]
-#print(allele_counts_table[1])
+reps = [int(i) for i in file_json['count_column'].keys()]
+
+allele_counts_table = []
+for table_columns in file_json['count_column'].keys():
+    allele_counts_table.append(df_data[file_json['count_column'][table_columns]])
 
 allele_counts_list = []
 
@@ -162,5 +171,8 @@ for rep in reps:
             allele_counts_list.append([rep, timepoint, variant_record, mutation_number[timepoints.index(timepoint)]])
 
     codon_counts_table = pd.DataFrame(data = allele_counts_list, columns = allele_counts_columns)
-    codon_counts_table.to_csv('../outputs/epistasis/YAP1_genotype_count_rep%s.csv'%rep, sep = ',', index = False)
+    codon_counts_table.to_csv(file_json['output_count_suffix']+'%s.csv'%rep, sep = ',', index = False)
+
+print('variant count table processing complete!')
+
 
