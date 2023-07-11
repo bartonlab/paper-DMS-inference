@@ -54,9 +54,9 @@ std::vector<std::array<int, 3>> get_lines_info(FILE* file_head, int *line_num){
     int vec_list[4];
 
     std::string substr("total_reads");
-    // std::cout << "Start!-\n";
+    std::cout << "Start!-\n";
     fgets(line, 128, file_head);
-    // std::cout << "Start!\n";
+    std::cout << "Start!\n";
     std::string token;
 
     while (fgets(line, 128, file_head)){
@@ -64,7 +64,7 @@ std::vector<std::array<int, 3>> get_lines_info(FILE* file_head, int *line_num){
         *line_num = *line_num + 1;
         std::string str(line);
         if(str.find(substr)!=std::string::npos){
-            // std::cout << line;
+            //std::cout << line;
             size_t pos = 0;
             i = 0;
             while ((pos = str.find(delimiter)) != std::string::npos) {
@@ -644,7 +644,6 @@ void build_cov( const int &seq_len, int dimension, int regularization,
         std::cout<<element<< " ";
         //tmp_idx_sin.emplace_back(element);
     }
-    std::cout<<std::endl;
 /*
     for(auto const &ent1 : double_idx) {
         // ent1.first is the first key
@@ -661,7 +660,6 @@ void build_cov( const int &seq_len, int dimension, int regularization,
     for(int i = 0; i < Info_vec.size(); i++){
         rep = Info_vec[i][0];
         gen = Info_vec[i][1];
-
         cov_matx_full[std::make_tuple(rep, gen)] = init_cov_mat;
         frq_vect_full[std::make_tuple(rep, gen)] = init_fre_vec;
 /*
@@ -681,7 +679,6 @@ void build_cov( const int &seq_len, int dimension, int regularization,
 
 
 
-
     int var_num;//, wt_num;
     double freq;
     //int site1, site2, site3, site4;
@@ -690,12 +687,6 @@ void build_cov( const int &seq_len, int dimension, int regularization,
 
     int line_num = variant_record.size();
     //line_num = 1000;
-
-    int generations = Info_vec[Info_vec.size()-1][1] + 1;
-
-    float mut_haplotype_freq[generations];
-
-    std::cout << "# of lines = " << line_num << std::endl;
     
     for(int line = 0; line < line_num; line++){
 
@@ -710,23 +701,21 @@ void build_cov( const int &seq_len, int dimension, int regularization,
         else{
             var_num = variant_record[line].variant.size();
             freq = variant_record[line].frequency;
-            mut_haplotype_freq[gen] += freq;
-            // std::cout<<freq<<std::endl; 
             //std::vector<int> all_variant = idx_raw;
             //std::vector<int> variant_idx;
             std::vector<int> all_variant_sd;
 
             int var_seq[seq_len];
             //int var_seq_sd[inter_len];
-            memcpy(var_seq, raw_seq, sizeof(raw_seq));
+            memcpy(var_seq,raw_seq,sizeof(raw_seq));
 
             for(int i = 0; i < var_num; i++){
                 var_seq[variant_record[line].variant[i]/21] = variant_record[line].variant[i];
-                // std::cout<<variant_record[line].variant[i]<<std::endl; 
+                //std::cout<<variant_record[line].variant[i]<<std::endl; 
             }  
             //std::cout<<"==="<<std::endl; 
             for(int i = 0; i<seq_len; i++){
-                // std::cout<<var_seq[i]<<"\t"; 
+                //std::cout<<var_seq[i]<<"\t"; 
                 //var_seq_sd[i*seq_len+i]=double_idx[var_seq[i]][var_seq[i]];
                 for(int j = i; j<seq_len; j++){
                     all_variant_sd.emplace_back(double_idx[var_seq[i]][var_seq[j]]);
@@ -735,47 +724,17 @@ void build_cov( const int &seq_len, int dimension, int regularization,
             }  
 
             for(int i = 0; i<all_variant_sd.size(); i++){  
+                // std::cout<<i<<std::endl; 
                 matrix_element[rep][gen][all_variant_sd[i]][all_variant_sd[i]] += freq;
                 frequency_element[rep][gen][0][all_variant_sd[i]] += freq;
                 for(int j = i+1; j<all_variant_sd.size(); j++){
                     matrix_element[rep][gen][all_variant_sd[i]][all_variant_sd[j]] += freq;
-                    // std::cout << tmp1<<","<<tmp2 << "|\t";
+                    //std::cout << tmp1<<","<<tmp2 << "|\t";
                 }
             }
             // exit(0);
         } 
     } 
-
-    for(int wt_gen = 0; wt_gen < generations; wt_gen++){
-        std::vector<int> all_variant_sd;
-        int var_seq[seq_len];
-        memcpy(var_seq, raw_seq, sizeof(raw_seq));
-        for(int i = 0; i<seq_len; i++){
-            // std::cout<<var_seq[i]<<"\t"; 
-            //var_seq_sd[i*seq_len+i]=double_idx[var_seq[i]][var_seq[i]];
-            for(int j = i; j<seq_len; j++){
-                all_variant_sd.emplace_back(double_idx[var_seq[i]][var_seq[j]]);
-                // std::cout<<var_seq[i]<<" "<<var_seq[j]<<" "<<double_idx[var_seq[i]][var_seq[j]]<<std::endl;
-            }
-        } 
-        for(int i = 0; i < all_variant_sd.size(); i++){  
-            // std::cout << all_variant_sd[i] << "|\t";
-            matrix_element[rep][wt_gen][all_variant_sd[i]][all_variant_sd[i]] += 1 - mut_haplotype_freq[wt_gen];
-            // std::cout<<frequency_element[rep][wt_gen][0][all_variant_sd[i]]<<std::endl;
-            frequency_element[rep][wt_gen][0][all_variant_sd[i]] += 1 - mut_haplotype_freq[wt_gen];
-            // std::cout<<1 - mut_haplotype_freq[wt_gen]<<" "<<frequency_element[rep][wt_gen][0][all_variant_sd[i]] <<std::endl;
-            for(int j = i+1; j<all_variant_sd.size(); j++){
-                matrix_element[rep][wt_gen][all_variant_sd[i]][all_variant_sd[j]] += 1 - mut_haplotype_freq[wt_gen];
-                // std::cout << tmp1<<","<<tmp2 << "|\t";
-            }
-        }
-    }
-
-    // std::cout<<mut_haplotype_freq[0]<<std::endl;
-    // std::cout<<mut_haplotype_freq[1]<<std::endl;
-    // std::cout<<mut_haplotype_freq[2]<<std::endl;
-    // std::cout<<mut_haplotype_freq[3]<<std::endl;
-
 
     std::ofstream outputFile;
     std::string filename;
@@ -816,7 +775,7 @@ void build_cov( const int &seq_len, int dimension, int regularization,
                 // ent2.first is the second key
                 // ent2.second is the data
                 outputFile << ent2.first << ","<<ent2.second<< std::endl;
-                // std::cout << ent1.first<<" "<< ent2.first << ""ent2.second<<std::endl;
+                //std::cout << ent1.first<<" "<< ent2.first << ""ent2.second<<std::endl;
                 //cov_matx_tmp.emplace_back(Trip(ent1.first, ent2.first, matrix_element[rep][gen][ent1.first][ent2.first]));
                 //cov_matx_tmp.emplace_back(Trip(ent2.first, ent1.first, matrix_element[rep][gen][ent1.first][ent2.first]));
             
@@ -834,16 +793,9 @@ int main(int argc, char* argv[]) {
     clock_t start, end;
     double cpu_time_used; 
     start = clock();
-    // std::cout << "Start!--\n";
+    std::cout << "Start!--\n";
     //std::string raw_sequence = "FLIMVD";
-    // std::string raw_sequence = "DVPLPAGWEMAKTSSGQRYFLNHIDQTTTWQDPR";
-
-    const char* raw_sequence_file = argv[4];
-    std::ifstream t(raw_sequence_file);
-    std::stringstream buffer;
-    buffer << t.rdbuf();
-    std::string raw_sequence = buffer.str();
-
+    std::string raw_sequence = "DVPLPAGWEMAKTSSGQRYFLNHIDQTTTWQDPR";
     std::ofstream outputFile;
     // create a name for the file output
     std::string filename;
@@ -863,10 +815,10 @@ int main(int argc, char* argv[]) {
 // read how many lines in data file & Info_vec = (rep,gen,tot_cnt)
     FILE* get_line = fopen(FileName, "r");
     int line_num = 0;
-    // std::cout << "# of lines = " << line_num << std::endl;
+
     std::vector<std::array<int, 3>> Info_vec = get_lines_info(get_line, &line_num);
 
-    
+    std::cout << "# of lines = " << line_num << std::endl;
     //std::cout << Info_vec[0].size() << std::endl;
     //std::cout << "# of lines = " << raw_data_lines << std::endl;
 
@@ -881,7 +833,7 @@ int main(int argc, char* argv[]) {
 
 // read the first index line and discard it
     fgets(line, 128, stream);
-    std::cout << line << std::endl;
+    //std::cout << line << std::endl;
 
 // loop through the file
     int struct_idx = 0;
@@ -907,7 +859,7 @@ int main(int argc, char* argv[]) {
             double_idx_set.insert(std::make_pair(idx_raw[i], idx_raw[j]));
         }
     }
-    // display(double_idx_set);
+    //display(double_idx_set);
     std::cout<<std::endl;
 
     //std::cout << idx_list[0] <<idx_list[1]<< std::endl;
@@ -976,7 +928,7 @@ int main(int argc, char* argv[]) {
     build_cov(seq_len, dimension, regularization, variant_record, Info_vec, idx_raw, idx_list, double_idx, frq_vect_full, cov_matx, protein_name);
     end = clock();
     cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-    std::cout << cpu_time_used << std::endl;
+    std::cout << cpu_time_used;
     return 0;
 }
 
