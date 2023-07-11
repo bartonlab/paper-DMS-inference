@@ -266,21 +266,12 @@ void printSelectionCoefficients(FILE *output, const std::vector<double> &s) {
 int main(int argc, char* argv[]) {
     std::cout << "Start!\n";
     //std::string raw_sequence = "FLIMVD";
-    // std::string raw_sequence = "DVPLPAGWEMAKTSSGQRYFLNHIDQTTTWQDPR";
-    const char* raw_sequence_file = argv[4];
-    std::ifstream t(raw_sequence_file);
-    std::stringstream buffer;
-    buffer << t.rdbuf();
-    std::string raw_sequence = buffer.str();
-
+    std::string raw_sequence = "DVPLPAGWEMAKTSSGQRYFLNHIDQTTTWQDPR";
     std::ofstream outputFile;
     // create a name for the file output
     std::string filename;
     int seq_length = raw_sequence.length();
-    // double regularization = 100.0;
-    
-    const char* regular = argv[5];
-    double regularization = atof(regular);
+    double regularization = 100.0;
     // const char* Index_file = "index_matrix.csv";
     // const char* Rawdata = "new_count_1.csv";
     const char* protein_name = argv[1];
@@ -312,7 +303,7 @@ int main(int argc, char* argv[]) {
     std::string file_name;
     const char* multiple_allele_file;
     const char* sindou_allele_file;
-    std::cout << "stop" << std::endl;
+
     //std::map<std::tuple<int, int>, SpMat> cov_xijkl;
     //std::map<std::tuple<int, int>, dMat> cov_xixj;
     //std::map<std::tuple<int, int>, dMat> freq_vect_full;
@@ -473,37 +464,10 @@ int main(int argc, char* argv[]) {
         }     
     }
 
-
-    FILE *fp_fc;  
-    std::string output_freq_change_name = std::string(protein_name)+"_freq_change_rep"+std::to_string(Info_vec[0][0])+".txt";
-    const char *output_freq_change_char = output_freq_change_name.c_str();
-    fp_fc = fopen(output_freq_change_char, "w");
-    FILE *fp_cm;  
-    std::string output_cov_matrix_name = std::string(protein_name)+"_cov_matrix_rep"+std::to_string(Info_vec[0][0])+".txt";
-    const char *output_cov_matrix_char = output_cov_matrix_name.c_str();
-    fp_cm = fopen(output_cov_matrix_char, "w");
-
-    std::cout<<"write frequency change and covariance file"<<std::endl;
-
-    for(int i = 0; i < matrix_dim; i++){
-        dx[i] = freq_vect_full[(Info_vec.size()-1)*matrix_dim + i] - freq_vect_full[0 * matrix_dim + i];
-        if(dx[i] != 0){
-            fprintf(fp_fc,"%d,%.6e\n", i, dx[i]);
-        }
-
-        for(int j = i; j < matrix_dim; j++){
-            if(totalCov[i*matrix_dim+j] != 0){
-                fprintf(fp_cm,"%d,%d,%.6e\n", i, j, dx[i]);
-            }
-        }
-    }
-
-
     for(int i =0;i<matrix_dim;i++){
+    	dx[i] = freq_vect_full[(Info_vec.size()-1)*matrix_dim + i] - freq_vect_full[0*matrix_dim + i];
     	totalCov[i*matrix_dim+i] += regularization;
-        std::cout<<dx[i]<<std::endl;
     }
-
 
 
     int status;
@@ -525,10 +489,7 @@ int main(int argc, char* argv[]) {
     }
 
     FILE *fp;  
-    // fp = fopen(std::string(protein_name)+"_epistasis_rep"+std::to_string(Info_vec[0][0])+".txt", "w");
-    std::string output_file_name = std::string(protein_name)+"_epistasis_rep"+std::to_string(Info_vec[0][0])+".txt";
-    const char *output_file_name_char = output_file_name.c_str();
-    fp = fopen(output_file_name_char, "w");
+    fp = fopen(std::string(protein_name)+"_epistasis_rep"+std::to_string(Info_vec[i][0])+".txt", "w");
    	std::cout<<"write file"<<std::endl;
     for (int i=0;i<sMAP.size();i++) {
     	fprintf(fp,"%.6e\n",sMAP[i]);
