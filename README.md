@@ -64,7 +64,7 @@ Please check the following examples to prepare the appropriate data format used 
 
 
 
-### Epistasis inference: 
+### Epistasis inference: (will be merged in one bash file to run automatically) 
 
 The following instruction is coorporated with the example of the replicate #1 of YAP1 as the target protein.
 
@@ -75,6 +75,9 @@ Then enter the command line `g++ -std=c++11 -lgslcblas -lgsl -I ./eigen-3.4.0/ g
 After all, the internediate allele frequencies data files would be proceeded by matrix manipulation codes. First, compling the `inversion.cpp` by enetering the following command line in the terminal within the directory of `./epistasis_inference/`: `g++ -std=c++11 -lgslcblas -lgsl -I ./eigen-3.4.0/ inversion.cpp -o inversion`, then with which enter the following execution line: `./inversion [Target-protein] [genoype counts data file] [target protein indexing file name] [raw sequence file] [regularization magnitude]`. In this analysis, it's `./inversion YAP1 ../output/epistasis/YAP1_haplotype_count_rep1.csv index_matrix.csv ./YAP1_Reference_AA_sequence.txt 100`
 
 Finally, you will have the output `[Target_protein]_epistasis_rep[replicate_num].txt` within `./epistasis_inference/` directory. In this example, the output file name is `YAP1_epistasis_rep1.txt`.
+
+The above instruction is for single replicate inference. If multiple replicates available, please run the previous codes first and determine the optimized regularization, then run the following command lines: `g++ -std=c++11 -lgslcblas -lgsl -I ./eigen-3.4.0/ inversion_joint.cpp -o inversion_joint` to compile the joint inference. Then run `./inversion_joint [Target-protein] [target protein indexing file name] [replicate number] [optimized regularization magnitude]`, in this example, we have two replicates of YAP1 WW domain protein and optimized regularization is 100, so the corresponding codes should be `./inversion_joint YAP1 ./index_matrix.csv 2 100`
+
 
 # License
 
