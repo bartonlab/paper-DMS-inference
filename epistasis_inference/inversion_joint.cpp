@@ -263,102 +263,42 @@ void printSelectionCoefficients(FILE *output, const std::vector<double> &s) {
 
 }
 
-int main(int argc, char* argv[]) {
-    std::cout << "Start!\n";
-    //std::string raw_sequence = "FLIMVD";
-    std::string raw_sequence = "DVPLPAGWEMAKTSSGQRYFLNHIDQTTTWQDPR";
-    std::ofstream outputFile;
-    // create a name for the file output
-    std::string filename;
-    int seq_length = raw_sequence.length();
-    double regularization = 100.0;
-    // const char* Index_file = "index_matrix.csv";
-    // const char* Rawdata = "new_count_1.csv";
-    const char* protein_name = argv[1];
-    const char* Rawdata = argv[2];
-    const char* Index_file = argv[3];
-    const char *raw_seq = raw_sequence.c_str();
-    
-    int raw_seq_idx[seq_length];
-    for(int tmp_idx = 0; tmp_idx < seq_length; tmp_idx++){
-        raw_seq_idx[tmp_idx] = tmp_idx * 21 + get_AA_idx(raw_sequence[tmp_idx]);
-    }
 
-// read how many lines in data file & Info_vec = (rep,gen,tot_cnt)
+int main(int argc, char* argv[]) {
+    const char* protein_name = argv[1];
+    const char* Index_file = argv[2];
+    const char* regular = argv[4];
+    const char* replicate = argv[3];
+    const char* covariance_matrix_file;
+    const char* frequency_change_file;
+    double regularization = atof(regular);
+    int replicates = atoi(replicate);
     FILE* get_line = fopen(Index_file, "r");
     int matrix_dim = 0;
-
     get_lines_num(get_line, &matrix_dim);
-
     std::cout << "Dimension of matrix = " << matrix_dim << std::endl;
-
-
-
-    get_line = fopen(Rawdata, "r");
-    std::vector<std::array<int, 3>> Info_vec = get_lines_info(get_line);
-    std::cout << Info_vec[0][0]<< std::endl;
-
-    int non_elements, matrix_nnz;
-    double sparsity;
-    std::string file_name;
-    const char* multiple_allele_file;
-    const char* sindou_allele_file;
-
-    //std::map<std::tuple<int, int>, SpMat> cov_xijkl;
-    //std::map<std::tuple<int, int>, dMat> cov_xixj;
-    //std::map<std::tuple<int, int>, dMat> freq_vect_full;
-    dMat cov_full(matrix_dim, matrix_dim);
-    dMat freq_diff(1, matrix_dim);
-    std::map< int, std::map<int, double>> matrix_element;
-    std::map< int, std::map<int, double>> freq_element;
     double *dx       = new double[matrix_dim];                           // difference between start and end allele frequencies
     double *totalCov = new double[matrix_dim*matrix_dim];                // accumulated allele covariance matrix
-    double *freq_vect_full = new double[Info_vec.size()*matrix_dim];
+    // double *freq_vect_full = new double[replicates*matrix_dim];
     for (int a=0; a < matrix_dim;a++)            dx[a]       = 0;
     for (int a=0; a < matrix_dim*matrix_dim;a++) totalCov[a] = 0;
-    for(int i = 0; i<Info_vec.size(); i++){
-    	for (int a=0; a < matrix_dim;a++) freq_vect_full[i*matrix_dim+a] = 0;}
 
+    double *dx_each_rep       = new double[matrix_dim];                           // difference between start and end allele frequencies
+    double *totalCov_each_rep = new double[matrix_dim*matrix_dim];                // accumulated allele covariance matrix
+    char line[128];
+    double freq;
+    int row_num, col_num;
+    std::string delimiter = ",";
+    std::string token;
+    std::string file_name;
 
-    for(int i = 0; i<Info_vec.size(); i++){
-        //std::tuple<int, int> rep_gen = std::make_tuple(Info_vec[i][0], Info_vec[i][1]);
-
-        //for (int a=0; a < matrix_dim;a++) freq_vect_full[i*matrix_dim+a] = 0;
-
-        std::cout <<"Allele frequencies import for: Replicate = "<<Info_vec[i][0]<<", Generation = "<<Info_vec[i][1]<< std::endl;
-
-        file_name = std::string(protein_name)+"_freq_" + std::to_string(Info_vec[i][0])+"_"+std::to_string(Info_vec[i][1])+".csv";
-        //file_name = "test_freq.csv";
-        sindou_allele_file = file_name.c_str();
-
-        get_line = fopen(sindou_allele_file, "r");
-
-        non_elements = 0;
-
-        get_lines_num(get_line, &non_elements);
-
-        matrix_nnz = non_elements;
-
-        //freq_vect_full[rep_gen].resize(1, matrix_dim);
-        //freq_vect_full[rep_gen].reserve(matrix_nnz); 
-
-        char line[128];
-        std::string delimiter = ",";
-        int row_num, col_num;
-        double freq;
-        std::string token;
-        get_line = fopen(sindou_allele_file, "r");
-        //get_line = fopen("test_freq.csv", "r");
-
-        
-        int line_num = 0; 
-        freq_element.clear();
-
+    for(int rep = 0; rep < replicates; rep++){
+        // for (int a=0; a < matrix_dim; a++)            dx_each_rep[a]       = 0;
+        // for (int a=0; a < matrix_dim*matrix_dim; a++) totalCov_each_rep[a] = 0;
+        file_name = std::string(protein_name) + "_freq_change_rep" + std::to_string(rep+1) + ".txt";
+        frequency_change_file = file_name.c_str();
+        get_line = fopen(frequency_change_file, "r");
         while(fgets(line, 128, get_line)){
-            line_num++;
-            //if(line_num%10000==0){
-            //    std::cout << line_num<< std::endl;
-            //}
             size_t pos = 0;
             int col_idx = 0;
             std::string s = line;
@@ -372,103 +312,58 @@ int main(int argc, char* argv[]) {
                 col_idx++;
             }
             freq = std::stod(s);
-            freq_vect_full[i*matrix_dim+row_num] += freq;
-            //freq_element[0][row_num] = freq;
+            dx[row_num] += freq;
         }
-/*
-        for(auto const &ent1 : freq_element) {  // ent1.first is the first key
-            for(auto const &ent2 : ent1.second) {  // ent2.first is the second key, ent2.second is the data
-                freq_vect_full[rep_gen](ent1.first, ent2.first) = ent2.second;
+        // for (int a=0; a < matrix_dim; a++)   dx[a] += dx_each_rep[a];
+
+
+        file_name = std::string(protein_name) + "_cov_matrix_rep" + std::to_string(rep+1) + ".txt";
+        covariance_matrix_file = file_name.c_str();
+        get_line = fopen(covariance_matrix_file, "r");
+        while(fgets(line, 128, get_line)){
+            // std::cout<<line;
+            size_t pos = 0;
+            int col_idx = 0;
+            std::string s = line;
+            while (col_idx<3) {
+                pos = s.find(delimiter);
+                token = s.substr(0, pos);
+                // std::cout<<token<<std::endl;
+                if(col_idx == 0){
+                    row_num = std::stoi(token);
+                }
+                if(col_idx == 1){
+                    col_num = std::stoi(token);
+                }
+                if(col_idx == 2){
+                    // std::cout<<token<<std::endl;
+                    freq = std::stod(token);
+                }                 
+                col_idx++;
+                s.erase(0, pos + delimiter.length());
             }
-        } */
-        
-        if(i<Info_vec.size()-1){//-xi*xj
-            //std::cout<<"=="<<std::endl;
-            //cov_xixj[rep_gen].resize(matrix_dim,matrix_dim);
-            for(int row=0;row<matrix_dim;row++){
-	            if(row%1000==0){
-	                std::cout << row<< std::endl;
-	            }
-            	for(int col = 0;col<matrix_dim;col++){
-            		totalCov[row*matrix_dim+col] -= freq_vect_full[i*matrix_dim+row] * freq_vect_full[i*matrix_dim+col];
-            		//totalCov[col*matrix_dim+row] -= freq_vect_full[i*matrix_dim+row] * freq_vect_full[i*matrix_dim+col];
-            		//if(row==26774 && col==502) std::cout << "=="<<totalCov[row*matrix_dim+col]<<" "<<freq_vect_full[i*matrix_dim+row]<<freq_vect_full[i*matrix_dim+col]<< std::endl;
-            	}
+            // std::cout<<"---"<<freq<<" "<<row_num<<" "<<col_num<<std::endl;
+            if(row_num == col_num) totalCov[col_num*matrix_dim+row_num] += freq;
+            else{
+                
+                totalCov[col_num*matrix_dim+row_num] += freq;
+                totalCov[row_num*matrix_dim+col_num] += freq;
             }
-            //freq_element.clear(); 
+        }
 
-            std::cout <<"Covariance matrix import for Replicate = "<<Info_vec[i][0]<<", Generation = "<<Info_vec[i][1]<< std::endl;
-
-            file_name = std::string(protein_name)+"_multiple_allele_" + std::to_string(Info_vec[i][0])+"_"+std::to_string(Info_vec[i][1])+".csv";
-
-            multiple_allele_file = file_name.c_str();
-
-            get_line = fopen(multiple_allele_file, "r");
-
-            non_elements = 0;
-
-            get_lines_num(get_line, &non_elements);
-
-            matrix_nnz = (non_elements - matrix_dim)*2 + matrix_dim;
-
-            std::cout << "Non-zero elements # = " << matrix_nnz << std::endl;
-
-            sparsity = double(matrix_nnz)*100/double(matrix_dim*matrix_dim);
-
-            std::cout << "Sparsity = " << sparsity <<"%"<< std::endl;
-
-            //cov_xijkl[rep_gen].resize(matrix_dim, matrix_dim);
-            //cov_xijkl[rep_gen].reserve(matrix_nnz); 
-
-            char line[128];
-            std::string delimiter = ",";
-            int row_num, col_num;
-            double freq;
-            std::string token;
-            get_line = fopen(multiple_allele_file, "r");
-            //get_line = fopen("test_matrix.csv", "r");
-
-            //matrix_element.clear();
-            int line_num = 0; 
-
-            while(fgets(line, 128, get_line)){//xijkl
-                line_num++;
-                if(line_num%1000000==0){
-                    std::cout << line_num<< std::endl;
-                }
-                size_t pos = 0;
-                int col_idx = 0;
-                std::string s = line;
-                while ((pos = s.find(delimiter)) != std::string::npos) {
-                    token = s.substr(0, pos);
-
-                    if(col_idx == 0){
-                        row_num = std::stoi(token);
-                        //std::cout << token<< "\t";
-                    }
-                    if(col_idx == 1){
-                        col_num = std::stoi(token);
-                        //std::cout << token<< "\t";
-                    }  
-
-                    s.erase(0, pos + delimiter.length());
-                    col_idx++;
-                }
-                freq = std::stod(s);
-                if(row_num == col_num) totalCov[col_num*matrix_dim+row_num] += freq;
-                else{
-                	totalCov[col_num*matrix_dim+row_num] += freq;
-                	totalCov[row_num*matrix_dim+col_num] += freq;
-                }
-            } 
-        }     
     }
 
+    // for(int i =0;i<matrix_dim;i++){
+    //     if (dx[i]!=0) std::cout<<i<<" "<<dx[i]<<std::endl;
+    //     for(int j =i;j<matrix_dim;j++){
+    //         if (totalCov[i*matrix_dim+j]!=0)
+    //             std::cout<<i<<" "<<j<<" "<<totalCov[i*matrix_dim+j]<<std::endl;
+    //     }
+    // }
     for(int i =0;i<matrix_dim;i++){
-    	dx[i] = freq_vect_full[(Info_vec.size()-1)*matrix_dim + i] - freq_vect_full[0*matrix_dim + i];
-    	totalCov[i*matrix_dim+i] += regularization;
+        totalCov[i*matrix_dim+i] += regularization;
+        // std::cout<<dx[i]<<std::endl;
     }
-
 
     int status;
     std::vector<double> sMAP(matrix_dim,0);
@@ -485,16 +380,18 @@ int main(int argc, char* argv[]) {
     gsl_linalg_LU_solve(&_cov.matrix, _p, &_dx.vector, _sMAP);
     
     for (int a=0;a<matrix_dim;a++) {
-    	sMAP[a] = gsl_vector_get(_sMAP, a);
+        sMAP[a] = gsl_vector_get(_sMAP, a);
     }
 
     FILE *fp;  
-    fp = fopen(std::string(protein_name)+"_epistasis_rep"+std::to_string(Info_vec[i][0])+".txt", "w");
-   	std::cout<<"write file"<<std::endl;
+    // fp = fopen(std::string(protein_name)+"_epistasis_rep"+std::to_string(Info_vec[0][0])+".txt", "w");
+    std::string output_file_name = std::string(protein_name)+"_epistasis_joint.txt";
+    const char *output_file_name_char = output_file_name.c_str();
+    fp = fopen(output_file_name_char, "w");
+    std::cout<<"write file"<<std::endl;
     for (int i=0;i<sMAP.size();i++) {
-    	fprintf(fp,"%.6e\n",sMAP[i]);
+        fprintf(fp,"%.6e\n",sMAP[i]);
     }
-
     return 0;
 }
 
