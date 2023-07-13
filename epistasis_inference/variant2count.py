@@ -80,7 +80,7 @@ def codon2aa(c, noq=False):              # Returns the amino acid character corr
 
 filename = sys.argv[-1]
 
-with open('./YAP1.json', 'r') as f:
+with open(filename, 'r') as f:
     file_json = json.load(f)
 
 df_data = pd.read_csv(file_json['raw_counts_file'], compression = 'gzip')

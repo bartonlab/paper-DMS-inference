@@ -1,7 +1,7 @@
 {
-	"raw_counts_file":    "../output/haplotype_counts/YAP1_haplotype_counts.csv.gzip",
-	"raw_sequence_file":  "../data/raw_data/YAP1_Reference_sequence.txt",
-	"output_count_suffix": "../output/epistasis/YAP1_haplotype_count_rep", 
+	"raw_counts_file":    "./YAP1_haplotype_counts.csv.gzip",
+	"raw_sequence_file":  "./YAP1_Reference_nu_sequence.txt",
+	"output_count_suffix": "./YAP1_haplotype_count_rep", 
 	"timepoint_list":     [0, 1, 2, 3],
 	"site_start":         1,
 	"site_end":           34,
