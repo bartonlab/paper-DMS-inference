@@ -68,7 +68,7 @@ Please check the following examples to prepare the appropriate data format used 
 
 Run the epistasis bash file directly to have single replicate epistasis inference and multiple replicates joint inference.
 
-Enter `bash run_epistasis.sh` in the directory of epistasis inference. Please prepare the raw data and JSON file in the way suggested in `run_epistasis.sh` file.
+Enter `bash run_epistasis.sh` in the directory of epistasis inference. Please prepare the raw data and JSON file in the way suggested in `./epistasis_inference/README_bash.txt` file.
 
 
 
