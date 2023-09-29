@@ -272,6 +272,7 @@ def fig_methods_comparison():
     ax.scatter(x_, np.array(y_)**2, color=C_PREF, s=SMALLSIZEDOT*2)
     ax.xaxis.set_ticks(x)
     ax.xaxis.set_ticklabels([NAME2NAME[label] for label in x], rotation = 45, ha = 'right')
+    ax.set_ylim(0, 1.05)
     
     ## e -- differences in performance
     
@@ -301,7 +302,7 @@ def fig_methods_comparison():
     ax_dr2.axhline(y=0, **dashlineprops)
 
     pprops = { 'colors':   [COLOR_2],
-               'ylim':     [xmin, xmax],
+               'ylim':     [xmin, xmax+0.03],
                'xlim':     [ymin, ymax],
                'yticks':   [-0.75, -0.50, -0.25, 0, 0.25, 0.50, 0.75],
                'xticks':   [],
@@ -753,7 +754,7 @@ def plot_selection(ax, df_pop, legend=True):
 # FIGURE 1 ARGUMENTS
 
 # FIGURE 1 MAIN PLOT FUNCTION
-def FIG1_SIMULATION_FINITE_SAMPLING():
+def fig_finite_sampling():
 
     FIG1_A_POS = {
         'x': 0.05,
@@ -780,11 +781,11 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
     FIG1_INFERENCE_DIR = './output/simulation/WF_mutational_effects/'
     FIG1_WF_SIMU_FILE = './output/simulation/WF_simulation.csv'
     FIG1_WF_SELECTION = FIG1_INFERENCE_DIR + '/selection_coefficients/'
-    FIG1_WF_LOGREG    = FIG1_INFERENCE_DIR+'/log_regression/'
-    FIG1_WF_RATIO     = FIG1_INFERENCE_DIR+'/enrichment_ratio/'
-    FIG1_WF_LOGRATIO  = FIG1_INFERENCE_DIR+'/enrichment_ratio_log/'
+    FIG1_WF_LOGREG    = FIG1_INFERENCE_DIR + '/log_regression/'
+    FIG1_WF_RATIO     = FIG1_INFERENCE_DIR + '/enrichment_ratio/'
+    FIG1_WF_LOGRATIO  = FIG1_INFERENCE_DIR + '/enrichment_ratio_log/'
     # FIG1_FINITE_SIZE  = '_sampling-10000/'
-    FIG1_NAME         = 'Fig1_simulation.pdf'
+    FIG1_NAME         = 'fig_s1_sampling.pdf'
 
     fig = plt.figure(figsize = (FIG1_SIZE_X, FIG1_SIZE_Y))
     gs  = fig.add_gridspec(2, 1, hspace = FIG1_HSPACE, **FIG1_BOX_ARG)
@@ -874,7 +875,6 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
             selection_coefficients_corr = (selection_coefficients_corr.sum().sum() - replicates)/factor
             enrichment_ratio_log_corr   = (enrichment_ratio_log_corr.sum().sum()   - replicates)/factor
             
-            
             temp[0].append(selection_coefficients_corr)
             temp[1].append(enrichment_ratio_corr)
             temp[2].append(log_regression_corr)
@@ -886,7 +886,7 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
         ax2.plot(generation_, temp[1], c = PALETTE[0], marker = marker[finite_list.index(finite_sampling)], markersize = SMALLSIZEDOT, markeredgewidth = 0, alpha = 1)
         ax2.plot(generation_, temp[2], c = PALETTE[1], marker = marker[finite_list.index(finite_sampling)], markersize = SMALLSIZEDOT, markeredgewidth = 0, alpha = 1)
         ax2.plot(generation_, temp[3], c = PALETTE[2], marker = marker[finite_list.index(finite_sampling)], markersize = SMALLSIZEDOT, markeredgewidth = 0, alpha = 1)
-        ax2.set_xlabel('Generations used for inference',      fontsize = SIZELABEL)
+        ax2.set_xlabel('Generations used for inference', fontsize = SIZELABEL)
         ax2.set_ylabel('Average Pearson correlation between\nreplicate inferred mutational effects', fontsize = SIZELABEL)
         ax2.set_xticks([2, 5, 10])
         ax2.set_xlim  ([   0, 11])
@@ -929,7 +929,6 @@ def FIG1_SIMULATION_FINITE_SAMPLING():
     ax2.spines[ 'top' ].set_visible(False)
     ax2.tick_params(axis = 'both', which = 'major', labelsize = SIZELABEL)
     #ax2.legend(handles = legend_fig_1b, frameon = False, fontsize = SIZELABEL, loc = 'upper left')
-    fig.show()
     fig.savefig(FIG_DIR + FIG1_NAME, dpi = FIG_DPI, **FIGPROPS)
 
 

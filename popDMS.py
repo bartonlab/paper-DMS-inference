@@ -77,11 +77,14 @@ aa2codon = {                                                         # DNA codon
     }                                              
 
 
-def codon2aa(c, noq=False):              # Returns the amino acid character corresponding to the input codon.
+def codon2aa(c, noq=False):
+    # Returns the amino acid character corresponding to the input codon.
+    
     if c[0]=='-' and c[1]=='-' and c[2]=='-': return '-'        # If all nucleotides are missing, return gap
     elif c[0]=='-' or c[1]=='-' or c[2]=='-':                   # Else if some nucleotides are missing, return '?'
         if noq: return '-'
         else:   return '?'
+    
     # If the first or second nucleotide is ambiguous, AA cannot be determined, return 'X'
     elif c[0] in ['W', 'S', 'M', 'K', 'R', 'Y'] or c[1] in ['W', 'S', 'M', 'K', 'R', 'Y']: return 'X'     
                                                     

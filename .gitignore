@@ -4,6 +4,8 @@ __pycache__
 */.ipynb_checkpoints
 
 # Local files
+old
+logomaker
 figures-slides.ipynb
 figures_slides.py
 figures/slides-*.pdf
