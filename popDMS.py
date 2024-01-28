@@ -677,7 +677,7 @@ def compute_freq_MaveDB(name, rep, types, haplotype_counts_file, reference_seque
         df_temp.to_csv(path, index=False, compression='gzip')
     
     
-def compute_variant_frequencies_Bloom(name, codon_counts_files, replicates, times, freq_dir, error_file=None, comment_char=None):
+def compute_variant_frequencies_Bloom(name, codon_counts_files, replicates, times, freq_dir='.', error_file=None, comment_char=None):
     '''
     Compute variant frequencies from codon counts in Bloom lab format. If an error
     file is provided, corrects for sequencing errors.
@@ -690,10 +690,10 @@ def compute_variant_frequencies_Bloom(name, codon_counts_files, replicates, time
         - freq_dir: Path to directory where frequencies will be saved
 
     Optional arguments:
-        - error_file (default:None): Path to a file recording sequence counts from
+        - error_file (default: None): Path to a file recording sequence counts from
             sequencing the reference sequence only, used to estimate sequencing
             error rates and correct variant frequencies
-        - comment_char (default:None): Character used to indicate comments in the
+        - comment_char (default: None): Character used to indicate comments in the
             codon counts files
     '''
     ################################################################################
@@ -804,7 +804,7 @@ def get_codon_error_freqs_Bloom(path, comment_char=None):
     return error_freqs
 
 
-def compute_variant_frequencies(name, reference_sequence_file, haplotype_counts_file, n_replicates, time_points, time_cols, freq_dir, with_epistasis=False, comment_char=None, format='MaveDB'):
+def compute_variant_frequencies(name, reference_sequence_file, haplotype_counts_file, n_replicates, time_points, time_cols, freq_dir='.', with_epistasis=False, comment_char=None, format='MaveDB'):
     '''
     Computes variant (allele) frequencies, used by popDMS, from haplotype counts. By
     default, we assume that counts are saved in MaveDB format. For more information
@@ -824,14 +824,14 @@ def compute_variant_frequencies(name, reference_sequence_file, haplotype_counts_
         - time_cols: A dictionary mapping between the number for each experimental
             replicate and the column in the haplotype counts file that contains
             count information
-        - freq_dir: Directory where variant frequency data will be saved
 
     Optional arguments:
-        - with_epistasis (default:False): If True, will compute 3- and 4-amino acid
+        - freq_dir (default: '.'): Path to directory where frequencies will be saved
+        - with_epistasis (default: False): If True, will compute 3- and 4-amino acid
             frequencies for epistasis analysis
-        - comment_char (default:None): Character used as a comment in the haplotype
+        - comment_char (default: None): Character used as a comment in the haplotype
             counts file; in some MaveDB files, this is '#'
-        - format (default:'MaveDB'): Format of the input data files (options:
+        - format (default: 'MaveDB'): Format of the input data files (options:
             'MaveDB', 'Bloom')
     '''
     ################################################################################
@@ -1053,7 +1053,7 @@ def plot_regularization(corrs, gamma_values):
     plt.show()
 
 
-def infer_correlated(name, freq_dir, output_dir, n_replicates, corr_cutoff_pct, with_epistasis=False, plot_gamma=True):
+def infer_correlated(name, n_replicates, corr_cutoff_pct, freq_dir='.', output_dir='.', with_epistasis=False, plot_gamma=True):
     '''
     Infer selection coefficients from data that includes correlations (counts)
     between pairs of mutant sites. This is not possible with data that includes
@@ -1062,20 +1062,21 @@ def infer_correlated(name, freq_dir, output_dir, n_replicates, corr_cutoff_pct, 
     Required arguments:
         - name: String that will be associated with saved files, serving as an
             identifier for the data set
-        - freq_dir: Directory where variant frequency data has been saved; assumes
-            data saved in the format of compute_variant_frequencies(...)
-        - output_dir: Directory where selection coefficients will be saved
         - n_replicates: Number of experimental replicates
         - corr_cutoff_pct: Cutoff on the maximum allowed drop in correlation
             between replicates, used to determine the optimal regularization
             strength
 
     Optional arguments:
-        - with_epistasis (default:False): Flag to infer epistatic interactions; this
-            requires correlation data for sets of three and four codons/amino acids;
-            not currently functional (implemented separately in C++ code in the 
-            epistasis_inference directory)
-        - plot_gamma (default:True): Plot correlation between replicates as a 
+        - freq_dir (default: '.'): Directory where variant frequency data has been 
+            saved; assumes data saved in the format of compute_variant_frequencies
+        - output_dir (default: '.'): Directory where selection coefficients will be 
+            saved
+        - with_epistasis (default: False): Flag to infer epistatic interactions; 
+            this requires correlation data for sets of three and four codons/amino 
+            acids; not currently functional (implemented separately in C++ code in 
+            the epistasis_inference directory)
+        - plot_gamma (default: True): Plot correlation between replicates as a 
             function of the regularization strength gamma
     '''
     ################################################################################
@@ -1134,7 +1135,7 @@ def infer_correlated(name, freq_dir, output_dir, n_replicates, corr_cutoff_pct, 
     df_temp.to_csv(path, index=False, compression='gzip')
 
 
-def infer_independent(name, freq_dir, output_dir, n_replicates, corr_cutoff_pct, plot_gamma=True):
+def infer_independent(name, n_replicates, corr_cutoff_pct, freq_dir='.', output_dir='.', plot_gamma=True):
     '''
     Infer selection coefficients from data that consists of single amino acid
     frequencies only.
@@ -1142,16 +1143,17 @@ def infer_independent(name, freq_dir, output_dir, n_replicates, corr_cutoff_pct,
     Required arguments:
         - name: String that will be associated with saved files, serving as an
             identifier for the data set
-        - freq_dir: Directory where variant frequency data has been saved; assumes
-            data saved in the format of compute_variant_frequencies(...)
-        - output_dir: Directory where selection coefficients will be saved
         - n_replicates: Number of experimental replicates
         - corr_cutoff_pct: Cutoff on the maximum allowed drop in correlation
             between replicates, used to determine the optimal regularization
             strength
 
     Optional arguments:
-        - plot_gamma (default:True): Plot correlation between replicates as a 
+        - freq_dir (default: '.'): Directory where variant frequency data has been
+            saved; assumes data saved in the format of compute_variant_frequencies
+        - output_dir (default: '.'): Directory where selection coefficients will be
+            saved
+        - plot_gamma (default: True): Plot correlation between replicates as a 
             function of the regularization strength gamma
     '''
     ################################################################################
