@@ -27,7 +27,7 @@ Version 3.4.0 of Eigen that we use can be downloaded from this [link](https://gi
 
 ### Running popDMS
 
-popDMS uses codon counts in [dms_tools format](http://jbloomlab.github.io/dms_tools/fileformats.html#deep-mutational-scanning-counts-file) or sequence counts in [MaveDB-HGVS format](https://www.mavedb.org/docs/mavehgvs/) for input. For reference, [this link](data/raw_data/FP16_DNA_codoncounts.csv) demonstrates the format for codon counts, and [this link](data/raw_data/TpoR_nucleotide_count.csv) shows an example file in MaveDB-HGVS format. 
+popDMS uses codon counts in [dms_tools format](http://jbloomlab.github.io/dms_tools/fileformats.html#deep-mutational-scanning-counts-file) or sequence counts in [MaveDB-HGVS format](https://www.mavedb.org/docs/mavehgvs/) for input. For reference, [this link](data/raw_data/FP16_DNA_codoncounts.csv) demonstrates the format for codon counts, and [this link](data/raw_data/TpoR_nucleotide_counts.csv) shows an example file in MaveDB-HGVS format. 
 
 Running popDMS differs slightly depending on the format of the input data.
 
