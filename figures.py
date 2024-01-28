@@ -140,46 +140,51 @@ NAME2NAME = {
 # FIGURE 1 OVERVIEW AND METHODS COMPARISON
 
 def fig_methods_comparison():
-    ''' FUTURE: PASS FIGURE NAME AND OTHER RELATIVE PARAMETERS INTO THE FUNCTION '''
+    ''' Show performance comparison across data sets '''
 
     input_files = {
-                   'Flu_WSN':         ['WSN',                   3],
-                   'Flu_A549':        ['A549',                  3],
-                   'Flu_CCL141':      ['CCL141',                3],
-                   'Flu_Aichi68C':    ['Aichi68C',              2],
-                   'Flu_PR8':         ['PR8' ,                  3],
-                   'Flu_MatrixM1':    ['Matrix_M1',             3],
-                   'ZIKV':            ['ZIKV',                  3],
-                   'Perth2009':       ['Perth2009',             4],
-                   'Flu_MS':          ['MS',                    2],
-                   'Flu_MxAneg':      ['MxAneg',                2],
-                   'HIV_BG505':       ['HIV Env BG505' ,        3],
-                   'HIV_BF520':       ['HIV Env BF520' ,        3],
-                   'HIV_CD4_human':   ['HIV BF520 human host',  2],
-                   'HIV_CD4_rhesus':  ['HIV BF520 rhesus host', 2],
-                   'HIV_bnAbs_FP16':  ['HIV bnAbs FP16',        2],
-                   'HIV_bnAbs_FP20':  ['HIV bnAbs FP20',        2],
-                   'HIV_bnAbs_VRC34': ['HIV bnAbs VRC34',       2],
-                   'HDR_Y2H_1':       ['Y2H_1',                 3],
-                   'HDR_Y2H_2':       ['Y2H_2',                 3],
-                   'HDR_E3':          ['E3',                    6],
-                   'WWdomain_YAP1':   ['YAP1',                  2],
-                   'Ubiq_Ube4b':      ['Ube4b',                 2],
-                   'HDR_DBR1':        ['DBR1',                  2],
-                   'Thrombo_TpoR_1':  ['TpoR',                  6],
-                   'Thrombo_TpoR_2':  ['TpoR_S505N',            6]
+                   'Flu_WSN':         ['WSN',              3],
+                   'Flu_A549':        ['A549',             3],
+                   'Flu_CCL141':      ['CCL141',           3],
+                   'Flu_Aichi68C':    ['Aichi68C',         2],
+                   'Flu_PR8':         ['PR8' ,             3],
+                   'Flu_MatrixM1':    ['Matrix_M1',        3],
+                   'ZIKV':            ['ZIKV',             3],
+                   'Perth2009':       ['Perth2009',        4],
+                   'Flu_MS':          ['MS',               2],
+                   'Flu_MxAneg':      ['MxAneg',           2],
+                   'HIV_BG505':       ['HIV Env BG505' ,   3],
+                   'HIV_BF520':       ['HIV Env BF520' ,   3],
+                   'HIV_CD4_human':   ['HIV BF520 human',  2],
+                   'HIV_CD4_rhesus':  ['HIV BF520 rhesus', 2],
+                   'HIV_bnAbs_FP16':  ['HIV bnAbs FP16',   2],
+                   'HIV_bnAbs_FP20':  ['HIV bnAbs FP20',   2],
+                   'HIV_bnAbs_VRC34': ['HIV bnAbs VRC34',  2],
+                   'HDR_Y2H_1':       ['Y2H_1',            3],
+                   'HDR_Y2H_2':       ['Y2H_2',            3],
+                   'HDR_E3':          ['E3',               6],
+                   'WWdomain_YAP1':   ['YAP1',             2],
+                   'Ubiq_Ube4b':      ['Ube4b',            2],
+                   'HDR_DBR1':        ['DBR1',             2],
+                   'Thrombo_TpoR_1':  ['TpoR',             6],
+                   'Thrombo_TpoR_2':  ['TpoR_S505N',       6]
                    }
 
     fig_title = 'fig-1-overview.pdf'
+    
+    print('protein\t\t\tR (pop)\tR (alt)\tR (between, Pearson/Spearman)')
 
     pref_avg = {}
     pop_avg  = {}
     df_ex    = 0
     ex_prot  = 'Ubiq_Ube4b'
+    
+    rps, rss = [], []  # Pearson and Spearman correlations between methods
+    
     for target_protein, info in input_files.items():
         reps = info[1]
         rep_list = ['rep_'+str(i+1) for i in range(reps)]
-        path = POP_DIR + info[0] + '.csv.gz'
+        path = POP_DIR + info[0] + '_selection_coefficients.csv.gz'
         df_sele = pd.read_csv(path)
         
 #        print('%s\t%d' % (target_protein, len(np.unique(df_sele[COL_SITE]))))
@@ -187,7 +192,7 @@ def fig_methods_comparison():
         if target_protein==ex_prot:
             df_ex = df_sele.copy(deep=True)
 
-        path = PREF_DIR +  info[0] + '.csv.gz'
+        path = PREF_DIR + info[0] + '.csv.gz'
         df_pref = pd.read_csv(path)
 
         df_corr_pref = df_pref[[i for i in rep_list]]
@@ -199,10 +204,23 @@ def fig_methods_comparison():
         df_corr_pref = df_corr_pref[rep_list]
         df_corr_sele = df_corr_sele[rep_list]
 
-        corr_avg_pref = (df_corr_pref.corr().sum().sum() - info[1])/(info[1]**2 - info[1])
+        corr_avg_pref = (df_corr_pref.corr().sum().sum() - reps)/(reps**2 - reps)
         pref_avg[target_protein] = corr_avg_pref
-        corr_avg_pop = (df_corr_sele.corr().sum().sum() - info[1])/(info[1]**2 - info[1])
+        corr_avg_pop = (df_corr_sele.corr().sum().sum() - reps)/(reps**2 - reps)
         pop_avg[target_protein] = corr_avg_pop
+        
+        # Check correlations between popDMS and alternatives
+        df_merge = pd.merge(df_pref, df_sele, how='left', left_on=['site', 'amino_acid'], right_on=['site', 'amino_acid']).dropna()
+        rp, pp = st.pearsonr(df_merge['joint'], df_merge['average'])
+        rs, ps = st.spearmanr(df_merge['joint'], df_merge['average'])
+        
+        print('%s\t%.2f\t%.2f\t%.2f\t%.2f' % (target_protein + ''.join((2-len(target_protein)//8)*['\t']),
+                                              corr_avg_pop, corr_avg_pref, rp, rs))
+                                              
+        rps.append(rp)
+        rss.append(rs)
+                                              
+    print('average\t\t\t%.2f\t%.2f\t%.2f\t%.2f\n' % (np.mean(list(pop_avg.values())), np.mean(list(pref_avg.values())), np.mean(rps), np.mean(rss)))
      
     # variables
     w = DOUBLE_COLUMN
@@ -247,7 +265,7 @@ def fig_methods_comparison():
     ldx = -0.01
     ldy = ldx * w/h
     fig.text(box_heat['left']+ldx, (box_heat['top']+box_heat['bottom'])/2, s = 'Amino acids', rotation=90, ha='center', va='center', **DEF_LABELPROPS, transform=fig.transFigure)
-    fig.text((box_heat['left']+box_heat['right'])/2, box_heat['bottom']+ldy, s = 'Sites', rotation=0, ha='center', va='center', **DEF_LABELPROPS, transform=fig.transFigure)
+    fig.text((box_heat['left']+box_heat['right'])/2, box_heat['bottom']+ldy, s = 'Sites (Ube4b)', rotation=0, ha='center', va='center', **DEF_LABELPROPS, transform=fig.transFigure)
     
     ax = plt.subplot(gs_comp[0, 0])
     
@@ -281,10 +299,13 @@ def fig_methods_comparison():
     keys = pop_avg.keys()
     dr2  = np.array([pop_avg[k]**2 - pref_avg[k]**2 for k in keys])
     
-    xmin, xmax = -0.75, 0.75
+    print('R^2 increase of >0.5 in %d out of %d data sets' % (np.sum(dr2>0.5), len(dr2)))
+    print('Mean (median) R^2 gain: %.2f (%.2f)' % (np.mean(dr2), np.median(dr2)))
+    
+    xmin, xmax = -0.80, 0.80
     ymin, ymax =  0, 5
 
-    n_bins = 30
+    n_bins = 35
     dmax   = xmax - xmin
     bin_d  = dmax/n_bins
     bins   = np.arange(xmin, xmax+2*bin_d, bin_d)
@@ -295,16 +316,18 @@ def fig_methods_comparison():
     lineprops     = dict(lw=SIZELINE*1.2, ls='-', alpha=1.0, drawstyle='steps-pre', clip_on=True)
     fillprops     = dict(lw=0, alpha=0.2, interpolate=False, step='pre', clip_on=True)
     dashlineprops = dict(lw=SIZELINE*1.2, ls=':', alpha=1.0, color=BKCOLOR)
-    tprops        = dict(ha='right', va='center', family=FONTFAMILY, size=SIZELABEL, clip_on=False)
+    tprops        = dict(ha='right', family=FONTFAMILY, size=SIZELABEL, clip_on=False)
 
-    ax_dr2.text(ymax, -0.075, 'Alternative more consistent', color=BKCOLOR, rotation=0, **tprops)
-    ax_dr2.text(ymax,  0.075, 'popDMS more consistent',      color=BKCOLOR, rotation=0, **tprops)
+    ax_dr2.text(ymax,  0.04, 'popDMS\nmore consistent',     color=BKCOLOR, rotation=0, va='bottom', **tprops)
+    ax_dr2.text(ymax, -0.04, 'Alternative more consistent', color=BKCOLOR, rotation=0, va='top', **tprops)
     ax_dr2.axhline(y=0, **dashlineprops)
+
+    tprops['va'] = 'center'
 
     pprops = { 'colors':   [COLOR_2],
                'ylim':     [xmin, xmax+0.03],
                'xlim':     [ymin, ymax],
-               'yticks':   [-0.75, -0.50, -0.25, 0, 0.25, 0.50, 0.75],
+               'yticks':   [-0.80, -0.60, -0.40, -0.20, 0, 0.20, 0.40, 0.60, 0.80],
                'xticks':   [],
                'yaxstart': xmin,
                'yaxend':   xmax,
@@ -357,7 +380,7 @@ def fig_methods_comparison():
     data_set = 'HIV Env BF520'
     n_reps   = 3
 
-    df_temp  = pd.read_csv(POP_DIR + data_set + '.csv.gz')
+    df_temp  = pd.read_csv(POP_DIR + data_set + '_selection_coefficients.csv.gz')
     pop_list = []
     for rep in range(1, n_reps+1):
         pop_list.append(df_temp['rep_' + str(rep)].tolist())
@@ -449,9 +472,690 @@ def fig_methods_comparison():
     fig.text(box_rep2['left']-ddx, (box_rep2['top']+box_rep2['bottom'])/2,   s='Enrichment ratio', rotation=90, ha='center', va='center', **DEF_LABELPROPS, transform=fig.transFigure)
     fig.text((box_rep2['left']+box_rep2['right'])/2, box_rep2['bottom']-ddy, s='Enrichment ratio', rotation=0,  ha='center', va='center', **DEF_LABELPROPS, transform=fig.transFigure)
     
-    fig.savefig(FIG_DIR + fig_title, dpi = 400, **FIGPROPS)
-    plt.show()
+    fig.savefig(FIG_DIR + fig_title, **FIGPROPS)
     
+    
+# show consistency b/w inferred selection coefficients and past metrics
+def fig_comp_epistasis():
+
+    # plot parameters
+    w = DOUBLE_COLUMN
+    h = DOUBLE_COLUMN / 2.7
+
+    fig = plt.figure(figsize = (w, h))
+    
+    box_t = 0.95
+    box_b = 0.12
+    box_l = 0.04
+    box_r = 0.98
+    
+    box_dx = 0.06
+    box_y  = box_t - box_b
+    box_x  = box_y * (h / w)
+    
+    box_comp = dict(left=box_l + 0*box_x + 0*box_dx, right=box_l + 1*box_x + 0*box_dx, bottom=box_b,      top=box_t)
+    box_epi  = dict(left=box_l + 1*box_x + 1*box_dx, right=box_l + 2*box_x + 1*box_dx, bottom=box_b,      top=box_t)
+    box_hist = dict(left=box_l + 2*box_x + 2*box_dx, right=box_r,                      bottom=box_b+0.08, top=box_t)
+    
+    # a -- compare selection coefficients and preferences in BG505
+    
+    pop_file = 'output/selection_coefficients/HIV Env BG505_selection_coefficients.csv.gz'
+    alt_file = 'output/merged_preference/HIV Env BG505.csv.gz'
+
+    df_pop = pd.read_csv(pop_file)
+    df_alt = pd.read_csv(alt_file)
+
+    df_merge = pd.merge(df_pop, df_alt, how='left', left_on=['site', 'amino_acid'], right_on=['site', 'amino_acid']).dropna()
+    
+    x = np.log10(df_merge['average'])
+    y = df_merge['joint']
+    
+    gs_comp = gridspec.GridSpec(1, 1, **box_comp)
+    ax_comp = plt.subplot(gs_comp[0, 0])
+    
+    scatterprops = dict(alpha=0.2, lw=0, s=SMALLSIZEDOT)
+    
+    ddx  = 0.10
+    ddy  = 0.03
+    xlim = [np.min(x)-ddx, np.max(x)+ddx]
+    ylim = [np.min(y)-ddy, np.max(y)+ddy]
+    xtd  = (xlim[1] - xlim[0])*0.06
+    ytd  = (ylim[1] - ylim[0])*0.06
+    
+    pprops = { 'xlim':        xlim,
+               'xticks':      [],
+               'ylim':        ylim,
+               'yticks':      [],
+               'xlabel':      'Log10 enrichment ratios (dms_tools2)',
+               'ylabel':      'Selection coefficients (popDMS)',
+               'colors':      [COLOR_2],
+               'plotprops':   scatterprops,
+               'axoffset':    0.1,
+               'theme':       'open',
+               'hide':        ['top', 'right'] }
+
+    mp.plot(type='scatter', ax=ax_comp, x=[x], y=[y], **pprops)
+    
+    corr = st.spearmanr(x, y)[0]
+    ax_comp.text(xlim[0]+xtd, ylim[1]-2*ytd, 'HIV-1 Env BG505\n' + r'$\rho$' + ' = %.2f' % corr, fontsize=SIZELABEL)
+    
+    # b -- epistasis heatmap
+
+    ## process data
+    epi_file = 'output/epistasis/merged_epistasis.csv.gz'
+
+    df_epi = pd.read_csv(epi_file)
+    
+    df_epi['average'] = (df_epi['log2wab-log2wa-log2wb_rep1'] + df_epi['log2wab-log2wa-log2wb_rep2'])/2
+    df_epi['joint']   = df_epi['popDMS_consensus_joint']
+    
+    print('epistasis correlations between popDMS and regression')
+    print('Pearson \t%.2f,\tp=%.2e' % (st.pearsonr(df_epi['average'], df_epi['joint'])[0], st.pearsonr(df_epi['average'], df_epi['joint'])[1]))
+    print('Spearman\t%.2f,\tp=%.2e' % (st.spearmanr(df_epi['average'], df_epi['joint'])[0], st.spearmanr(df_epi['average'], df_epi['joint'])[1]))
+    
+    sites = np.unique(list(np.unique(df_epi['site_1'])) + list(np.unique(df_epi['site_2'])))
+    N     = len(sites)
+
+    episq = np.zeros((N, N))
+    smax  = 0
+    fmax  = 0
+
+    for i in range(N):
+        for j in range(i+1, N):
+            df_sub = df_epi[(df_epi['site_1']==sites[i]) & (df_epi['site_2']==sites[j])]
+            ssq    = np.sum(np.array(df_sub['joint'])**2)
+            fsq    = np.sum(np.array(df_sub['average'])**2)
+            episq[i, j] = ssq
+            episq[j, i] = fsq
+
+            if ssq>smax:
+                smax = ssq
+            if fsq>fmax:
+                fmax = fsq
+
+    for i in range(N):
+        for j in range(i+1, N):
+            episq[i, j] /= smax
+            episq[j, i] /= fmax
+    
+    ## make plot
+    gs_epi = gridspec.GridSpec(1, 1, **box_epi)
+    ax_epi = plt.subplot(gs_epi[0, 0])
+    
+    rec_props = dict(height=1, width=1, ec=None, lw=0, clip_on=False, angle=45)
+    
+    a = 1 / np.sqrt(2)
+    rec_patches = []
+    
+    ticks     = [1, 10, 20, 30]
+    tickprops = dict(family=FONTFAMILY, size=SIZELABEL, clip_on=False, rotation_mode='anchor')
+    for i in range(N):
+        for j in range(i+1, N):
+            cij = hls_to_rgb(0.58, 0.53 * episq[i,j] + 1. * (1 - episq[i,j]), 0.60)
+            cji = hls_to_rgb(0.00, 0.59 * episq[j,i] + 1. * (1 - episq[j,i]), 0.00)
+            
+            recij = matplotlib.patches.Rectangle(xy=(a*(i+j-1), a*(1+j-i)), fc=cij, **rec_props)
+            recji = matplotlib.patches.Rectangle(xy=(a*(i+j-1), a*(1+i-j)), fc=cji, **rec_props)
+            rec_patches.append(recij)
+            rec_patches.append(recji)
+            
+            if (i==0) and (j in ticks):
+                ax_epi.text(a*(i+j-2.5), a*(1.50+j-i), s=j, ha='center', va='bottom', rotation=45, **tickprops)
+                ax_epi.text(a*(i+j-3.0), a*(2.25+i-j), s=j, ha='center',  va='top', rotation=-45, **tickprops)
+                
+    ax_epi.text(a*(N/2-2.5-2.5), a*(1.50+N/2+2.5), s='Sites (WW domain)', ha='center', va='bottom', rotation=45, **tickprops)
+    ax_epi.text(a*(N/2-2.5-3.0), a*(2.25-N/2-2.5), s='Sites (WW domain)', ha='center',  va='top', rotation=-45, **tickprops)
+            
+    container_props = dict(height=N, width=N, ec=BKCOLOR, fc='none', lw=AXWIDTH/2, clip_on=False, angle=45)
+    rec = matplotlib.patches.Rectangle(xy=(a*(N-2), a*(2-N)), **container_props)
+    rec_patches.append(rec)
+        
+    pprops = { 'colors':    [BKCOLOR],
+               'xlim':      [0, N/a],
+               'ylim':      [-N/(2*a), N/(2*a)],
+               'xticks':    [],
+               'yticks':    [],
+               'plotprops': dict(lw=0, s=0.2*SMALLSIZEDOT, marker='o'),
+               'theme':     'open',
+               'axoffset':  0,
+               'hide' :     ['top', 'bottom', 'left', 'right'] }
+
+    mp.plot(type='scatter', ax=ax_epi, x=[[-10]], y=[[0]], **pprops)
+    
+    ## legend
+    rec_props = dict(height=1, width=1, ec=None, lw=0, clip_on=False)
+    
+    n_boxes = 14
+    x_box   = -2
+    y_box   = -26.5
+    for i in range(n_boxes+1):
+        t = i/n_boxes
+        cij = hls_to_rgb(0.58, 0.53 * t + 1. * (1 - t), 0.60)
+        cji = hls_to_rgb(0.00, 0.59 * t + 1. * (1 - t), 0.00)
+        
+        recij = matplotlib.patches.Rectangle(xy=(x_box+i, y_box),   fc=cij, **rec_props)
+        recji = matplotlib.patches.Rectangle(xy=(x_box+i, y_box-1), fc=cji, **rec_props)
+        rec_patches.append(recij)
+        rec_patches.append(recji)
+        
+#    container_props = dict(height=2, width=n_boxes+1, ec=BKCOLOR, fc='none', lw=AXWIDTH/2, clip_on=False)
+#    rec = matplotlib.patches.Rectangle(xy=(x_box, y_box-1), **container_props)
+#    rec_patches.append(rec)
+        
+    for patch in rec_patches:
+        ax_epi.add_artist(patch)
+        
+    tprops = dict(family=FONTFAMILY, size=SIZELABEL, clip_on=False)
+    ax_epi.text(x_box+(n_boxes+1)/2, y_box+1.5, s='Normalized sum of\nsquared epistatic interactions', ha='center', va='bottom', **tprops)
+    ax_epi.text(x_box+0.5,         y_box-1.5, s='0', ha='center', va='top', **tprops)
+    ax_epi.text(x_box+n_boxes+0.5, y_box-1.5, s='1', ha='center', va='top', **tprops)
+    
+    ax_epi.text(a*(3*N/2-2.5-0.5), a*(1.50+N/2+2.5), s='popDMS', ha='center', va='bottom', rotation=-45, **tickprops)
+    ax_epi.text(a*(3*N/2-2.5+0.0), a*(2.25-N/2-2.5), s='Log ratio regression', ha='center',  va='top', rotation=45, **tickprops)
+    
+    # c -- epistasis sparsity
+    
+    gs_hist = gridspec.GridSpec(1, 1, **box_hist)
+    ax_hist = plt.subplot(gs_hist[0, 0])
+    
+    # prepare histogram of log10 counts for sum of squared epistasis values
+    epi_max = 1
+    n_bins  = 50
+    bin_dx  = epi_max / n_bins
+    bins    = np.arange(-bin_dx, epi_max+2*bin_dx, bin_dx)
+    
+    epi_pop = np.array([episq[i, j] for i in range(N) for j in range(i+1, N)])
+    epi_alt = np.array([episq[j, i] for i in range(N) for j in range(i+1, N)])
+    
+    hist_pop = [np.sum((bins[i]<=epi_pop) & (epi_pop<bins[i+1])) for i in range(len(bins)-2)]
+    hist_pop.append(np.sum(epi_pop>=bins[-2]))
+    hist_pop.append(0)
+    
+    hist_alt = [np.sum((bins[i]<=epi_alt) & (epi_alt<bins[i+1])) for i in range(len(bins)-2)]
+    hist_alt.append(np.sum(epi_alt>=bins[-2]))
+    hist_alt.append(0)
+    
+    for i in range(len(hist_pop)):
+        if hist_pop[i]>0:
+            hist_pop[i] = 1 + np.log10(hist_pop[i])
+        else:
+            hist_pop[i] = 0
+            
+    for i in range(len(hist_alt)):
+        if hist_alt[i]>0:
+            hist_alt[i] = 1 + np.log10(hist_alt[i])
+        else:
+            hist_alt[i] = 0
+            
+    hist_props = dict(lw=AXWIDTH/2, width=1.0*epi_max/n_bins, align='center', alpha=0.2,
+                      orientation='vertical')#, edgecolor=[BKCOLOR])
+
+    pprops = { 'xlim':        [0, epi_max+2*bin_dx],
+               'xticks':      [ 0, 0.25, 0.5, 0.75, 1+bin_dx],
+               'xticklabels': [ 0, 0.25, 0.5, 0.75, 1.0],
+               'ylim':        [0.75, 3.25],
+               'yticks':      [0.75, 1, 2, 3, 3.25],
+               'yticklabels': ['', r'$1$', r'$10$', r'$10^2$', ''],
+               'xlabel':      'Normalized sum of\nsquared epistatic interactions',
+               'ylabel':      'Counts',
+               'colors':      [COLOR_1, LCOLOR],
+               'plotprops':   hist_props,
+               'axoffset':    0.1,
+               'theme':       'open',
+               'hide':        ['top', 'right'] }
+
+    mp.plot(type='bar', ax=ax_hist, x=[bins+(bin_dx/2), bins+(bin_dx/2)], y=[hist_pop, hist_alt], **pprops)
+    
+    lineprops = {'lw': SIZELINE, 'ls': '-', 'alpha': 1, 'drawstyle': 'steps-mid'}
+    pprops['plotprops'] = lineprops
+    mp.line(ax=ax_hist, x=[bins+(bin_dx/2), bins+(bin_dx/2)], y=[hist_pop, hist_alt], **pprops)
+    
+    legend_x  =  0.55
+    legend_d  = -0.04
+    legend_y  = 3.15
+    legend_dy = 0.125
+    plotprops = dict(mew=AXWIDTH, markersize=SMALLSIZEDOT/2, fmt='o', elinewidth=SIZELINE/2,
+                     capthick=0, capsize=0, clip_on=False, alpha=0.6)
+
+    mp.error(ax=ax_hist, x=[[legend_x + legend_d]], y=[[legend_y]], colors=[COLOR_1], plotprops=plotprops)
+    ax_hist.text(legend_x, legend_y, 'popDMS', ha='left', va='center', **DEF_LABELPROPS)
+    mp.error(ax=ax_hist, x=[[legend_x + legend_d]], y=[[legend_y - legend_dy]], colors=[LCOLOR], plotprops=plotprops)
+    ax_hist.text(legend_x, legend_y - legend_dy, 'Log ratio regression', ha='left', va='center', **DEF_LABELPROPS)
+    
+    ax_hist.yaxis.set_label_coords(-0.16, 0.5)
+    
+    # sublabels
+    ddx = 0.025
+    ddy = ddx * (w / h)
+    fig.text(box_comp['left']-ddx, box_comp['top'], s = 'a', transform=fig.transFigure, **DEF_SUBLABEL)
+    fig.text(box_epi['left']-ddx,  box_epi['top'],  s = 'b', transform=fig.transFigure, **DEF_SUBLABEL)
+    fig.text(box_hist['left']-ddx, box_hist['top'], s = 'c', transform=fig.transFigure, **DEF_SUBLABEL)
+
+    plt.savefig(FIG_DIR + 'fig-2-comp-epistasis.pdf', **FIGPROPS)
+
+
+def plot_selection(ax, df_pop, legend=True):
+    """ Plot selection heatmap. """
+
+    # process stored data
+
+    sites = np.unique(df_pop[COL_SITE])
+    
+    df_WT   = df_pop[df_pop[COL_WT]==True]
+    WT      = [df_WT[df_WT[COL_SITE]==s].iloc[0][COL_AA] for s in sites]
+    s_WT    = [df_WT[df_WT[COL_SITE]==s].iloc[0][COL_S]  for s in sites]
+    s_vec   = [[df_pop[(df_pop[COL_SITE]==sites[i]) & (df_pop[COL_AA]==aa)].iloc[0][COL_S] - s_WT[i] for aa in AA] for i in range(len(sites))]
+    s_norm  = np.max(np.fabs(s_vec))
+
+    # plot selection across the protein, normalizing WT residues to zero
+
+    site_rec_props = dict(height=1, width=1, ec=None, lw=AXWIDTH/2, clip_on=False)
+    prot_rec_props = dict(height=len(AA), width=len(sites), ec=BKCOLOR, fc='none', lw=AXWIDTH/2, clip_on=False)
+    cBG             = '#F5F5F5'
+    rec_patches     = []
+    WT_dots_x       = []
+    WT_dots_y       = []
+    
+    for i in range(len(sites)):
+        WT_dots_x.append(i + 0.5)
+        WT_dots_y.append(len(AA)-AA.index(WT[i])-0.5)
+        for j in range(len(AA)):
+            
+            # skip WT
+            if AA[j]==WT[i]:
+                continue
+
+            # fill BG for unobserved
+            c = cBG
+            if s_vec[i][j]!=-s_WT[i]:
+                t = s_vec[i][j] / s_norm
+                if np.fabs(t)>1:
+                    t /= np.fabs(t)
+                if t>0:
+                    c = hls_to_rgb(0.02, 0.53 * t + 1. * (1 - t), 0.83)
+                else:
+                    c = hls_to_rgb(0.58, 0.53 * np.fabs(t) + 1. * (1 - np.fabs(t)), 0.60)
+            
+            rec = matplotlib.patches.Rectangle(xy=(i, len(AA)-1-j), fc=c, **site_rec_props)
+            rec_patches.append(rec)
+    
+    rec = matplotlib.patches.Rectangle(xy=(0, 0), **prot_rec_props)
+    rec_patches.append(rec)
+    
+    # add patches and plot
+    
+    for patch in rec_patches:
+        ax.add_artist(patch)
+
+    pprops = { 'colors':    [BKCOLOR],
+               'xlim':      [0, len(sites) + 1],
+               'ylim':      [0, len(AA) + 0.5],
+               'xticks':    [],
+               'yticks':    [],
+               'plotprops': dict(lw=0, s=0.2*SMALLSIZEDOT, marker='o', clip_on=False),
+               #'xlabel':    'Sites',
+               #'ylabel':    'Amino acids',
+               'theme':     'open',
+               'axoffset':  0,
+               'hide' :     ['top', 'bottom', 'left', 'right'] }
+
+    mp.plot(type='scatter', ax=ax, x=[WT_dots_x], y=[WT_dots_y], **pprops)
+    
+    # legend
+    
+    rec_patches = []
+
+    if legend:
+    
+        invt = ax.transData.inverted()
+        xy1  = invt.transform((0,0))
+        xy2  = invt.transform((0,9))
+        legend_dy = (xy1[1]-xy2[1])/3 # multiply by 3 for slides/poster
+
+        xloc = len(sites) + 2 + 6  # len(sites) - 6.5
+        yloc = 17  # -4
+        for i in range(-5, 5+1, 1):
+            c = cBG
+            t = i/5
+            if t>0:
+                c = hls_to_rgb(0.02, 0.53 * t + 1. * (1 - t), 0.83)
+            else:
+                c = hls_to_rgb(0.58, 0.53 * np.fabs(t) + 1. * (1 - np.fabs(t)), 0.60)
+            rec = matplotlib.patches.Rectangle(xy=(xloc + i, yloc), fc=c, **site_rec_props)
+            rec_patches.append(rec)
+            
+        txtprops = dict(ha='center', va='center', color=BKCOLOR, family=FONTFAMILY, size=SIZELABEL)
+        ax.text(xloc+0.5, yloc-4*legend_dy, 'Mutation effects', clip_on=False, **txtprops)
+        ax.text(xloc-4.5, yloc+2*legend_dy, '-', clip_on=False, **txtprops)
+        ax.text(xloc+5.5, yloc+2*legend_dy, '+', clip_on=False, **txtprops)
+
+        xloc = len(sites) + 2  # 0
+        yloc = 11  # -4
+        c    = cBG
+        rec  = matplotlib.patches.Rectangle(xy=(xloc, yloc + 4*legend_dy), fc=c, **site_rec_props) # paper
+    #    rec  = matplotlib.patches.Rectangle(xy=(xloc, yloc + 6*legend_dy), fc=c, **site_rec_props) # slides
+        rec_patches.append(rec)
+
+        for patch in rec_patches:
+            ax.add_artist(patch)
+            
+        mp.scatter(ax=ax, x=[[xloc + 0.5]], y=[[yloc + 0.5]], **pprops)
+
+        txtprops['ha'] = 'left'
+        ax.text(xloc + 1.5, yloc + 0.5, 'WT amino acid', clip_on=False, **txtprops)
+        ax.text(xloc + 1.5, yloc + 0.5 + 4*legend_dy, 'Not observed', clip_on=False, **txtprops) # paper
+    #    ax.text(xloc + 1.3, yloc + 0.5 + 6*legend_dy, 'Not observed', clip_on=False, **txtprops) # slides
+
+
+######################
+# Supplementary figures
+
+
+######################
+# FIGURE 1 FINITE SAMPLING SIMULATION
+# FIGURE 1 ARGUMENTS
+
+# FIGURE 1 MAIN PLOT FUNCTION
+def fig_finite_sampling():
+
+    FIG1_A_POS = {
+        'x': 0.05,
+        'y': 0.95
+    }
+    FIG1_B_POS = {
+        'x': 0.05,
+        'y': 0.48
+    }
+    FIG1_SIZE_X = SINGLE_COLUMN
+    FIG1_SIZE_Y = SINGLE_COLUMN
+    FIG1_SIMU_SCALE   = 'linear'
+    FIG1_VAR          = 'R'
+    FIG1_HSPACE       = 0.4
+    FIG1_FINITE_NUM   = 10
+    FIG1_MARKER_SIZE  = 5
+    FIG1_GEN          = 10
+    FIG1_ALPHA        = 0.3
+    FIG1_BOX_ARG      = dict(left = 0.2, right = 0.95, bottom = 0.1, top = 0.95)
+    FIG1_TRUE_COLOR   = COLOR_2
+    FIG1_TRUE_ALPHA   = 1.0
+
+    FIG1_TRAJECTORY_DIR = './output/simulation/WF_finite_sampling/'
+    FIG1_INFERENCE_DIR = './output/simulation/WF_mutational_effects/'
+    FIG1_WF_SIMU_FILE = './output/simulation/WF_simulation.csv'
+    FIG1_WF_SELECTION = FIG1_INFERENCE_DIR + '/selection_coefficients/'
+    FIG1_WF_LOGREG    = FIG1_INFERENCE_DIR + '/log_regression/'
+    FIG1_WF_RATIO     = FIG1_INFERENCE_DIR + '/enrichment_ratio/'
+    FIG1_WF_LOGRATIO  = FIG1_INFERENCE_DIR + '/enrichment_ratio_log/'
+    # FIG1_FINITE_SIZE  = '_sampling-10000/'
+    FIG1_NAME         = 'fig-s1-sampling.pdf'
+
+    fig = plt.figure(figsize = (FIG1_SIZE_X, FIG1_SIZE_Y))
+    gs  = fig.add_gridspec(2, 1, hspace = FIG1_HSPACE, **FIG1_BOX_ARG)
+
+    fig.text(**FIG1_A_POS, s = 'a', **DEF_SUBLABEL, transform = fig.transFigure)
+    fig.text(**FIG1_B_POS, s = 'b', **DEF_SUBLABEL, transform = fig.transFigure)
+
+    # Plot trajectories
+    ax1 = fig.add_subplot(gs[:1, 0])
+    ax1.set_xlabel('Generation', fontsize = SIZELABEL)
+    ax1.set_ylabel('Variant frequency', fontsize = SIZELABEL)
+    ax1.tick_params(axis = 'both', which = 'major', labelsize = SIZELABEL)
+    ax1.set_yscale(FIG1_SIMU_SCALE)
+    num_traj = 0
+
+    for traj_num in range(FIG1_FINITE_NUM):
+        df_trajectory = pd.read_csv(FIG1_TRAJECTORY_DIR + 'rep-%s'%traj_num + '.csv.zip', index_col=0)
+        for i in [FIG1_VAR]:
+            ax1.plot([i for i in range(FIG1_FINITE_NUM)], df_trajectory.loc[i][:FIG1_GEN], color = BKCOLOR, alpha = FIG1_ALPHA)
+    df_trajectory = pd.read_csv(FIG1_WF_SIMU_FILE, index_col=0)
+    col_list      = df_trajectory.T.columns.tolist()
+    for i in [FIG1_VAR]:
+        ax1.plot(df_trajectory.columns[:FIG1_GEN], df_trajectory.T[i][:FIG1_GEN], color = FIG1_TRUE_COLOR, alpha = FIG1_TRUE_ALPHA)
+
+#    legend_fig1_a = [Line2D([0], [0], color = FIG1_FINITE_COLOR, lw = 2, label = 'Finitely sampled'),
+#                     Line2D([0], [0], color = FIG1_TRUE_COLOR,   lw = 2, label = 'True evolution')]
+#    ax1.legend(handles = legend_fig1_a, frameon = False, fontsize = SIZELABEL)
+    ax1.spines['right'].set_visible(False)
+    ax1.spines['top'].set_visible(False)
+    ax1.set_yscale('log')
+    ax1.set_xticks([0, 3, 6, 9])
+    
+    # legend
+                    
+    colors    = [FIG1_TRUE_COLOR, BKCOLOR]
+    colors_lt = [FIG1_TRUE_COLOR, LCOLOR]
+    plotprops = DEF_ERRORPROPS.copy()
+    plotprops['clip_on'] = False
+    
+    invt = ax1.transData.inverted()
+    xy1  = invt.transform((   0, 0))
+    xy2  = invt.transform((7.50, 9))
+    xy3  = invt.transform((3.00, 9))
+    xy4  = invt.transform((5.25, 9))
+
+    legend_dx1 = xy1[0]-xy2[0]
+    legend_dx2 = xy1[0]-xy3[0]
+    legend_dx  = xy1[0]-xy4[0]
+    legend_dy  = -2.4e-4
+    legend_x   =  0.015
+    legend_y   = [1e-3, 1e-3 + legend_dy]
+    legend_t   = ['True evolution', 'Finitely sampled']
+    
+    for k in range(len(legend_y)):
+        mp.error(ax=ax1, x=[[legend_x+legend_dx]], y=[[legend_y[k]]], edgecolor=[colors[k]], facecolor=[colors_lt[k]], plotprops=plotprops)
+        ax1.text(legend_x, legend_y[k], legend_t[k], ha='left', va='center', **DEF_LABELPROPS)
+        
+    # second panel
+
+    ax2 = fig.add_subplot(gs[1:, 0])
+    generation   = 10
+    replicates   = 100
+    sample_index = 10
+
+    generations=[1, 4, 9, 19]
+    finite_list = [50000]
+    marker = ['o', 'v', '*']
+    generation_ = [i + 1 for i in generations[: -1]]
+
+    for finite_sampling in finite_list:
+        temp = [[],[],[],[]]
+        for generation in generation_:
+
+            df_select               = pd.read_csv(FIG1_INFERENCE_DIR + '/selection_coefficients_gen-%s_'%generation+'sampling-%s'%finite_sampling+'.csv.zip', index_col=0)
+            df_enrichment_regress   = pd.read_csv(FIG1_INFERENCE_DIR + '/log_regression_gen-%s_'%generation+'sampling-%s'%finite_sampling+'.csv.zip', index_col=0)
+            df_enrichment_ratio     = pd.read_csv(FIG1_INFERENCE_DIR + '/enrichment_ratio_gen-%s_'%generation+'sampling-%s'%finite_sampling+'.csv.zip', index_col=0)
+            df_enrichment_ratio_log = pd.read_csv(FIG1_INFERENCE_DIR + '/enrichment_ratio_log_gen-%s_'%generation+'sampling-%s'%finite_sampling+'.csv.zip', index_col=0)
+
+            enrichment_ratio_corr       =     df_enrichment_ratio.T.corr(method = 'pearson')
+            log_regression_corr         =   df_enrichment_regress.T.corr(method = 'pearson')
+            selection_coefficients_corr =               df_select.T.corr(method = 'pearson')
+            enrichment_ratio_log_corr   = df_enrichment_ratio_log.T.corr(method = 'pearson')
+            
+            factor = replicates * replicates - replicates
+            enrichment_ratio_corr       = (enrichment_ratio_corr.sum().sum()       - replicates)/factor
+            log_regression_corr         = (log_regression_corr.sum().sum()         - replicates)/factor
+            selection_coefficients_corr = (selection_coefficients_corr.sum().sum() - replicates)/factor
+            enrichment_ratio_log_corr   = (enrichment_ratio_log_corr.sum().sum()   - replicates)/factor
+            
+            temp[0].append(selection_coefficients_corr)
+            temp[1].append(enrichment_ratio_corr)
+            temp[2].append(log_regression_corr)
+            temp[3].append(enrichment_ratio_log_corr)
+            
+        PALETTE = sns.hls_palette(3)
+
+        ax2.plot(generation_, temp[0], c = C_POP,      marker = marker[finite_list.index(finite_sampling)], markersize = SMALLSIZEDOT, markeredgewidth = 0, alpha = 0.6)
+        ax2.plot(generation_, temp[1], c = PALETTE[0], marker = marker[finite_list.index(finite_sampling)], markersize = SMALLSIZEDOT, markeredgewidth = 0, alpha = 0.6)
+        ax2.plot(generation_, temp[2], c = PALETTE[1], marker = marker[finite_list.index(finite_sampling)], markersize = SMALLSIZEDOT, markeredgewidth = 0, alpha = 0.6)
+        ax2.plot(generation_, temp[3], c = PALETTE[2], marker = marker[finite_list.index(finite_sampling)], markersize = SMALLSIZEDOT, markeredgewidth = 0, alpha = 0.6)
+        ax2.set_xlabel('Generations used for inference', fontsize = SIZELABEL)
+        ax2.set_ylabel('Average Pearson correlation between\nreplicate inferred mutational effects', fontsize = SIZELABEL)
+        ax2.set_xticks([2, 5, 10])
+        ax2.set_xlim  ([   0, 11])
+        ax2.set_ylim  ([-0.05, 1])
+        
+#    legend_fig_1b = [Line2D([0], [0], color = '#4F94CD', lw = 2, label = 'popDMS',           alpha = 0.6),
+#                     Line2D([0], [0], color = 'red',     lw = 2, label = 'Enrichment ratio', alpha = 0.6),
+#                     Line2D([0], [0], color = 'orange',  lw = 2, label = 'Log scaled ratio', alpha = 0.6),
+#                     Line2D([0], [0], color = 'green',   lw = 2, label = 'Log regression',   alpha = 0.6)
+#                    ]
+
+    # legend
+                    
+    colors    = [C_POP, PALETTE[0], PALETTE[1], PALETTE[2]]
+    colors_lt = [C_POP, PALETTE[0], PALETTE[1], PALETTE[2]]
+    plotprops = DEF_ERRORPROPS.copy()
+    plotprops['clip_on'] = False
+    
+    invt = ax2.transData.inverted()
+    xy1  = invt.transform((   0,  0))
+    xy2  = invt.transform((7.50, 10))
+    xy3  = invt.transform((3.00, 10))
+    xy4  = invt.transform((5.25, 10))
+
+    legend_dx1 = xy1[0]-xy2[0]
+    legend_dx2 = xy1[0]-xy3[0]
+    legend_dx  = xy1[0]-xy4[0]
+    legend_dy  = xy1[1]-xy2[1]
+    legend_x   = 1.8
+    legend_y   = [0.99, 0.99 + 1*legend_dy, 0.99 + 2*legend_dy, 0.99 + 3*legend_dy]
+    legend_t   = ['popDMS', 'Enrichment ratio', 'Log ratio', 'Log regression']
+    
+    for k in range(len(legend_y)):
+        mp.error(ax=ax2, x=[[legend_x+legend_dx]], y=[[legend_y[k]]], edgecolor=[colors[k]], facecolor=[colors_lt[k]], plotprops=plotprops)
+        ax2.text(legend_x, legend_y[k], legend_t[k], ha='left', va='center', **DEF_LABELPROPS)
+
+    ax2.set_yticks([0, 0.25, 0.5, 0.75, 1])
+    ax2.set_xlim([1, 11])
+    ax2.spines['right'].set_visible(False)
+    ax2.spines[ 'top' ].set_visible(False)
+    ax2.tick_params(axis = 'both', which = 'major', labelsize = SIZELABEL)
+    #ax2.legend(handles = legend_fig_1b, frameon = False, fontsize = SIZELABEL, loc = 'upper left')
+    fig.savefig(FIG_DIR + FIG1_NAME, dpi = FIG_DPI, **FIGPROPS)
+    
+    
+def fig_site_spectrum():
+
+    # plot parameters
+    w = SINGLE_COLUMN
+    h = SINGLE_COLUMN * 1.5
+
+    fig = plt.figure(figsize = (w, h))
+    
+    box_t = 0.90
+    box_b = 0.15
+    box_l = 0.15
+    box_r = 0.90
+    
+    box_dx = 0.05
+    box_dy = 4 * box_dx * (w / h)  # scale the box by a proportional amount along the x and y axes
+    box_y  = (box_t - box_b - box_dy) / 2
+    box_x  = box_y * (h / w) / 4  # denominator is effectively the aspect ratio
+    
+    box_sim1_pop = dict(left=box_l,                      right=box_l + 1*box_x,            bottom=box_t - 1*box_y,            top=box_t)
+    box_sim1_alt = dict(left=box_l + 1*box_x + 1*box_dx, right=box_l + 2*box_x + 1*box_dx, bottom=box_t - 1*box_y,            top=box_t)
+    box_sim2_pop = dict(left=box_l + 2*box_x + 4*box_dx, right=box_l + 3*box_x + 4*box_dx, bottom=box_t - 1*box_y,            top=box_t)
+    box_sim2_alt = dict(left=box_l + 3*box_x + 5*box_dx, right=box_l + 4*box_x + 5*box_dx, bottom=box_t - 1*box_y,            top=box_t)
+    box_dif1_pop = dict(left=box_l,                      right=box_l + 1*box_x,            bottom=box_t - 2*box_y - 1*box_dy, top=box_t - 1*box_y - 1*box_dy)
+    box_dif1_alt = dict(left=box_l + 1*box_x + 1*box_dx, right=box_l + 2*box_x + 1*box_dx, bottom=box_t - 2*box_y - 1*box_dy, top=box_t - 1*box_y - 1*box_dy)
+    box_dif2_pop = dict(left=box_l + 2*box_x + 4*box_dx, right=box_l + 3*box_x + 4*box_dx, bottom=box_t - 2*box_y - 1*box_dy, top=box_t - 1*box_y - 1*box_dy)
+    box_dif2_alt = dict(left=box_l + 3*box_x + 5*box_dx, right=box_l + 4*box_x + 5*box_dx, bottom=box_t - 2*box_y - 1*box_dy, top=box_t - 1*box_y - 1*box_dy)
+    
+    # read in data
+    pop_file = 'output/selection_coefficients/HIV Env BG505.csv.gz'
+    alt_file = 'output/merged_preference/HIV Env BG505.csv.gz'
+
+    df_pop = pd.read_csv(pop_file)
+    df_alt = pd.read_csv(alt_file)
+
+    df_merge = pd.merge(df_pop, df_alt, how='left', left_on=['site', 'amino_acid'], right_on=['site', 'amino_acid']).dropna()
+
+    # plot similar/dissimilar sites
+    sim1 = 287
+    sim2 = 417
+    dif1 = 592
+    dif2 = 596
+    
+    gs_sim  = [gridspec.GridSpec(1, 1, **box_sim1_pop), gridspec.GridSpec(1, 1, **box_sim1_alt),
+               gridspec.GridSpec(1, 1, **box_sim2_pop), gridspec.GridSpec(1, 1, **box_sim2_alt)]
+    ax_list = [plt.subplot(gs[0,0]) for gs in gs_sim]
+    
+    logoprops = dict(color_scheme='dmslogo_funcgroup', font_name='Arial Rounded MT Bold')
+    
+    pop_scale = 8
+    ax_idx    = 0
+    for site in [sim1, sim2]:
+        for metric in ['joint', 'average']:
+            df_site = df_merge[['site', 'amino_acid', metric]]
+            df_site = df_site[df_site['site']==site]
+                
+            if metric=='joint':
+                df_site[metric] = np.exp(pop_scale * df_site[metric]) / np.sum(np.exp(pop_scale * df_site[metric]))
+            
+            df_site = df_site.replace(np.nan, 0)
+            df_lm   = pd.pivot_table(df_site, values=metric, index=['site'], columns=['amino_acid']).reset_index()
+            df_lm.set_index('site', inplace = True)
+            
+            logo = lm.Logo(df_lm[0:], ax=ax_list[ax_idx], **logoprops)
+            logo.style_spines(spines=['bottom', 'right', 'left', 'top'], visible = False)
+            ax_list[ax_idx].set_xticks([])
+            ax_list[ax_idx].set_yticks([])
+            
+            ax_idx += 1
+            
+    gs_dif  = [gridspec.GridSpec(1, 1, **box_dif1_pop), gridspec.GridSpec(1, 1, **box_dif1_alt),
+               gridspec.GridSpec(1, 1, **box_dif2_pop), gridspec.GridSpec(1, 1, **box_dif2_alt)]
+    ax_list = [plt.subplot(gs[0,0]) for gs in gs_dif]
+    
+    ax_idx = 0
+    for site in [dif1, dif2]:
+        for metric in ['joint', 'average']:
+            df_site = df_merge[['site', 'amino_acid', metric]]
+            df_site = df_site[df_site['site']==site]
+                
+            if metric=='joint':
+                df_site[metric] = np.exp(pop_scale * df_site[metric]) / np.sum(np.exp(pop_scale * df_site[metric]))
+            
+            df_site = df_site.replace(np.nan, 0)
+            df_lm   = pd.pivot_table(df_site, values=metric, index=['site'], columns=['amino_acid']).reset_index()
+            df_lm.set_index('site', inplace = True)
+            
+            logo = lm.Logo(df_lm[0:], ax=ax_list[ax_idx], **logoprops)
+            logo.style_spines(spines=['bottom', 'right', 'left', 'top'], visible = False)
+            ax_list[ax_idx].set_xticks([])
+            ax_list[ax_idx].set_yticks([])
+            
+            ax_idx += 1
+            
+    # annotations
+    tprops = dict(family=FONTFAMILY, size=SIZELABEL, clip_on=False, rotation_mode='anchor', ha='right', va='center', rotation=90)
+    for i in range(len(ax_list)//2):
+        ax_list[2*i].text(np.sum(ax_list[2*i].get_xlim())/2, -0.03, 'popDMS', **tprops)
+        ax_list[2*i + 1].text(np.sum(ax_list[2*i + 1].get_xlim())/2, -0.03, 'Preference', **tprops)
+        
+    dx = 0.03
+    tprops = dict(family=FONTFAMILY, size=SIZELABEL, clip_on=False, rotation_mode='anchor', ha='center', va='bottom', rotation=90)
+    fig.text(box_sim1_pop['left']-dx, (box_sim1_pop['top'] + box_sim1_pop['bottom'])/2, 'Similar inference',   transform=fig.transFigure, **tprops)
+    fig.text(box_dif1_pop['left']-dx, (box_dif1_pop['top'] + box_dif1_pop['bottom'])/2, 'Different inference', transform=fig.transFigure, **tprops)
+    
+    dy = 0.03
+    tprops = dict(family=FONTFAMILY, size=SIZELABEL, clip_on=False, ha='center', va='bottom')
+    fig.text((box_sim1_pop['left'] + box_sim1_alt['right'])/2, box_sim1_pop['top'] + dy, 'Site %d' % sim1, transform=fig.transFigure, **tprops)
+    fig.text((box_sim2_pop['left'] + box_sim2_alt['right'])/2, box_sim2_pop['top'] + dy, 'Site %d' % sim2, transform=fig.transFigure, **tprops)
+    fig.text((box_dif1_pop['left'] + box_dif1_alt['right'])/2, box_dif1_pop['top'] + dy, 'Site %d' % dif1, transform=fig.transFigure, **tprops)
+    fig.text((box_dif2_pop['left'] + box_dif2_alt['right'])/2, box_dif2_pop['top'] + dy, 'Site %d' % dif2, transform=fig.transFigure, **tprops)
+    
+    dx = 0.05
+    dy = 0.04
+    fig.text(box_sim1_pop['left']-dx, box_sim1_pop['top'] + dy, 'a', transform=fig.transFigure, **DEF_SUBLABEL)
+    fig.text(box_dif1_pop['left']-dx, box_dif1_pop['top'] + dy, 'b', transform=fig.transFigure, **DEF_SUBLABEL)
+
+    plt.savefig(FIG_DIR + 'fig-s2-spectrum.pdf', **FIGPROPS)
+    
+    
+######################
+# Old figures
+
 
 def fig_epistasis():
 
@@ -619,317 +1323,188 @@ def fig_epistasis():
               handletextpad = 0.1)
 
     plt.savefig(FIG_DIR + 'Fig4_epistasis.pdf', dpi=200)
-    plt.show()
-
-
-def plot_selection(ax, df_pop, legend=True):
-    """ Plot selection heatmap. """
-
-    # process stored data
-
-    sites = np.unique(df_pop[COL_SITE])
     
-    df_WT   = df_pop[df_pop[COL_WT]==True]
-    WT      = [df_WT[df_WT[COL_SITE]==s].iloc[0][COL_AA] for s in sites]
-    s_WT    = [df_WT[df_WT[COL_SITE]==s].iloc[0][COL_S]  for s in sites]
-    s_vec   = [[df_pop[(df_pop[COL_SITE]==sites[i]) & (df_pop[COL_AA]==aa)].iloc[0][COL_S] - s_WT[i] for aa in AA] for i in range(len(sites))]
-    s_norm  = np.max(np.fabs(s_vec))
 
-    # plot selection across the protein, normalizing WT residues to zero
+def fig_comp_epistasis_single_old():
 
-    site_rec_props = dict(height=1, width=1, ec=None, lw=AXWIDTH/2, clip_on=False)
-    prot_rec_props = dict(height=len(AA), width=len(sites), ec=BKCOLOR, fc='none', lw=AXWIDTH/2, clip_on=False)
-    cBG             = '#F5F5F5'
-    rec_patches     = []
-    WT_dots_x       = []
-    WT_dots_y       = []
+    # plot parameters
+    w = SINGLE_COLUMN
+    h = SINGLE_COLUMN * 2
+
+    fig = plt.figure(figsize = (w, h))
     
-    for i in range(len(sites)):
-        WT_dots_x.append(i + 0.5)
-        WT_dots_y.append(len(AA)-AA.index(WT[i])-0.5)
-        for j in range(len(AA)):
+    box_t = 0.98
+    box_b = 0.10
+    box_l = 0.10
+    box_r = 0.98
+    
+    box_dy = 0.05
+    box_y  = (box_t - box_b - box_dy) / 2
+    box_x  = box_y * (h / w)
+    
+    box_comp = dict(left=box_l, right=box_l + box_x, bottom=box_t - 1*box_y,            top=box_t)
+    box_epi  = dict(left=box_l, right=box_l + box_x, bottom=box_t - 2*box_y - 2*box_dy, top=box_t - 1*box_y - 2*box_dy)
+    
+    
+    # a -- compare selection coefficients and preferences in BG505
+    
+    pop_file = 'output/selection_coefficients/HIV Env BG505.csv.gz'
+    alt_file = 'output/merged_preference/HIV Env BG505.csv.gz'
+
+    df_pop = pd.read_csv(pop_file)
+    df_alt = pd.read_csv(alt_file)
+
+    df_merge = pd.merge(df_pop, df_alt, how='left', left_on=['site', 'amino_acid'], right_on=['site', 'amino_acid']).dropna()
+    
+    x = np.log10(df_merge['average'])
+#    x = df_merge['average']
+    y = df_merge['joint']
+    
+    gs_comp = gridspec.GridSpec(1, 1, **box_comp)
+    ax_comp = plt.subplot(gs_comp[0, 0])
+    
+    scatterprops = dict(alpha=0.2, edgecolor='none', s=SMALLSIZEDOT, c=COLOR_2)
+    
+    ddx   = 0.10
+#    ddx   = 0.01
+    ddy   = 0.03
+    ticks = []
+    xlim  = [np.min(x)-ddx, np.max(x)+ddx]
+    ylim  = [np.min(y)-ddy, np.max(y)+ddy]
+    xtd   = (xlim[1] - xlim[0])*0.06
+    ytd   = (ylim[1] - ylim[0])*0.06
+    
+    ax_comp.set_xlabel('Log10 enrichment ratios (dms_tools2)', fontsize=SIZELABEL)
+    ax_comp.set_ylabel('Selection coefficients (popDMS)', fontsize=SIZELABEL)
+
+    ax_comp.scatter(x, y, **scatterprops)
+    
+#    corr = st.pearsonr(x, y)[0]
+#    ax_comp.text(xlim[0]+xtd, ylim[1]-ytd, 'R = %.2f' % corr, fontsize=SIZELABEL)
+    
+    corr = st.spearmanr(x, y)[0]
+    ax_comp.text(xlim[0]+xtd, ylim[1]-ytd, r'$\rho$' + ' = %.2f' % corr, fontsize=SIZELABEL)
+
+    ax_comp.set_xticks(ticks)
+    ax_comp.set_yticks(ticks)
+    ax_comp.set_xlim(xlim)
+    ax_comp.set_ylim(ylim)
+
+    ax_comp.spines['right'].set_visible(False)
+    ax_comp.spines[ 'top' ].set_visible(False)
+    
+    
+    # b -- epistasis heatmap
+
+    ## process data
+    epi_file = 'output/epistasis/merged_epistasis.csv.gz'
+
+    df_epi = pd.read_csv(epi_file)
+    
+    df_epi['average'] = (df_epi['log2wab-log2wa-log2wb_rep1'] + df_epi['log2wab-log2wa-log2wb_rep2'])/2
+    df_epi['joint']   = df_epi['popDMS_consensus_joint']
+    
+    sites = np.unique(list(np.unique(df_epi['site_1'])) + list(np.unique(df_epi['site_2'])))
+    N     = len(sites)
+
+    episq = np.zeros((N, N))
+    smax  = 0
+    fmax  = 0
+
+    for i in range(N):
+        for j in range(i+1, N):
+            df_sub = df_epi[(df_epi['site_1']==sites[i]) & (df_epi['site_2']==sites[j])]
+            ssq    = np.sum(np.array(df_sub['joint'])**2)
+            fsq    = np.sum(np.array(df_sub['average'])**2)
+            episq[i, j] = ssq
+            episq[j, i] = fsq
+
+            if ssq>smax:
+                smax = ssq
+            if fsq>fmax:
+                fmax = fsq
+
+    for i in range(N):
+        for j in range(i+1, N):
+            episq[i, j] /= smax
+            episq[j, i] /= fmax
+    
+    ## make plot
+    gs_epi = gridspec.GridSpec(1, 1, **box_epi)
+    ax_epi = plt.subplot(gs_epi[0, 0])
+    
+    rec_props = dict(height=1, width=1, ec=None, lw=0, clip_on=False, angle=45)
+    
+    a = 1 / np.sqrt(2)
+    rec_patches = []
+    
+    ticks     = [1, 10, 20, 30]
+    tickprops = dict(family=FONTFAMILY, size=SIZELABEL, clip_on=False, rotation_mode='anchor')
+    for i in range(N):
+        for j in range(i+1, N):
+            cij = hls_to_rgb(0.58, 0.53 * episq[i,j] + 1. * (1 - episq[i,j]), 0.60)
+            cji = hls_to_rgb(0.00, 0.59 * episq[j,i] + 1. * (1 - episq[j,i]), 0.00)
             
-            # skip WT
-            if AA[j]==WT[i]:
-                continue
-
-            # fill BG for unobserved
-            c = cBG
-            if s_vec[i][j]!=-s_WT[i]:
-                t = s_vec[i][j] / s_norm
-                if np.fabs(t)>1:
-                    t /= np.fabs(t)
-                if t>0:
-                    c = hls_to_rgb(0.02, 0.53 * t + 1. * (1 - t), 0.83)
-                else:
-                    c = hls_to_rgb(0.58, 0.53 * np.fabs(t) + 1. * (1 - np.fabs(t)), 0.60)
+            recij = matplotlib.patches.Rectangle(xy=(a*(i+j-1), a*(1+j-i)), fc=cij, **rec_props)
+            recji = matplotlib.patches.Rectangle(xy=(a*(i+j-1), a*(1+i-j)), fc=cji, **rec_props)
+            rec_patches.append(recij)
+            rec_patches.append(recji)
             
-            rec = matplotlib.patches.Rectangle(xy=(i, len(AA)-1-j), fc=c, **site_rec_props)
-            rec_patches.append(rec)
-    
-    rec = matplotlib.patches.Rectangle(xy=(0, 0), **prot_rec_props)
+            if (i==0) and (j in ticks):
+                ax_epi.text(a*(i+j-2.5), a*(1.50+j-i), s=j, ha='center', va='bottom', rotation=45, **tickprops)
+                ax_epi.text(a*(i+j-3.0), a*(2.25+i-j), s=j, ha='center',  va='top', rotation=-45, **tickprops)
+                
+    ax_epi.text(a*(N/2-2.5-2.5), a*(1.50+N/2+2.5), s='Sites', ha='center', va='bottom', rotation=45, **tickprops)
+    ax_epi.text(a*(N/2-2.5-3.0), a*(2.25-N/2-2.5), s='Sites', ha='center',  va='top', rotation=-45, **tickprops)
+            
+    container_props = dict(height=N, width=N, ec=BKCOLOR, fc='none', lw=AXWIDTH/2, clip_on=False, angle=45)
+    rec = matplotlib.patches.Rectangle(xy=(a*(N-2), a*(2-N)), **container_props)
     rec_patches.append(rec)
-    
-    # add patches and plot
-    
-    for patch in rec_patches:
-        ax.add_artist(patch)
-
+        
     pprops = { 'colors':    [BKCOLOR],
-               'xlim':      [0, len(sites) + 1],
-               'ylim':      [0, len(AA) + 0.5],
+               'xlim':      [0, N/a],
+               'ylim':      [-N/(2*a), N/(2*a)],
                'xticks':    [],
                'yticks':    [],
-               'plotprops': dict(lw=0, s=0.2*SMALLSIZEDOT, marker='o', clip_on=False),
-               #'xlabel':    'Sites',
-               #'ylabel':    'Amino acids',
+               'plotprops': dict(lw=0, s=0.2*SMALLSIZEDOT, marker='o'),
                'theme':     'open',
                'axoffset':  0,
                'hide' :     ['top', 'bottom', 'left', 'right'] }
 
-    mp.plot(type='scatter', ax=ax, x=[WT_dots_x], y=[WT_dots_y], **pprops)
+    mp.plot(type='scatter', ax=ax_epi, x=[[-10]], y=[[0]], **pprops)
     
-    # legend
+    ## legend
+    rec_props = dict(height=1, width=1, ec=None, lw=0, clip_on=False)
     
-    rec_patches = []
-
-    if legend:
-    
-        invt = ax.transData.inverted()
-        xy1  = invt.transform((0,0))
-        xy2  = invt.transform((0,9))
-        legend_dy = (xy1[1]-xy2[1])/3 # multiply by 3 for slides/poster
-
-        xloc = len(sites) + 2 + 6  # len(sites) - 6.5
-        yloc = 17  # -4
-        for i in range(-5, 5+1, 1):
-            c = cBG
-            t = i/5
-            if t>0:
-                c = hls_to_rgb(0.02, 0.53 * t + 1. * (1 - t), 0.83)
-            else:
-                c = hls_to_rgb(0.58, 0.53 * np.fabs(t) + 1. * (1 - np.fabs(t)), 0.60)
-            rec = matplotlib.patches.Rectangle(xy=(xloc + i, yloc), fc=c, **site_rec_props)
-            rec_patches.append(rec)
-            
-        txtprops = dict(ha='center', va='center', color=BKCOLOR, family=FONTFAMILY, size=SIZELABEL)
-        ax.text(xloc+0.5, yloc-4*legend_dy, 'Mutational effects', clip_on=False, **txtprops)
-        ax.text(xloc-4.5, yloc+2*legend_dy, '-', clip_on=False, **txtprops)
-        ax.text(xloc+5.5, yloc+2*legend_dy, '+', clip_on=False, **txtprops)
-
-        xloc = len(sites) + 2  # 0
-        yloc = 11  # -4
-        c    = cBG
-        rec  = matplotlib.patches.Rectangle(xy=(xloc, yloc + 4*legend_dy), fc=c, **site_rec_props) # paper
-    #    rec  = matplotlib.patches.Rectangle(xy=(xloc, yloc + 6*legend_dy), fc=c, **site_rec_props) # slides
-        rec_patches.append(rec)
-
-        for patch in rec_patches:
-            ax.add_artist(patch)
-            
-        mp.scatter(ax=ax, x=[[xloc + 0.5]], y=[[yloc + 0.5]], **pprops)
-
-        txtprops['ha'] = 'left'
-        ax.text(xloc + 1.5, yloc + 0.5, 'WT amino acid', clip_on=False, **txtprops)
-        ax.text(xloc + 1.5, yloc + 0.5 + 4*legend_dy, 'Not observed', clip_on=False, **txtprops) # paper
-    #    ax.text(xloc + 1.3, yloc + 0.5 + 6*legend_dy, 'Not observed', clip_on=False, **txtprops) # slides
-    
-#        txtprops = dict(ha='center', va='center', color=BKCOLOR, family=FONTFAMILY, size=SIZELABEL)
-#        for i in range(len(NUC)-1):
-#            ax.text(-0.85, 3-i+0.5, NUC[i+1], clip_on=False, **txtprops)
-
-#        txtprops['ha'] = 'center'
-#        txtprops['va'] = 'top'
-#        for i in range(0, len(sites), 10):
-#            ax.text(0.5 + i, -0.5, sites[i], clip_on=False, **txtprops)
-
-#        ax.text(-11, -4.5, -5, clip_on=False, **txtprops)
-#        ax.text(- 6, -4.5,  0, clip_on=False, **txtprops)
-#        ax.text(- 1, -4.5,  5, clip_on=False, **txtprops)
-#        ax.text(- 5.5, -6.0, 'Inferred selection\ncoefficient, $\hat{s}$ (%)', clip_on=False, **txtprops)
-
-
-######################
-# FIGURE 1 FINITE SAMPLING SIMULATION
-# FIGURE 1 ARGUMENTS
-
-# FIGURE 1 MAIN PLOT FUNCTION
-def fig_finite_sampling():
-
-    FIG1_A_POS = {
-        'x': 0.05,
-        'y': 0.95
-    }
-    FIG1_B_POS = {
-        'x': 0.05,
-        'y': 0.48
-    }
-    FIG1_SIZE_X = SINGLE_COLUMN
-    FIG1_SIZE_Y = SINGLE_COLUMN
-    FIG1_SIMU_SCALE   = 'linear'
-    FIG1_VAR          = 'R'
-    FIG1_HSPACE       = 0.4
-    FIG1_FINITE_NUM   = 10
-    FIG1_MARKER_SIZE  = 5
-    FIG1_GEN          = 10
-    FIG1_ALPHA        = 0.3
-    FIG1_BOX_ARG      = dict(left = 0.2, right = 0.95, bottom = 0.1, top = 0.95)
-    FIG1_TRUE_COLOR   = COLOR_2
-    FIG1_TRUE_ALPHA   = 1.0
-
-    FIG1_TRAJECTORY_DIR = './output/simulation/WF_finite_sampling/'
-    FIG1_INFERENCE_DIR = './output/simulation/WF_mutational_effects/'
-    FIG1_WF_SIMU_FILE = './output/simulation/WF_simulation.csv'
-    FIG1_WF_SELECTION = FIG1_INFERENCE_DIR + '/selection_coefficients/'
-    FIG1_WF_LOGREG    = FIG1_INFERENCE_DIR + '/log_regression/'
-    FIG1_WF_RATIO     = FIG1_INFERENCE_DIR + '/enrichment_ratio/'
-    FIG1_WF_LOGRATIO  = FIG1_INFERENCE_DIR + '/enrichment_ratio_log/'
-    # FIG1_FINITE_SIZE  = '_sampling-10000/'
-    FIG1_NAME         = 'fig_s1_sampling.pdf'
-
-    fig = plt.figure(figsize = (FIG1_SIZE_X, FIG1_SIZE_Y))
-    gs  = fig.add_gridspec(2, 1, hspace = FIG1_HSPACE, **FIG1_BOX_ARG)
-
-    fig.text(**FIG1_A_POS, s = 'a', **DEF_SUBLABEL, transform = fig.transFigure)
-    fig.text(**FIG1_B_POS, s = 'b', **DEF_SUBLABEL, transform = fig.transFigure)
-
-    # Plot trajectories
-    ax1 = fig.add_subplot(gs[:1, 0])
-    ax1.set_xlabel('Generation', fontsize = SIZELABEL)
-    ax1.set_ylabel('Variant frequency', fontsize = SIZELABEL)
-    ax1.tick_params(axis = 'both', which = 'major', labelsize = SIZELABEL)
-    ax1.set_yscale(FIG1_SIMU_SCALE)
-    num_traj = 0
-
-    for traj_num in range(FIG1_FINITE_NUM):
-        df_trajectory = pd.read_csv(FIG1_TRAJECTORY_DIR + 'rep-%s'%traj_num + '.csv.zip', index_col=0)
-        for i in [FIG1_VAR]:
-            ax1.plot([i for i in range(FIG1_FINITE_NUM)], df_trajectory.loc[i][:FIG1_GEN], color = BKCOLOR, alpha = FIG1_ALPHA)
-    df_trajectory = pd.read_csv(FIG1_WF_SIMU_FILE, index_col=0)
-    col_list      = df_trajectory.T.columns.tolist()
-    for i in [FIG1_VAR]:
-        ax1.plot(df_trajectory.columns[:FIG1_GEN], df_trajectory.T[i][:FIG1_GEN], color = FIG1_TRUE_COLOR, alpha = FIG1_TRUE_ALPHA)
-
-#    legend_fig1_a = [Line2D([0], [0], color = FIG1_FINITE_COLOR, lw = 2, label = 'Finitely sampled'),
-#                     Line2D([0], [0], color = FIG1_TRUE_COLOR,   lw = 2, label = 'True evolution')]
-#    ax1.legend(handles = legend_fig1_a, frameon = False, fontsize = SIZELABEL)
-    ax1.spines['right'].set_visible(False)
-    ax1.spines['top'].set_visible(False)
-    ax1.set_yscale('log')
-    ax1.set_xticks([0, 3, 6, 9])
-    
-    # legend
-                    
-    colors    = [FIG1_TRUE_COLOR, BKCOLOR]
-    colors_lt = [FIG1_TRUE_COLOR, LCOLOR]
-    plotprops = DEF_ERRORPROPS.copy()
-    plotprops['clip_on'] = False
-    
-    invt = ax1.transData.inverted()
-    xy1  = invt.transform((   0, 0))
-    xy2  = invt.transform((7.50, 9))
-    xy3  = invt.transform((3.00, 9))
-    xy4  = invt.transform((5.25, 9))
-
-    legend_dx1 = xy1[0]-xy2[0]
-    legend_dx2 = xy1[0]-xy3[0]
-    legend_dx  = xy1[0]-xy4[0]
-    legend_dy  = -2.4e-4
-    legend_x   =  0.015
-    legend_y   = [1e-3, 1e-3 + legend_dy]
-    legend_t   = ['True evolution', 'Finitely sampled']
-    
-    for k in range(len(legend_y)):
-        mp.error(ax=ax1, x=[[legend_x+legend_dx]], y=[[legend_y[k]]], edgecolor=[colors[k]], facecolor=[colors_lt[k]], plotprops=plotprops)
-        ax1.text(legend_x, legend_y[k], legend_t[k], ha='left', va='center', **DEF_LABELPROPS)
+    n_boxes = 9
+    x_box   = 33
+    y_box   = -24
+    for i in range(n_boxes+1):
+        t = i/n_boxes
+        cij = hls_to_rgb(0.58, 0.53 * t + 1. * (1 - t), 0.60)
+        cji = hls_to_rgb(0.00, 0.59 * t + 1. * (1 - t), 0.00)
         
-    # second panel
-
-    ax2 = fig.add_subplot(gs[1:, 0])
-    generation   = 10
-    replicates   = 100
-    sample_index = 10
-
-    generations=[1, 4, 9, 19]
-    finite_list = [50000]
-    marker = ['o', 'v', '*']
-    generation_ = [i + 1 for i in generations[: -1]]
-
-    for finite_sampling in finite_list:
-        temp = [[],[],[],[]]
-        for generation in generation_:
-
-            df_select               = pd.read_csv(FIG1_INFERENCE_DIR + '/selection_coefficients_gen-%s_'%generation+'sampling-%s'%finite_sampling+'.csv.zip', index_col=0)
-            df_enrichment_regress   = pd.read_csv(FIG1_INFERENCE_DIR + '/log_regression_gen-%s_'%generation+'sampling-%s'%finite_sampling+'.csv.zip', index_col=0)
-            df_enrichment_ratio     = pd.read_csv(FIG1_INFERENCE_DIR + '/enrichment_ratio_gen-%s_'%generation+'sampling-%s'%finite_sampling+'.csv.zip', index_col=0)
-            df_enrichment_ratio_log = pd.read_csv(FIG1_INFERENCE_DIR + '/enrichment_ratio_log_gen-%s_'%generation+'sampling-%s'%finite_sampling+'.csv.zip', index_col=0)
-
-            enrichment_ratio_corr       =     df_enrichment_ratio.T.corr(method = 'pearson')
-            log_regression_corr         =   df_enrichment_regress.T.corr(method = 'pearson')
-            selection_coefficients_corr =               df_select.T.corr(method = 'pearson')
-            enrichment_ratio_log_corr   = df_enrichment_ratio_log.T.corr(method = 'pearson')
-            
-            factor = replicates * replicates - replicates
-            enrichment_ratio_corr       = (enrichment_ratio_corr.sum().sum()       - replicates)/factor
-            log_regression_corr         = (log_regression_corr.sum().sum()         - replicates)/factor
-            selection_coefficients_corr = (selection_coefficients_corr.sum().sum() - replicates)/factor
-            enrichment_ratio_log_corr   = (enrichment_ratio_log_corr.sum().sum()   - replicates)/factor
-            
-            temp[0].append(selection_coefficients_corr)
-            temp[1].append(enrichment_ratio_corr)
-            temp[2].append(log_regression_corr)
-            temp[3].append(enrichment_ratio_log_corr)
-            
-        PALETTE = sns.hls_palette(3)
-
-        ax2.plot(generation_, temp[0], c = C_POP,      marker = marker[finite_list.index(finite_sampling)], markersize = SMALLSIZEDOT, markeredgewidth = 0, alpha = 1)
-        ax2.plot(generation_, temp[1], c = PALETTE[0], marker = marker[finite_list.index(finite_sampling)], markersize = SMALLSIZEDOT, markeredgewidth = 0, alpha = 1)
-        ax2.plot(generation_, temp[2], c = PALETTE[1], marker = marker[finite_list.index(finite_sampling)], markersize = SMALLSIZEDOT, markeredgewidth = 0, alpha = 1)
-        ax2.plot(generation_, temp[3], c = PALETTE[2], marker = marker[finite_list.index(finite_sampling)], markersize = SMALLSIZEDOT, markeredgewidth = 0, alpha = 1)
-        ax2.set_xlabel('Generations used for inference', fontsize = SIZELABEL)
-        ax2.set_ylabel('Average Pearson correlation between\nreplicate inferred mutational effects', fontsize = SIZELABEL)
-        ax2.set_xticks([2, 5, 10])
-        ax2.set_xlim  ([   0, 11])
-        ax2.set_ylim  ([-0.05, 1])
+        recij = matplotlib.patches.Rectangle(xy=(x_box+i, y_box),   fc=cij, **rec_props)
+        recji = matplotlib.patches.Rectangle(xy=(x_box+i, y_box-1), fc=cji, **rec_props)
+        rec_patches.append(recij)
+        rec_patches.append(recji)
         
-#    legend_fig_1b = [Line2D([0], [0], color = '#4F94CD', lw = 2, label = 'popDMS',           alpha = 0.6),
-#                     Line2D([0], [0], color = 'red',     lw = 2, label = 'Enrichment ratio', alpha = 0.6),
-#                     Line2D([0], [0], color = 'orange',  lw = 2, label = 'Log scaled ratio', alpha = 0.6),
-#                     Line2D([0], [0], color = 'green',   lw = 2, label = 'Log regression',   alpha = 0.6)
-#                    ]
-
-    # legend
-                    
-    colors    = [C_POP, PALETTE[0], PALETTE[1], PALETTE[2]]
-    colors_lt = [C_POP, PALETTE[0], PALETTE[1], PALETTE[2]]
-    plotprops = DEF_ERRORPROPS.copy()
-    plotprops['clip_on'] = False
+    container_props = dict(height=2, width=n_boxes+1, ec=BKCOLOR, fc='none', lw=AXWIDTH/2, clip_on=False)
+    rec = matplotlib.patches.Rectangle(xy=(x_box, y_box-1), **container_props)
+    rec_patches.append(rec)
+        
+    for patch in rec_patches:
+        ax_epi.add_artist(patch)
+        
+    tprops = dict(family=FONTFAMILY, size=SIZELABEL, clip_on=False)
+    ax_epi.text(x_box+(n_boxes+1)/2, y_box+1.5, s='Normalized sum of squared\nepistatic interactions', ha='center', va='bottom', **tprops)
+    ax_epi.text(x_box+0.5,         y_box-1.5, s='0', ha='center', va='top', **tprops)
+    ax_epi.text(x_box+n_boxes+0.5, y_box-1.5, s='1', ha='center', va='top', **tprops)
     
-    invt = ax2.transData.inverted()
-    xy1  = invt.transform((   0,  0))
-    xy2  = invt.transform((7.50, 10))
-    xy3  = invt.transform((3.00, 10))
-    xy4  = invt.transform((5.25, 10))
+    ax_epi.text(a*(3*N/2-2.5-0.5), a*(1.50+N/2+2.5), s='popDMS', ha='center', va='bottom', rotation=-45, **tickprops)
+    ax_epi.text(a*(3*N/2-2.5+0.0), a*(2.25-N/2-2.5), s='Log ratio regression', ha='center',  va='top', rotation=45, **tickprops)
 
-    legend_dx1 = xy1[0]-xy2[0]
-    legend_dx2 = xy1[0]-xy3[0]
-    legend_dx  = xy1[0]-xy4[0]
-    legend_dy  = xy1[1]-xy2[1]
-    legend_x   = 1.8
-    legend_y   = [0.99, 0.99 + 1*legend_dy, 0.99 + 2*legend_dy, 0.99 + 3*legend_dy]
-    legend_t   = ['popDMS', 'Enrichment ratio', 'Log ratio', 'Log regression']
-    
-    for k in range(len(legend_y)):
-        mp.error(ax=ax2, x=[[legend_x+legend_dx]], y=[[legend_y[k]]], edgecolor=[colors[k]], facecolor=[colors_lt[k]], plotprops=plotprops)
-        ax2.text(legend_x, legend_y[k], legend_t[k], ha='left', va='center', **DEF_LABELPROPS)
-
-    ax2.set_yticks([0, 0.25, 0.5, 0.75, 1])
-    ax2.set_xlim([1, 11])
-    ax2.spines['right'].set_visible(False)
-    ax2.spines[ 'top' ].set_visible(False)
-    ax2.tick_params(axis = 'both', which = 'major', labelsize = SIZELABEL)
-    #ax2.legend(handles = legend_fig_1b, frameon = False, fontsize = SIZELABEL, loc = 'upper left')
-    fig.savefig(FIG_DIR + FIG1_NAME, dpi = FIG_DPI, **FIGPROPS)
+    plt.savefig(FIG_DIR + 'fig-2-comp-epistasis.pdf', **FIGPROPS)
 
 
 ######################
@@ -1330,7 +1905,6 @@ def FIG2_METHODS_COMPARISON():
 #    ax3.set_ylabel('Enrichment ratio', fontsize = SIZELABEL, labelpad = 25)
     
     fig.savefig(FIG_DIR + FIG2_NAME, dpi = 400, **FIGPROPS)
-    plt.show()
 
 
 #################
@@ -1781,7 +2355,6 @@ def FIG3_VISUALIZATION(exp_scale = 10, sites_per_line = 35):
         clb.ax.set_xlabel(r'$\sum$|epistasis|', fontsize = SIZELABEL)
         
     fig.savefig(FIG_DIR + 'Fig3_realdata.pdf', dpi=200)
-    plt.show()
 
 
 def FIG4_VISUALIZATION():
@@ -1886,7 +2459,6 @@ def FIG4_VISUALIZATION():
               handletextpad = 0.1)
 
     plt.savefig(FIG_DIR + 'Fig4_epistasis.pdf', dpi=200)
-    plt.show() 
 
 
 ###
@@ -1942,10 +2514,7 @@ def SUPPFIG1_EPISTASIS():
     plt.ylabel('rep #1')
     plt.xlabel('rep #2')
     plt.savefig(FIG_DIR + 'Sup_Fig1_epistasis_correlation.pdf', dpi=200)
-    plt.show()
 
-
-# OLD VERSIONS
 
 def fig_methods_comparison_old():
     ''' FUTURE: PASS FIGURE NAME AND OTHER RELATIVE PARAMETERS INTO THE FUNCTION '''
@@ -2188,5 +2757,4 @@ def fig_methods_comparison_old():
             ax3_sub.spines[ 'top' ].set_visible(False)
     
     fig.savefig(FIG_DIR + fig_title, dpi = 400, **FIGPROPS)
-    plt.show()
 

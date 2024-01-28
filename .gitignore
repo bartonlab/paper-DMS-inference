@@ -6,9 +6,10 @@ __pycache__
 # Local files
 old
 logomaker
-figures-slides.ipynb
+figures_slides.ipynb
 figures_slides.py
 figures/slides-*.pdf
+figures/old
 
 # Mac hidden files
 .DS_Store

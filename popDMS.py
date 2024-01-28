@@ -1,44 +1,99 @@
-import sys, os
+import sys
+import os
 import re
-from importlib import reload
 import copy
-import itertools
-from itertools import combinations
+
 import numpy as np
-import itertools
 import scipy as sp
 import scipy.stats as st
-from scipy import interpolate 
+
+import itertools
+from itertools import combinations
 
 import pandas as pd
-import seaborn as sns
+pd.set_option('future.no_silent_downcasting', True)
 
 import matplotlib
-import matplotlib.cm as cm
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+import matplotlib.colors as mcolors
 import matplotlib.gridspec as gridspec
-import matplotlib.image as mpimg
+from matplotlib.font_manager import FontProperties
+import matplotlib.patches as mpatches
+import matplotlib.ticker as ticker
 
-import tqdm
-import time
-import csv
-import math
+from colorsys import hls_to_rgb
+
+import mplot as mp
+
 
 # GLOBAL VARIABLES
 
-NUC    = ['-', 'A', 'C', 'G', 'T']                           # Nucleotide letter
-REF    = NUC[0]
-CODONS = ['AAA', 'AAC', 'AAG', 'AAT', 'ACA', 'ACC', 'ACG', 'ACT',   # Tri-nucleotide units table
+## MaveDB column identifiers
+MAVEDB_NT     = 'hgvs_nt'
+MAVEDB_PRO    = 'hgvs_pro'
+MAVEDB_SPLICE = 'hgvs_splice'
+MAVEDB_WT     = '_wt'
+MAVEDB_ACC    = 'accession'
+
+## popDMS column identifiers
+COL_SITE = 'site'
+COL_AA   = 'amino_acid'
+COL_WT   = 'WT_indicator'
+COL_S    = 'joint'
+
+## Sequence conventions
+NUC    = ['A', 'C', 'G', 'T']                                      # Ordered list of nucleotides
+CODONS = ['AAA', 'AAC', 'AAG', 'AAT', 'ACA', 'ACC', 'ACG', 'ACT',  # Ordered list of codons
           'AGA', 'AGC', 'AGG', 'AGT', 'ATA', 'ATC', 'ATG', 'ATT',
           'CAA', 'CAC', 'CAG', 'CAT', 'CCA', 'CCC', 'CCG', 'CCT',
           'CGA', 'CGC', 'CGG', 'CGT', 'CTA', 'CTC', 'CTG', 'CTT',
           'GAA', 'GAC', 'GAG', 'GAT', 'GCA', 'GCC', 'GCG', 'GCT',
           'GGA', 'GGC', 'GGG', 'GGT', 'GTA', 'GTC', 'GTG', 'GTT',
           'TAA', 'TAC', 'TAG', 'TAT', 'TCA', 'TCC', 'TCG', 'TCT',
-          'TGA', 'TGC', 'TGG', 'TGT', 'TTA', 'TTC', 'TTG', 'TTT']   
-AA  = ['A', 'R', 'N', 'D', 'C', 'E', 'Q', 'G', 'H', 'I','L', 'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', '*']
-NUC = ['A', 'C', 'G', 'T']
-MU  = { 'GC': 1.0e-7,                                         
+          'TGA', 'TGC', 'TGG', 'TGT', 'TTA', 'TTC', 'TTG', 'TTT']
+AA     = ['A', 'R', 'N', 'D', 'C', 'E', 'Q', 'G', 'H', 'I', 'L',   # Ordered list of amino acids
+          'K', 'M', 'F', 'P', 'S', 'T', 'W', 'Y', 'V', '*']
+CODON2AA = {'ATA':'I', 'ATC':'I', 'ATT':'I', 'ATG':'M',            # Map from codons to amino acids
+            'ACA':'T', 'ACC':'T', 'ACG':'T', 'ACT':'T',
+            'AAC':'N', 'AAT':'N', 'AAA':'K', 'AAG':'K',
+            'AGC':'S', 'AGT':'S', 'AGA':'R', 'AGG':'R',
+            'CTA':'L', 'CTC':'L', 'CTG':'L', 'CTT':'L',
+            'CCA':'P', 'CCC':'P', 'CCG':'P', 'CCT':'P',
+            'CAC':'H', 'CAT':'H', 'CAA':'Q', 'CAG':'Q',
+            'CGA':'R', 'CGC':'R', 'CGG':'R', 'CGT':'R',
+            'GTA':'V', 'GTC':'V', 'GTG':'V', 'GTT':'V',
+            'GCA':'A', 'GCC':'A', 'GCG':'A', 'GCT':'A',
+            'GAC':'D', 'GAT':'D', 'GAA':'E', 'GAG':'E',
+            'GGA':'G', 'GGC':'G', 'GGG':'G', 'GGT':'G',
+            'TCA':'S', 'TCC':'S', 'TCG':'S', 'TCT':'S',
+            'TTC':'F', 'TTT':'F', 'TTA':'L', 'TTG':'L',
+            'TAC':'Y', 'TAT':'Y', 'TAA':'*', 'TAG':'*',
+            'TGC':'C', 'TGT':'C', 'TGA':'*', 'TGG':'W' }
+AA2CODON = {'I': ['ATA', 'ATC', 'ATT'],                            # Map from amino acids to codons
+            'M': ['ATG'], 
+            'T': ['ACA', 'ACC', 'ACG', 'ACT'], 
+            'N': ['AAC', 'AAT'], 
+            'K': ['AAA', 'AAG'], 
+            'S': ['AGC', 'AGT', 'TCA', 'TCC', 'TCG', 'TCT'], 
+            'R': ['AGA', 'AGG', 'CGA', 'CGC', 'CGG', 'CGT'], 
+            'L': ['CTA', 'CTC', 'CTG', 'CTT', 'TTA', 'TTG'], 
+            'P': ['CCA', 'CCC', 'CCG', 'CCT'], 
+            'H': ['CAC', 'CAT'], 
+            'Q': ['CAA', 'CAG'], 
+            'V': ['GTA', 'GTC', 'GTG', 'GTT'], 
+            'A': ['GCA', 'GCC', 'GCG', 'GCT'], 
+            'D': ['GAC', 'GAT'], 
+            'E': ['GAA', 'GAG'], 
+            'G': ['GGA', 'GGC', 'GGG', 'GGT'], 
+            'F': ['TTC', 'TTT'], 
+            'Y': ['TAC', 'TAT'], 
+            'C': ['TGC', 'TGT'], 
+            'W': ['TGG'], 
+            '*': ['TAA', 'TAG', 'TGA']}
+CODON2AANUM = dict(zip(CODONS, [AA.index(CODON2AA[c]) for c in CODONS]))
+
+MU  = { 'GC': 1.0e-7,
         'AT': 7.0e-7,
         'CG': 5.0e-7,
         'AC': 9.0e-7,
@@ -51,961 +106,1112 @@ MU  = { 'GC': 1.0e-7,
         'CT': 1.2e-5,
         'GA': 1.6e-5  }
 
-aa2codon = {                                                         # DNA codon table
-    'A' : ['GCT', 'GCC', 'GCA', 'GCG'],
-    'C' : ['TGT', 'TGC'],
-    'D' : ['GAT', 'GAC'],
-    'E' : ['GAA', 'GAG'],
-    'F' : ['TTT', 'TTC'],
-    'G' : ['GGT', 'GGC', 'GGA', 'GGG'],
-    'H' : ['CAT', 'CAC'],
-    'I' : ['ATT', 'ATC', 'ATA'],
-    'K' : ['AAA', 'AAG'],
-    'L' : ['TTA', 'TTG', 'CTT', 'CTC', 'CTA', 'CTG'],
-    'M' : ['ATG'],
-    'N' : ['AAT', 'AAC'],
-    'P' : ['CCT', 'CCC', 'CCA', 'CCG'],
-    'Q' : ['CAA', 'CAG'],
-    'R' : ['CGT', 'CGC', 'CGA', 'CGG', 'AGA', 'AGG'],
-    'S' : ['TCT', 'TCC', 'TCA', 'TCG', 'AGT', 'AGC'],
-    'T' : ['ACT', 'ACC', 'ACA', 'ACG'],
-    'V' : ['GTT', 'GTC', 'GTA', 'GTG'],
-    'W' : ['TGG'],
-    'Y' : ['TAT', 'TAC'],
-    '*' : ['TAA', 'TGA', 'TAG'],
-    '-' : ['---'],
-    }                                              
+# Figure variables
+
+cm2inch = lambda x: x/2.54
+SINGLE_COLUMN   = cm2inch(8.8)
+ONE_FIVE_COLUMN = cm2inch(11.4)
+DOUBLE_COLUMN   = cm2inch(18.0)
+SLIDE_WIDTH     = 10.5
+GOLDR           = (1.0 + np.sqrt(5)) / 2.0
+
+FONTFAMILY    = 'Arial'
+SIZESUBLABEL  = 8
+SIZELABEL     = 6
+SIZETICK      = 6
+SMALLSIZEDOT  = 6.
+SIZELINE      = 0.6
+AXES_FONTSIZE = 6
+AXWIDTH       = 0.4
+
+BKCOLOR = '#252525'
+
+FIGPROPS = {
+    'transparent' : True,
+    'bbox_inches' : 'tight'
+}
 
 
-def codon2aa(c, noq=False):
-    # Returns the amino acid character corresponding to the input codon.
+# Built-in plot
+
+def fig_dms(pop_file, fig_file):
+    ''' Show performance comparison across data sets '''
     
-    if c[0]=='-' and c[1]=='-' and c[2]=='-': return '-'        # If all nucleotides are missing, return gap
-    elif c[0]=='-' or c[1]=='-' or c[2]=='-':                   # Else if some nucleotides are missing, return '?'
-        if noq: return '-'
-        else:   return '?'
+    # Read in data
+    df_pop = pd.read_csv(pop_file)
+     
+    # Plot variables
+    w = DOUBLE_COLUMN
+
+    box_t = 0.95
+    box_b = 0.05
+    box_l = 0.05
+    box_r = 0.95
+
+    sites_per_line = 100
+    n_rows = 21
+    h_per_line = w * (box_r - box_l) * (n_rows / sites_per_line)
+    dh_per_line = 0.1 * h_per_line
+
+    n_sites = len(np.unique(df_pop[COL_SITE]))
+    n_lines = int(np.ceil(n_sites / sites_per_line))
+
+    h = ((n_lines * h_per_line) + ((n_lines - 1) * dh_per_line)) / (box_t - box_b)
+
+    fig = plt.figure(figsize = (w, h))
     
-    # If the first or second nucleotide is ambiguous, AA cannot be determined, return 'X'
-    elif c[0] in ['W', 'S', 'M', 'K', 'R', 'Y'] or c[1] in ['W', 'S', 'M', 'K', 'R', 'Y']: return 'X'     
-                                                    
-    elif c[0]=='T':                                             # Else go to tree
-        if c[1]=='T':
-            if    c[2] in ['T', 'C', 'Y']: return 'F'
-            elif  c[2] in ['A', 'G', 'R']: return 'L'
-            else:                          return 'X'
-        elif c[1]=='C':                    return 'S'
-        elif c[1]=='A':
-            if    c[2] in ['T', 'C', 'Y']: return 'Y'
-            elif  c[2] in ['A', 'G', 'R']: return '*'
-            else:                          return 'X'
-        elif c[1]=='G':
-            if    c[2] in ['T', 'C', 'Y']: return 'C'
-            elif  c[2]=='A':               return '*'
-            elif  c[2]=='G':               return 'W'
-            else:                          return 'X'
-        else:                              return 'X'
-        
-    elif c[0]=='C':
-        if   c[1]=='T':                    return 'L'
-        elif c[1]=='C':                    return 'P'
-        elif c[1]=='A':
-            if    c[2] in ['T', 'C', 'Y']: return 'H'
-            elif  c[2] in ['A', 'G', 'R']: return 'Q'
-            else:                          return 'X'
-        elif c[1]=='G':                    return 'R'
-        else:                              return 'X'
-        
-    elif c[0]=='A':
-        if c[1]=='T':
-            if    c[2] in ['T', 'C', 'Y']: return 'I'
-            elif  c[2] in ['A', 'M', 'W']: return 'I'
-            elif  c[2]=='G':               return 'M'
-            else:                          return 'X'
-        elif c[1]=='C':                    return 'T'
-        elif c[1]=='A':
-            if    c[2] in ['T', 'C', 'Y']: return 'N'
-            elif  c[2] in ['A', 'G', 'R']: return 'K'
-            else:                          return 'X'
-        elif c[1]=='G':
-            if    c[2] in ['T', 'C', 'Y']: return 'S'
-            elif  c[2] in ['A', 'G', 'R']: return 'R'
-            else:                          return 'X'
-        else:                              return 'X'
-        
-    elif c[0]=='G':
-        if   c[1]=='T':                    return 'V'
-        elif c[1]=='C':                    return 'A'
-        elif c[1]=='A':
-            if    c[2] in ['T', 'C', 'Y']: return 'D'
-            elif  c[2] in ['A', 'G', 'R']: return 'E'
-            else:                          return 'X'
-        elif c[1]=='G':                    return 'G'
-        else:                              return 'X'
+    box_y  = (box_t - box_b) / (n_lines + 0.1 * (n_lines - 1))
+    box_dy = 0.1 * box_y
 
-    else:                                  return 'X'
-
-
-codon_to_aa_num = {}
-for i in range(len(CODONS)):
-    codon = CODONS[i]
-    aminoacid = codon2aa(codon)
-    aminoacid_num = AA.index(aminoacid)
-    codon_to_aa_num[i] = aminoacid_num
-
-
-# Get frequency intermediate data file from raw variant table
-
-def nucleotide_file_to_counts_single_allele(nucleotide_file_name, reference_sequence, timepoints, rep, table_col_name, save_path):
-    codon_length = 3
-    df_data = pd.read_csv(nucleotide_file_name, compression='gzip')
-    df_data = df_data.fillna(0)
-    df_data.reset_index(drop=True, inplace=True)
-    df_data = df_data.drop(df_data.columns[0], axis = 1)
+    cur_sites = n_sites
+    box = []
+    for i in range(n_lines):
+        if cur_sites > sites_per_line:
+            box.append(dict(left=box_l, right=box_r, bottom=box_t - (i + 1) * box_y - i * box_dy, top=box_t - i * box_y - i * box_dy))
+        else:
+            box.append(dict(left=box_l, right=box_l + (cur_sites / sites_per_line) * (box_r - box_l), bottom=box_t - (i + 1) * box_y - i * box_dy, top=box_t - i * box_y - i * box_dy))
+        cur_sites -= sites_per_line
     
-    if 'TpoR' in nucleotide_file_name:
-        df_data = df_data.drop(['hgvs_splice'], axis=1)
-      
-    df_data[df_data['hgvs_nt'].str.contains('X', regex=False)]
-    df_data = df_data[~df_data.hgvs_nt.str.contains('X', regex=False)]
+    gs = [gridspec.GridSpec(1, 1, **box[i]) for i in range(n_lines)]
+    ax = [plt.subplot(gs[i][0, 0]) for i in range(n_lines)]
     
-    df_frequency = df_data.loc[:,df_data.columns[2]:].astype('float')
-    df_frequency.loc[:,df_frequency.columns[2]:] = df_frequency.loc[:,df_frequency.columns[2]:].div(df_frequency.sum(axis=1),axis=0)
-    site_list = sorted(df_data['hgvs_pro'].str.extractall('(\d+)')[0].astype(int).unique())
+    # Plot selection heatmaps
+
+    sites  = np.unique(df_pop[COL_SITE])
+    df_WT  = df_pop[df_pop[COL_WT]==True]
+    WT     = [df_WT[df_WT[COL_SITE]==s].iloc[0][COL_AA] for s in sites]
+    s_WT   = [df_WT[df_WT[COL_SITE]==s].iloc[0][COL_S]  for s in sites]
+    s_vec  = [[df_pop[(df_pop[COL_SITE]==sites[i]) & (df_pop[COL_AA]==aa)].iloc[0][COL_S] - s_WT[i] for aa in AA] for i in range(len(sites))]
+    s_norm = np.max(np.fabs(s_vec))
     
-    raw_codon = [reference_sequence[i:i+codon_length] for i in range(0, len(reference_sequence), codon_length)]
-    allele_counts_columns = ['generation', 'site', 'codon', 'counts']
-    allele_counts_table = df_data[table_col_name]
-
-    temp = allele_counts_table.columns.tolist()[0]
-    allele_counts_table = allele_counts_table.rename(columns={temp: 'variants'})
-    count_table_columns = allele_counts_table.columns.tolist()
-    allele_counts_table[allele_counts_table['variants'] == '_wt']
-
-    allele_counts_table_no_wt = allele_counts_table.drop(allele_counts_table.index[allele_counts_table['variants'] == '_wt'])
-
-    total_count = []
-    total_mut = []
-    total_wt  = []
-
-    for i in range(len(timepoints)):
-        counts_all = allele_counts_table[count_table_columns[i+1]].tolist()
-        temp = [int(integer) for integer in counts_all]
-        counts_all = temp
-        summation_all = sum(counts_all)
-        total_count.append(summation_all)
-        counts_mut = allele_counts_table_no_wt[count_table_columns[i+1]].tolist()
-        temp = [int(integer) for integer in counts_mut]
-        counts_mut = temp
-        summation_mut = sum(counts_mut)
-        total_mut.append(summation_mut)
-        summation_wt = summation_all - summation_mut
-        total_wt.append(summation_wt)
+    for i in range(n_lines):
+        sub_sites = sites[i * sites_per_line:(i + 1) * sites_per_line]
+        df_pop_sub = df_pop[df_pop[COL_SITE].isin(sub_sites)]
+        plot_selection(ax[i], df_pop_sub, s_norm=s_norm, legend=(i==n_lines-1))
     
-    codon_allele_dict = {}
-    for gen in timepoints:
-        codon_allele_dict[gen] = {}
-        for idx in site_list:
-            codon_allele_dict[gen][idx] = {}
-            for codon in CODONS:
-                codon_allele_dict[gen][idx][codon] = 0
-
-            codon_allele_dict[gen][idx][raw_codon[site_list.index(idx)]] = total_count[timepoints.index(gen)]
+    # Save figure
     
-    reference_list = list(reference_sequence)
-    for i in range(allele_counts_table_no_wt.shape[0]):
-        print("Progress {:2.1%}".format(i / allele_counts_table_no_wt.shape[0]), end="\r")
-        variants_allele = allele_counts_table_no_wt.iloc[i].variants
-        mutation_number = allele_counts_table_no_wt.iloc[i].tolist()[1:]
-        temp = [int(integer) for integer in mutation_number]
-        mutation_number = temp
-        nucleotide = [x for x in variants_allele if x.isalpha()]
-        variant_site = re.findall("(\d+)", variants_allele)
-        nucleotide = nucleotide[1:]
-        variant_list = reference_list.copy()
-        for j in range(len(variant_site)):
-            variant_list[int(variant_site[j])-1] = nucleotide[2 * j + 1]
-        variant_sequence = ''.join(variant_list)
-        variant_codon = [variant_sequence[i:i+codon_length] for i in range(0, len(variant_sequence), codon_length)]
-        for r, n, idx in zip(raw_codon, variant_codon, site_list):
-            if r != n:
-                for gen in timepoints:
-                    codon_allele_dict[gen][idx][r] -= mutation_number[timepoints.index(gen)]
-                    codon_allele_dict[gen][idx][n] += mutation_number[timepoints.index(gen)]
-
-    allele_counts_list = []
-    for gen, site_codon_counts in codon_allele_dict.items():
-        for site, codon_counts in site_codon_counts.items():
-            for codon, counts in codon_counts.items():
-                allele_counts_list.append([gen, site, codon, counts])
-
-    codon_counts_table = pd.DataFrame(data = allele_counts_list, columns = allele_counts_columns)
-    codon_counts_table.to_csv(save_path, sep = ',', index = False, compression = 'gzip')
-    return site_list
+    plt.show()
+    fig.savefig(fig_file, **FIGPROPS)
 
 
-def nucleotide_file_to_counts_double_allele(nucleotide_file_name, reference_sequence, timepoints, rep, table_col_name, save_path):
-    codon_length = 3
-    df_data = pd.read_csv(nucleotide_file_name, compression='gzip')
-    df_data = df_data.fillna(0)
-    df_data.reset_index(drop=True, inplace=True)
-    df_data = df_data.drop(df_data.columns[0], axis = 1)
+def plot_selection(ax, df_pop, s_norm=1, legend=False):
+    """ Plot selection heatmap. """
+
+    # process stored data
+
+    sites = np.unique(df_pop[COL_SITE])
+    df_WT = df_pop[df_pop[COL_WT]==True]
+    WT    = [df_WT[df_WT[COL_SITE]==s].iloc[0][COL_AA] for s in sites]
+    s_WT  = [df_WT[df_WT[COL_SITE]==s].iloc[0][COL_S]  for s in sites]
+    s_vec = [[df_pop[(df_pop[COL_SITE]==sites[i]) & (df_pop[COL_AA]==aa)].iloc[0][COL_S] - s_WT[i] for aa in AA] for i in range(len(sites))]
+
+    # plot selection across the protein, normalizing WT residues to zero
+
+    site_rec_props = dict(height=1, width=1, ec=None, lw=AXWIDTH/2, clip_on=False)
+    prot_rec_props = dict(height=len(AA), width=len(sites), ec=BKCOLOR, fc='none', lw=AXWIDTH/2, clip_on=False)
+    cBG             = '#F5F5F5'
+    rec_patches     = []
+    WT_dots_x       = []
+    WT_dots_y       = []
     
-    if 'TpoR' in nucleotide_file_name:
-        df_data = df_data.drop(['hgvs_splice'], axis=1)
+    for i in range(len(sites)):
+        WT_dots_x.append(i + 0.5)
+        WT_dots_y.append(len(AA)-AA.index(WT[i])-0.5)
+        for j in range(len(AA)):
+            
+            # skip WT
+            if AA[j]==WT[i]:
+                continue
 
-    df_data[df_data['hgvs_nt'].str.contains('X', regex=False)]
-    df_data = df_data[~df_data.hgvs_nt.str.contains('X', regex=False)]
-    
-    df_frequency = df_data.loc[:,df_data.columns[2]:].astype('float')
-    df_frequency.loc[:,df_frequency.columns[2]:] = df_frequency.loc[:,df_frequency.columns[2]:].div(df_frequency.sum(axis=1),axis=0)
-    site_list = sorted(df_data['hgvs_pro'].str.extractall('(\d+)')[0].astype(int).unique())
-    raw_codon = [reference_sequence[i:i+codon_length] for i in range(0, len(reference_sequence), codon_length)]
-    allele_counts_columns = ['generation', 'site_1', 'codon_1', 'site_2', 'codon_2', 'counts']
-    allele_counts_table = df_data[table_col_name]
-
-    temp = allele_counts_table.columns.tolist()[0]
-    allele_counts_table = allele_counts_table.rename(columns={temp: 'variants'})
-    count_table_columns = allele_counts_table.columns.tolist()
-    allele_counts_table[allele_counts_table['variants'] == '_wt']
-
-    allele_counts_table_no_wt = allele_counts_table.drop(allele_counts_table.index[allele_counts_table['variants'] == '_wt'])
-
-    total_count = []
-    total_mut = []
-    total_wt  = []
-    for i in range(len(timepoints)):
-        counts_all = allele_counts_table[count_table_columns[i+1]].tolist()
-        temp = [int(integer) for integer in counts_all]
-        counts_all = temp
-        summation_all = sum(counts_all)
-        total_count.append(summation_all)
-        counts_mut = allele_counts_table_no_wt[count_table_columns[i+1]].tolist()
-        temp = [int(integer) for integer in counts_mut]
-        counts_mut = temp
-        summation_mut = sum(counts_mut)
-        total_mut.append(summation_mut)
-        summation_wt = summation_all - summation_mut
-        total_wt.append(summation_wt)
-
-    length_site_list = len(site_list)
-    length_codon_list = len(CODONS)
-    codon_allele_dict = {}
-    for gen in timepoints:
-        codon_allele_dict[gen] = {}
-        for idx_i in range(length_site_list):
-            codon_allele_dict[gen][site_list[idx_i]] = {}
-            codon_allele_dict[gen][site_list[idx_i]][raw_codon[idx_i]] = {}
-            for idx_j in range(idx_i+1, length_site_list):
-                codon_allele_dict[gen][site_list[idx_i]][raw_codon[idx_i]][site_list[idx_j]] = {}
-                codon_allele_dict[gen][site_list[idx_i]][raw_codon[idx_i]][site_list[idx_j]][raw_codon[idx_j]] = total_count[timepoints.index(gen)]
-
-    reference_list = list(reference_sequence)
-
-    for i in range(allele_counts_table_no_wt.shape[0]):
-        print("Progress {:2.1%}".format(i / allele_counts_table_no_wt.shape[0]), end="\r")
-        variants_allele = allele_counts_table_no_wt.iloc[i].variants
-        mutation_number = allele_counts_table_no_wt.iloc[i].tolist()[1:]
-        temp = [int(integer) for integer in mutation_number]
-        mutation_number = temp
-        nucleotide = [x for x in variants_allele if x.isalpha()]
-        variant_site = re.findall("(\d+)", variants_allele)
-        nucleotide = nucleotide[1:]
-        variant_list = reference_list.copy()
-        for j in range(len(variant_site)):
-            variant_list[int(variant_site[j])-1] = nucleotide[2 * j + 1]
-        variant_sequence = ''.join(variant_list)
-        variant_codon = [variant_sequence[i:i+codon_length] for i in range(0, len(variant_sequence), codon_length)]
-        variant_site = []
-
-        for r, n, idx in zip(raw_codon, variant_codon, site_list):
-            if r != n:
-                variant_site.append(idx)
-
-        double_variant = []
-        for v_site in variant_site:
-            v_site_index = site_list.index(v_site)
-            for j in range(v_site_index):
-                double_variant.append([site_list[j], v_site])
-            for j in range(v_site_index+1, len(site_list)):
-                double_variant.append([v_site, site_list[j]])
-
-        for d_v in double_variant:
-            site_i = d_v[0]
-            site_j = d_v[1]
-            idx_i = site_list.index(site_i)
-            idx_j = site_list.index(site_j)
-            codon_i = variant_codon[idx_i]
-            codon_j = variant_codon[idx_j]
-
-            for gen in timepoints:
-                codon_allele_dict[gen][site_i][raw_codon[idx_i]][site_j][raw_codon[idx_j]] -= mutation_number[timepoints.index(gen)]
-                if codon_i not in codon_allele_dict[gen][site_i].keys():
-                    codon_allele_dict[gen][site_i][codon_i] = {}
-                    codon_allele_dict[gen][site_i][codon_i][site_j] = {}
-                    codon_allele_dict[gen][site_i][codon_i][site_j][codon_j] = mutation_number[timepoints.index(gen)]
+            # fill BG for unobserved
+            c = cBG
+            if s_vec[i][j]!=-s_WT[i]:
+                t = s_vec[i][j] / s_norm
+                if np.fabs(t)>1:
+                    t /= np.fabs(t)
+                if t>0:
+                    c = hls_to_rgb(0.02, 0.53 * t + 1. * (1 - t), 0.83)
                 else:
-                    if site_j not in codon_allele_dict[gen][site_i][codon_i].keys():
-                        codon_allele_dict[gen][site_i][codon_i][site_j] = {}
-                        codon_allele_dict[gen][site_i][codon_i][site_j][codon_j] = mutation_number[timepoints.index(gen)]
+                    c = hls_to_rgb(0.58, 0.53 * np.fabs(t) + 1. * (1 - np.fabs(t)), 0.60)
+            
+            rec = matplotlib.patches.Rectangle(xy=(i, len(AA)-1-j), fc=c, **site_rec_props)
+            rec_patches.append(rec)
+    
+    rec = matplotlib.patches.Rectangle(xy=(0, 0), **prot_rec_props)
+    rec_patches.append(rec)
+    
+    # add patches and plot
+    
+    for patch in rec_patches:
+        ax.add_artist(patch)
+
+    pprops = { 'colors':    [BKCOLOR],
+               'xlim':      [0, len(sites) + 1],
+               'ylim':      [0, len(AA) + 0.5],
+               'xticks':    [],
+               'yticks':    [],
+               'plotprops': dict(lw=0, s=0.2*SMALLSIZEDOT, marker='o', clip_on=False),
+               #'xlabel':    'Sites',
+               #'ylabel':    'Amino acids',
+               'theme':     'open',
+               'axoffset':  0,
+               'hide' :     ['top', 'bottom', 'left', 'right'] }
+
+    mp.plot(type='scatter', ax=ax, x=[WT_dots_x], y=[WT_dots_y], **pprops)
+    
+    # legend
+    
+    rec_patches = []
+
+    if legend:
+    
+        invt = ax.transData.inverted()
+        xy1  = invt.transform((0,0))
+        xy2  = invt.transform((0,9))
+        legend_dy = (xy1[1]-xy2[1])/3 # multiply by 3 for slides/poster
+
+        xloc = len(sites) + 2 + 6  # len(sites) - 6.5
+        yloc = 17  # -4
+        for i in range(-5, 5+1, 1):
+            c = cBG
+            t = i/5
+            if t>0:
+                c = hls_to_rgb(0.02, 0.53 * t + 1. * (1 - t), 0.83)
+            else:
+                c = hls_to_rgb(0.58, 0.53 * np.fabs(t) + 1. * (1 - np.fabs(t)), 0.60)
+            rec = matplotlib.patches.Rectangle(xy=(xloc + i, yloc), fc=c, **site_rec_props)
+            rec_patches.append(rec)
+            
+        txtprops = dict(ha='center', va='center', color=BKCOLOR, family=FONTFAMILY, size=SIZELABEL)
+        ax.text(xloc+0.5, yloc-4*legend_dy, 'Mutation effects', clip_on=False, **txtprops)
+        ax.text(xloc-4.5, yloc+2*legend_dy, '-', clip_on=False, **txtprops)
+        ax.text(xloc+5.5, yloc+2*legend_dy, '+', clip_on=False, **txtprops)
+
+        xloc = len(sites) + 2  # 0
+        yloc = 11  # -4
+        c    = cBG
+        rec  = matplotlib.patches.Rectangle(xy=(xloc, yloc + 4*legend_dy), fc=c, **site_rec_props) # paper
+    #    rec  = matplotlib.patches.Rectangle(xy=(xloc, yloc + 6*legend_dy), fc=c, **site_rec_props) # slides
+        rec_patches.append(rec)
+
+        for patch in rec_patches:
+            ax.add_artist(patch)
+            
+        mp.scatter(ax=ax, x=[[xloc + 0.5]], y=[[yloc + 0.5]], **pprops)
+
+        txtprops['ha'] = 'left'
+        ax.text(xloc + 1.5, yloc + 0.5, 'WT amino acid', clip_on=False, **txtprops)
+        ax.text(xloc + 1.5, yloc + 0.5 + 4*legend_dy, 'Not observed', clip_on=False, **txtprops) # paper
+    #    ax.text(xloc + 1.3, yloc + 0.5 + 6*legend_dy, 'Not observed', clip_on=False, **txtprops) # slides
+
+
+# FUNCTIONS
+
+def get_variant_sites_nucs(mavedb_nt, shift_by_one=True):
+    '''
+    Return a list of variants and their locations from an 'hvgs_nt' column in MaveDB
+    format
+    '''
+    ################################################################################
+    
+    # MaveDB variant format c.[XA>B;YC>D]
+    # X, Y: nucleotide numbers
+    # A, C: reference nucleotides
+    # B, D: mutant nucleotides
+    # ;: separator between substitutions
+    
+    if mavedb_nt==MAVEDB_WT:
+        return [], []
+    
+    var_str = mavedb_nt.replace('[', '').replace(']', '').split('.')[1].split(';')
+    
+    sites = []
+    nucs  = []
+    for var in var_str:
+        sites.append(int(''.join([x for x in var.split('>')[0] if not x.isalpha()])))
+        nucs.append(var.split('>')[-1])
+    
+    ord = np.argsort(sites)
+    sites = [sites[i] for i in ord]
+    nucs = [nucs[i] for i in ord]
+    
+    if shift_by_one:
+        sites = np.array(sites) - 1
+    
+    return sites, nucs
+    
+
+def get_selection_file(dir, name, file_ext='.csv.gz'):
+    ''' Return the path to a file recording selection coefficients '''
+    return os.path.join(dir, '_'.join([name, 'selection_coefficients']) + file_ext)
+
+
+def get_reads_file(dir, name, replicate, file_ext='.csv'):
+    ''' Return the path to a file recording the number of reads for each time point '''
+    return os.path.join(dir, '_'.join([name, 'reads_rep', str(replicate)]) + file_ext)
+
+
+def get_codon_count_file(dir, name, type, replicate, file_ext='.csv.gz'):
+    ''' Return the path to a codon count file (temporary, to be converted to frequencies) '''
+    return os.path.join(dir, '_'.join([name, type, 'codon_counts_rep', str(replicate)]) + file_ext)
+
+
+def get_codon_freq_file(dir, name, type, replicate, file_ext='.csv.gz'):
+    ''' Return the path to a codon frequency file '''
+    return os.path.join(dir, '_'.join([name, type, 'codon_rep', str(replicate)]) + file_ext)
+
+
+def get_aa_freq_file(dir, name, type, replicate, file_ext='.csv.gz'):
+    ''' Return the path to an amino acid frequency file '''
+    return os.path.join(dir, '_'.join([name, type, 'aa_rep', str(replicate)]) + file_ext)
+    
+    
+def read_fancy_comments(file, comment_char=None, sep=','):
+    '''
+    In count files stored in MaveDB format, '#' characters are sometimes used as
+    both comment lines (at the beginning of the file) and as part of accession
+    numbers. read_csv() in pandas removes all instances of the comment character.
+    Instead, this function will remove only lines that start with the comment
+    character. h/t Thymen on stack overflow.
+    '''
+    
+    if not isinstance(comment_char, str):
+        return pd.read_csv(file)
+    
+    headers = None
+    results = []
+    with open(file, 'r') as f:
+        first_line = True
+        for line in f.readlines():
+            if line.startswith(comment_char):
+                continue
+
+            if line.strip():
+                if first_line:
+                    headers = [word for word in line.strip().split(sep) if word]
+                    headers = list(map(str.strip, headers))
+                    first_line = False
+                else:
+                    results.append([word for word in line.strip().split(sep) if word])
+
+    return pd.DataFrame(results, columns=headers)
+
+
+def convert_codon_counts_to_variant_frequencies(dir, name, types, n_replicates, reference_sequence_file, comment_char=None):
+    '''
+    Convert codon counts (popDMS format) to variant frequencies
+    '''
+    
+    # Read in codon counts
+    replicates = [i+1 for i in range(n_replicates)]
+    codon_counts = {}
+    for type in types:
+        codon_list = []
+        for rep in replicates:
+            codon_list.append(pd.read_csv(get_codon_count_file(dir, name, type, rep)))
+        codon_counts[type] = codon_list
+    
+    # Read in reference sequence
+    ref_seq = open(reference_sequence_file).read()
+    
+    # Extract numbered sites from data and construct the reference sequence
+    codon_length = 3
+    site_list = sorted(codon_counts['single'][0]['site'].astype('str').str.extractall('(\d+)')[0].astype(int).unique())
+    ref_codons = np.array([''.join(ref_seq[i:i+codon_length]) for i in range(0, len(ref_seq), codon_length)])
+    ref_codons_by_site = dict(zip(site_list, ref_codons))
+    ref_aas = np.array([CODON2AA[c] for c in ref_codons])
+    ref_aas_by_site = dict(zip(site_list, ref_aas))
+
+    # Compute total reads and save to file
+    reads_cols = ['generation', 'reads']
+    time_points = [sorted(list(codon_counts['single'][r_idx]['generation'].unique())) for r_idx in range(len(replicates))]
+    total_count = []
+    for r_idx in range(len(replicates)):
+        total_count.append([])
+        for t in time_points[r_idx]:
+            total_count[r_idx].append(np.sum(codon_counts['single'][r_idx][(codon_counts['single'][r_idx]['generation']==t) & (codon_counts['single'][r_idx]['site']==site_list[0])]['counts']))
+        df_temp = pd.DataFrame(data=[[time_points[r_idx][i], total_count[r_idx][i]] for i in range(len(time_points[r_idx]))], columns=reads_cols)
+        df_temp.to_csv(get_reads_file(dir, name, replicates[r_idx], file_ext='.csv'), index=False)
+
+    # Map dataframe row data to dictionaries
+    def get_key(type, row):
+        if type=='single': return (row['site'], CODON2AA[row['codon']])
+        elif type=='double': return (row['site_1'], CODON2AA[row['codon_1']], row['site_2'], CODON2AA[row['codon_2']])
+    
+    # Initialize dictionary of codon/aa counts and fill in counts
+    aa_counts = dict(zip(types, [[[{} for t in time_points[r_idx]] for r_idx in range(len(replicates))] for type in types]))
+    for r_idx in range(len(replicates)):
+        for i in range(len(time_points[r_idx])):
+            for type in types:
+                for df_iter, row in codon_counts[type][r_idx][codon_counts[type][r_idx]['generation']==time_points[r_idx][i]].iterrows():
+                    key = get_key(type, row)
+                    if key not in aa_counts[type][r_idx][i]:
+                        aa_counts[type][r_idx][i][key] = row['counts']
                     else:
-                        if codon_j not in codon_allele_dict[gen][site_i][codon_i][site_j].keys():
-                            codon_allele_dict[gen][site_i][codon_i][site_j][codon_j] = mutation_number[timepoints.index(gen)]
+                        aa_counts[type][r_idx][i][key] += row['counts']
+    
+    # Save single aa frequencies to file, including WT indicator
+    single_aa_columns = ['generation', 'site', 'aa', 'frequency', 'WT_indicator']
+    for r_idx in range(len(replicates)):
+        counts_list = []
+        for i in range(len(time_points[r_idx])):
+            t = time_points[r_idx][i]
+            for aas, counts in aa_counts['single'][r_idx][i].items():
+                if counts>0:
+                    counts_list.append([t] + list(aas) + [counts/total_count[r_idx][i], aas[1]==ref_aas_by_site[aas[0]]])
+        df_temp = pd.DataFrame(data=counts_list, columns=single_aa_columns)
+        df_temp.to_csv(get_aa_freq_file(dir, name, 'single', replicates[r_idx]), index=False, compression='gzip')
+
+    # Save double aa frequencies to file
+    if 'double' in types:
+        double_aa_columns = ['generation', 'site_1', 'aa_1', 'site_2', 'aa_2', 'frequency']
+        for r_idx in range(len(replicates)):
+            counts_list = []
+            for i in range(len(time_points[r_idx])):
+                t = time_points[r_idx][i]
+                for aas, counts in aa_counts['double'][r_idx][i].items():
+                    if counts>0:
+                        counts_list.append([t] + list(aas) + [counts/total_count[r_idx][i]])
+
+        df_temp = pd.DataFrame(data=counts_list, columns=double_aa_columns)
+        df_temp.to_csv(get_aa_freq_file(dir, name, 'double', replicates[r_idx]), index=False, compression='gzip')
+
+    # Convert codon counts to frequencies and save to file
+    df_cols = dict(single=['generation', 'site', 'codon', 'frequency'],
+                   double=['generation', 'site_1', 'codon_1', 'site_2', 'codon_2', 'frequency'])
+    id_cols = dict(single=['site', 'codon'], 
+                   double=['site_1', 'codon_1', 'site_2', 'codon_2'])
+    for type in types:
+        for r_idx in range(len(replicates)):
+            counts_list = []
+            for i in range(len(time_points[r_idx])):
+                t = time_points[r_idx][i]
+                for df_iter, row in codon_counts[type][r_idx][codon_counts[type][r_idx]['generation']==t].iterrows():
+                    counts_list.append([t] + list(row[id_cols[type]]) + [row['counts']/total_count[r_idx][i]])
+            df_temp = pd.DataFrame(data=counts_list, columns=df_cols[type])
+            df_temp.to_csv(get_codon_freq_file(dir, name, type, replicates[r_idx]), index=False, compression='gzip')
+
+
+def compute_freq_MaveDB(name, rep, types, haplotype_counts_file, reference_sequence, time_points, time_cols, freq_dir, comment_char=None):
+    '''
+    Compute variant frequencies (single and double codons) from an input haplotype
+    counts file in MaveDB format
+    '''
+    ################################################################################
+    
+    # Read in haplotype counts, fill NA counts, and drop unneeded columns
+    df_data = read_fancy_comments(haplotype_counts_file, comment_char=comment_char).replace('NA', np.nan).fillna(0).drop([MAVEDB_ACC], axis=1)
+    if MAVEDB_SPLICE in df_data.columns:
+        df_data = df_data.drop([MAVEDB_SPLICE], axis=1)
+    df_data.reset_index(drop=True, inplace=True)
+    
+    # Remove rows with ambiguous nucleotides
+    df_data = df_data[~df_data[MAVEDB_NT].astype('str').str.contains('X', regex=False)]
+    
+    # Extract numbered sites from data and construct the reference sequence
+    codon_length = 3
+    site_list = sorted(df_data[MAVEDB_PRO].astype('str').str.extractall('(\d+)')[0].astype(int).unique())
+    ref_codons = np.array([''.join(reference_sequence[i:i+codon_length]) for i in range(0, len(reference_sequence), codon_length)])
+    ref_codons_by_site = dict(zip(site_list, ref_codons))
+    ref_aas = np.array([CODON2AA[c] for c in ref_codons])
+    ref_aas_by_site = dict(zip(site_list, ref_aas))
+    
+    # Explicitly cast numerical columns
+    col_types = dict(zip(time_cols, ['float64' for c in time_cols]))
+    df_data = df_data.astype(col_types)
+    
+    # Compute total counts
+    total_count = []
+    time_sort = np.argsort(time_points)
+    time_points = list(np.array(time_points)[time_sort])
+    time_cols = np.array(time_cols)[time_sort]
+    for i in range(len(time_points)):
+        total_count.append(np.sum(df_data[time_cols[i]]))
+    
+    # Initialize dictionary of codon/aa counts and fill in WT counts
+    codon_counts = dict(zip(['single', 'double'], [[{} for t in time_points] for i in range(2)]))
+    aa_counts = dict(zip(types, [[{} for t in time_points] for type in types]))
+    for i in range(len(time_points)):
+        for seq_i in range(len(site_list)):
+            idx_i = site_list[seq_i]
+            
+            for c in CODONS:
+                codon_counts['single'][i][(idx_i, c)] = 0
+            codon_counts['single'][i][(idx_i, ref_codons[seq_i])] = total_count[i]
+            
+            for a in AA:
+                aa_counts['single'][i][(idx_i, a)] = 0
+            aa_counts['single'][i][(idx_i, CODON2AA[ref_codons[seq_i]])] = total_count[i]
+                
+            for seq_j in range(seq_i+1, len(site_list)):
+                idx_j = site_list[seq_j]
+                codon_counts['double'][i][(idx_i, ref_codons[seq_i], idx_j, ref_codons[seq_j])] = total_count[i]
+                aa_counts['double'][i][(idx_i, CODON2AA[ref_codons[seq_i]], idx_j, CODON2AA[ref_codons[seq_j]])] = total_count[i]
+    
+    # Iterate through haplotypes and compute variant counts
+    reference_sequence = list(reference_sequence)
+    for df_iter, row in df_data.iterrows():
+    
+        # Progress bar
+        if int(df_iter)%1000==0:
+            print('{} replicate {}, computing codon frequencies... {:2.1%}'.format(name, rep, int(df_iter) / len(df_data)), end="\r", flush=True)
+        
+        # Extract list of mutations (skip WT)
+        variants = row[MAVEDB_NT]
+        if variants==MAVEDB_WT:
+            continue
+        variant_sites, variant_nucs = get_variant_sites_nucs(variants, shift_by_one=True)
+        variant_sequence = reference_sequence.copy()
+        for v_site, v_nuc in zip(variant_sites, variant_nucs):
+            variant_sequence[v_site] = v_nuc
+        variant_codons = np.array([''.join(variant_sequence[i:i+codon_length]) for i in range(0, len(variant_sequence), codon_length)])
+        variant_aas = np.array([CODON2AA[c] for c in variant_codons])
+        
+        # Get mismatched codons/aas and sparsely fill counts
+        for var_state, ref_state, single_state_counts, double_state_counts, states in [
+            [variant_codons, ref_codons, codon_counts['single'], codon_counts['double'], CODONS],
+            [variant_aas, ref_aas, aa_counts['single'], aa_counts['double'], AA]]:
+            
+            mismatches = [i for i in range(len(var_state)) if var_state[i]!=ref_state[i]]
+            
+            for ii in range(len(mismatches)):
+                seq_i = mismatches[ii]
+                idx_i = site_list[seq_i]
+                st_i  = var_state[seq_i]
+                
+                # Single codon/aa counts
+                for i in range(len(time_points)):
+                    single_state_counts[i][(idx_i, st_i)] += row[time_cols[i]]
+                
+                # Double codon/aa counts
+                for jj in range(ii+1, len(mismatches)):
+                    seq_j = mismatches[jj]
+                    idx_j = site_list[seq_j]
+                    st_j  = var_state[seq_j]
+                    
+                    for i in range(len(time_points)):
+                        if (idx_i, st_i, idx_j, st_j) not in double_state_counts[i]:
+                            double_state_counts[i][(idx_i, st_i, idx_j, st_j)] = row[time_cols[i]]
                         else:
-                            codon_allele_dict[gen][site_i][codon_i][site_j][codon_j] += mutation_number[timepoints.index(gen)]
+                            double_state_counts[i][(idx_i, st_i, idx_j, st_j)] += row[time_cols[i]]
+                        
+    # Add counts for one mutant and one reference codon/aa
+    for i in range(len(time_points)):
+        for ref_state, single_state_counts, double_state_counts, states in [
+            [ref_codons, codon_counts['single'], codon_counts['double'], CODONS],
+            [ref_aas, aa_counts['single'], aa_counts['double'], AA]]:
+            for seq_i, st_i in itertools.product(range(len(site_list)), states):
+                idx_i = site_list[seq_i]
+                if st_i!=ref_state[seq_i]:
+                    total_single = single_state_counts[i][(idx_i, st_i)]
+                    for seq_j in range(seq_i):
+                        idx_j = site_list[seq_j]
+                        total_double = 0
+                        for st_j in states:
+                            if st_j!=ref_state[seq_j] and (idx_j, st_j, idx_i, st_i) in double_state_counts[i]:
+                                total_double += double_state_counts[i][(idx_j, st_j, idx_i, st_i)]
+                        double_state_counts[i][(idx_j, ref_state[seq_j], idx_i, st_i)] = total_single - total_double
+                    for seq_j in range(seq_i+1, len(site_list)):
+                        idx_j = site_list[seq_j]
+                        total_double = 0
+                        for st_j in states:
+                            if st_j!=ref_state[seq_j] and (idx_i, st_i, idx_j, st_j) in double_state_counts[i]:
+                                total_double += double_state_counts[i][(idx_i, st_i, idx_j, st_j)]
+                        double_state_counts[i][(idx_i, st_i, idx_j, ref_state[seq_j])] = total_single - total_double
+                    
+    # Correct reference/WT counts
+    # Future: add function to get key for each data type (single/double, codon/aa) and iterate generically through all data structures
+    for i in range(len(time_points)):
+        for codons, counts in codon_counts['single'][i].items():
+            if codons[1]!=ref_codons_by_site[codons[0]]:
+                codon_counts['single'][i][(codons[0], ref_codons_by_site[codons[0]])] -= counts
+                
+        for codons, counts in codon_counts['double'][i].items():
+            if codons[1]!=ref_codons_by_site[codons[0]] or codons[3]!=ref_codons_by_site[codons[2]]:
+                codon_counts['double'][i][(codons[0], ref_codons_by_site[codons[0]], codons[2], ref_codons_by_site[codons[2]])] -= counts
+                
+        for aas, counts in aa_counts['single'][i].items():
+            if aas[1]!=ref_aas_by_site[aas[0]]:
+                aa_counts['single'][i][(aas[0], ref_aas_by_site[aas[0]])] -= counts
+                
+        for aas, counts in aa_counts['double'][i].items():
+            if aas[1]!=ref_aas_by_site[aas[0]] or aas[3]!=ref_aas_by_site[aas[2]]:
+                aa_counts['double'][i][(aas[0], ref_aas_by_site[aas[0]], aas[2], ref_aas_by_site[aas[2]])] -= counts
 
-        if len(variant_site)>1:
-            error_deletion = list(combinations(variant_site, 2))
-            for item in error_deletion:
-                site_i = item[0]
-                site_j = item[1]
-                idx_i = site_list.index(site_i)
-                idx_j = site_list.index(site_j)
-                codon_i = variant_codon[idx_i]
-                codon_j = variant_codon[idx_j]
-                for gen in timepoints:
-                    codon_allele_dict[gen][site_i][raw_codon[idx_i]][site_j][raw_codon[idx_j]] += mutation_number[timepoints.index(gen)]
-                    codon_allele_dict[gen][site_i][codon_i][site_j][codon_j] -= mutation_number[timepoints.index(gen)]
+    # Save total reads to file
+    reads_cols = ['generation', 'reads']
+    df_temp = pd.DataFrame(data=[[time_points[i], total_count[i]] for i in range(len(time_points))], columns=reads_cols)
+    df_temp.to_csv(get_reads_file(freq_dir, name, rep, file_ext='.csv'), index=False)
+    
+    # Save single aa frequencies to file, including WT indicator
+    single_aa_columns = ['generation', 'site', 'aa', 'frequency', 'WT_indicator']
+    counts_list = []
+    for i in range(len(time_points)):
+        t = time_points[i]
+        for aas, counts in aa_counts['single'][i].items():
+            if counts>0:
+                counts_list.append([t] + list(aas) + [counts/total_count[i], aas[1]==ref_aas_by_site[aas[0]]])
+
+    path = get_aa_freq_file(freq_dir, name, 'single', rep)
+    df_temp = pd.DataFrame(data=counts_list, columns=single_aa_columns)
+    df_temp.to_csv(path, index=False, compression='gzip')
+
+    # Save other frequencies to file
+    single_codon_columns = ['generation', 'site', 'codon', 'frequency']
+    double_codon_columns = ['generation', 'site_1', 'codon_1', 'site_2', 'codon_2', 'frequency']
+    double_aa_columns = ['generation', 'site_1', 'aa_1', 'site_2', 'aa_2', 'frequency']
+    for counts_dict, columns, path in [
+        [codon_counts['single'], single_codon_columns, get_codon_freq_file(freq_dir, name, 'single', rep)],
+        [codon_counts['double'], double_codon_columns, get_codon_freq_file(freq_dir, name, 'double', rep)],
+        [aa_counts['double'], double_aa_columns, get_aa_freq_file(freq_dir, name, 'double', rep)]]:
+        
+        counts_list = []
+        for i in range(len(time_points)):
+            t = time_points[i]
+            for pairs, counts in counts_dict[i].items():
+                if counts>0:
+                    counts_list.append([t] + list(pairs) + [counts/total_count[i]])
+
+        df_temp = pd.DataFrame(data=counts_list, columns=columns)
+        df_temp.to_csv(path, index=False, compression='gzip')
+    
+    
+def compute_variant_frequencies_Bloom(name, codon_counts_files, replicates, times, freq_dir, error_file=None, comment_char=None):
+    '''
+    Compute variant frequencies from codon counts in Bloom lab format. If an error
+    file is provided, corrects for sequencing errors.
+
+    Required arguments:
+        - name: Name of the experiment
+        - codon_counts_files: List of paths to codon counts files
+        - replicates: List of replicate numbers
+        - times: List of time points
+        - freq_dir: Path to directory where frequencies will be saved
+
+    Optional arguments:
+        - error_file (default:None): Path to a file recording sequence counts from
+            sequencing the reference sequence only, used to estimate sequencing
+            error rates and correct variant frequencies
+        - comment_char (default:None): Character used to indicate comments in the
+            codon counts files
+    '''
+    ################################################################################
+    
+    # Collect basic information
+    unique_reps = np.sort(np.unique(replicates))
+    n_replicates = len(unique_reps)
+    replicates = np.array(replicates)
+    times = np.array(times)
+
+    # Read in sequencing error frequencies, if provided
+    error_freqs = None
+    if error_file is not None:
+        error_freqs = get_codon_error_freqs_Bloom(error_file, comment_char=comment_char)
+
+    # Read in codon counts for each replicate and save to file
+    codon_counts_files = np.array(codon_counts_files)
+    for r_idx in range(n_replicates):
+        
+        # Read in codon counts and time order them
+        n_files = len(codon_counts_files[replicates==unique_reps[r_idx]])
+        codon_counts = [pd.read_csv(codon_counts_files[replicates==unique_reps[r_idx]][i]) for i in range(n_files)]
+        codon_times = [times[replicates==unique_reps[r_idx]][i] for i in range(n_files)]
+        time_sort = np.argsort(codon_times)
+        codon_counts = [codon_counts[i] for i in time_sort]
+        codon_times = [codon_times[i] for i in time_sort]
+
+        # Get reference sequence
+        sites = list(np.sort(np.unique(codon_counts[0]['site'])))
+        ref_codons = np.array([str(codon_counts[0][codon_counts[0]['site']==s].iloc[0]['wildtype']) for s in sites])
+        ref_aas = np.array([CODON2AA[c] for c in ref_codons])
+        ref_aas_by_site = dict(zip(sites, ref_aas))
+
+        # Compute amino acid frequencies and save to file
+        max_reads = [0 for t in codon_times]
+        aa_freqs = [{} for t in codon_times]
+        for i in range(len(codon_times)):
+            for df_iter, row in codon_counts[i].iterrows():
+                total_counts = np.sum(row[CODONS])
+                if total_counts>max_reads[i]:
+                    max_reads[i] = total_counts
+
+                if error_freqs is not None:
+                    f_vec_measured = np.array(row[CODONS])/total_counts
+                    err_matrix = np.eye(len(CODONS))
+                    wt_idx = CODONS.index(ref_codons[sites.index(row['site'])])
+                    for c_i in range(len(CODONS)):
+                        if c_i!=wt_idx:
+                            err_matrix[c_i, wt_idx] = error_freqs[row['site']][c_i]
+                        else:
+                            err_matrix[c_i, c_i] = 1 - np.sum(error_freqs[row['site']])
+                    f_vec_corrected = np.matmul(np.linalg.inv(err_matrix), f_vec_measured)
+
+                    for aa in AA:
+                        aa_idxs = np.array([CODONS.index(c) for c in AA2CODON[aa]])
+                        aa_freqs[i][(row['site'], aa)] = np.sum(f_vec_corrected[aa_idxs])
+
+                else:
+                    for aa in AA:
+                        aa_cols = AA2CODON[aa]
+                        aa_counts = np.sum(row[aa_cols])
+                        aa_freqs[i][(row['site'], aa)] = aa_counts/total_counts
+
+        # Save reads to file
+        reads_cols = ['generation', 'reads']
+        df_temp = pd.DataFrame(data=[[codon_times[i], max_reads[i]] for i in range(len(codon_times))], columns=reads_cols)
+        df_temp.to_csv(get_reads_file(freq_dir, name, unique_reps[r_idx], file_ext='.csv'), index=False)
+
+        # Save amino acid frequencies to file, with WT indicator
+        aa_freqs_list = []
+        for i in range(len(codon_times)):
+            t = codon_times[i]
+            for aas, freq in aa_freqs[i].items():
+                aa_freqs_list.append([t] + list(aas) + [freq, aas[1]==ref_aas_by_site[aas[0]]])
+
+        aa_freqs_cols = ['generation', 'site', 'aa', 'frequency', 'WT_indicator']
+        df_temp = pd.DataFrame(data=aa_freqs_list, columns=aa_freqs_cols)
+        df_temp.to_csv(get_aa_freq_file(freq_dir, name, 'single', unique_reps[r_idx]), index=False, compression='gzip')
 
 
-    allele_counts_list = []
-    for gen, site_codon_counts in codon_allele_dict.items():
-        for site_i, codoni_sitej_codonj_countj in site_codon_counts.items():
-            for codon_i, sitej_codonj_countj in codoni_sitej_codonj_countj.items():
-                for site_j, codonj_countj in sitej_codonj_countj.items():
-                    for codon_j, count_j in codonj_countj.items():
-                        allele_counts_list.append([gen, site_i, codon_i, site_j, codon_j, count_j])
+def get_codon_error_freqs_Bloom(path, comment_char=None):
+    ''' Get sequencing error frequencies from data in Bloom lab format. '''
+
+    # Read in dataframe and get list of sites
+    df = pd.read_csv(path, comment=comment_char)
+    sites = np.sort(np.unique(df['site']))
+
+    # Get wildtype codons
+    wt_codons = np.array([str(df[df['site']==s].iloc[0]['wildtype']) for s in sites])
+
+    # Get total number of reads for each site
+    total_reads = np.zeros(len(sites))
+    for i in range(len(sites)):
+        total_reads[i] = np.sum(df[df['site']==sites[i]].iloc[0][CODONS])
+
+    # Get error frequencies
+    error_freqs = {}
+    for s in sites:
+        error_freqs[s] = np.zeros(len(CODONS))
+    for seq_i in range(len(sites)):
+        df_site = df[df['site']==sites[seq_i]].iloc[0]
+        for c in CODONS:
+            error_freqs[sites[seq_i]][CODONS.index(c)] = df_site[c]/total_reads[seq_i]
+        
+        # Set error for WT codon to zero
+        error_freqs[sites[seq_i]][CODONS.index(wt_codons[seq_i])] = 0
+
+    return error_freqs
 
 
-    codon_counts_table = pd.DataFrame(data = allele_counts_list, columns = allele_counts_columns)
-    codon_counts_table.to_csv(save_path, sep = ',', index = False, compression = 'gzip')
-    return True
+def compute_variant_frequencies(name, reference_sequence_file, haplotype_counts_file, n_replicates, time_points, time_cols, freq_dir, with_epistasis=False, comment_char=None, format='MaveDB'):
+    '''
+    Computes variant (allele) frequencies, used by popDMS, from haplotype counts. By
+    default, we assume that counts are saved in MaveDB format. For more information
+    on this format, see https://www.mavedb.org/docs/mavedb/data_formats.html
 
-# TARGET_PROTEIN_NAME, REFERENCE_SEQUENCE, RAW_HAPLOTYPE, TRANSFORMED_HAPLOTYPE, REPLICATES, INPUT_COUNTS_DIR, GENERATIONS, HAPLOTYPE_REP_GEN_COL
-def output_save_allele(TARGET_PROTEIN_NAME, REFERENCE_SEQUENCE, RAW_HAPLOTYPE, TRANSFORMED_HAPLOTYPE, REPLICATES, GENERATIONS, INPUT_COUNTS_DIR, HAPLOTYPE_REP_GEN_COL):
-    with open(REFERENCE_SEQUENCE,"r") as raw_seq:
-        REFER_SEQ = raw_seq.read()
-    REP_LIST = [i+1 for i in range(REPLICATES)]
-    df_count = pd.read_csv(RAW_HAPLOTYPE, skiprows=4)
-    df_count.to_csv(TRANSFORMED_HAPLOTYPE, compression='gzip', index = False)
-    for REP in REP_LIST:
-        print(TARGET_PROTEIN_NAME + ', replicate '+str(REP)+', single allele collecting')
-        SAVE_PATH = INPUT_COUNTS_DIR + TARGET_PROTEIN_NAME + '_single_allele_rep' + str(REP) + '.csv.gzip' 
-        site_list = nucleotide_file_to_counts_single_allele(TRANSFORMED_HAPLOTYPE, REFER_SEQ, GENERATIONS, REP, HAPLOTYPE_REP_GEN_COL[REP], SAVE_PATH)
-        print(TARGET_PROTEIN_NAME + ', replicate '+str(REP)+', single allele finished')
-        print(TARGET_PROTEIN_NAME + ', replicate '+str(REP)+', double allele collecting')
-        SAVE_PATH = INPUT_COUNTS_DIR + TARGET_PROTEIN_NAME + '_double_allele_rep' + str(REP) + '.csv.gzip'
-        nucleotide_file_to_counts_double_allele(TRANSFORMED_HAPLOTYPE, REFER_SEQ, GENERATIONS, REP, HAPLOTYPE_REP_GEN_COL[REP], SAVE_PATH)
-        print(TARGET_PROTEIN_NAME + ', replicate '+str(REP)+', double allele finished')
+    Required arguments:
+        - name: String that will be associated with saved files, serving as an
+            identifier for the data set
+        - reference_sequence_file: File path to the reference sequence, which is
+            needed to specify 'WT' variants
+        - haplotype_counts_file: Path to an existing file recording haplotype
+            frequencies
+        - n_replicates: Number of experimental replicates
+        - time_points: Time points in the data; for normalization across data sets,
+            this should be roughly the number of 'generations' between sequencing
+            samples in the experiment
+        - time_cols: A dictionary mapping between the number for each experimental
+            replicate and the column in the haplotype counts file that contains
+            count information
+        - freq_dir: Directory where variant frequency data will be saved
 
-    return site_list
+    Optional arguments:
+        - with_epistasis (default:False): If True, will compute 3- and 4-amino acid
+            frequencies for epistasis analysis
+        - comment_char (default:None): Character used as a comment in the haplotype
+            counts file; in some MaveDB files, this is '#'
+        - format (default:'MaveDB'): Format of the input data files (options:
+            'MaveDB', 'Bloom')
+    '''
+    ################################################################################
+    
+    # Read in reference sequence
+    ref_seq = open(reference_sequence_file).read()
+    
+    # Compute and save counts for each experimental replicate
+    replicates = [i+1 for i in range(n_replicates)]
+    for rep in replicates:
+        types = ['single', 'double']
+        if with_epistasis:
+            types += ['triple', 'quadruple']
+        if format=='MaveDB':
+            compute_freq_MaveDB(name, rep, types, haplotype_counts_file, ref_seq, time_points, time_cols[rep], freq_dir, comment_char)
+        # elif format=='Bloom':
+        #     compute_freq_Bloom(haplotype_counts_file, ref_seq, time_points, time_cols[rep], path_single, path_double, comment_char)
+        print('\r' + ' ' * 80, end='\r')
+        print(name + ' replicate '+str(rep)+' complete')
+    
 
-# codes for independent site data
+def compute_dx_covariance(aa_freqs):
+    '''
+    Compute net change in amino acid frequency and integrated covariance matrix
+    from amino acid frequency data.
+    '''
+    
+    # Gather information
+    reps  = len(aa_freqs['single'])
+    sites = list(np.unique(aa_freqs['single'][0]['site']))
+    sites.sort()
 
-def independent_site_pipeline(TARGET_PROTEIN, REPLICATE, OUTPUT_DIR, DNACODON_FILE, PRE_FILES, POST_FILES, EPISTASIS, REGULARIZATION_PERCENT):
-    REPLICATES = [i+1 for i in range(REPLICATE)]
-    estimate_selection, regularization_list = MPL_independent_site_inference(TARGET_PROTEIN, REPLICATES, DNACODON_FILE, PRE_FILES, POST_FILES)
-    correlation_list = optimize_regularization_independent_site(estimate_selection, REPLICATES, regularization_list)
-    PLOT_REGULARIZATION_CORRELATION(regularization_list, correlation_list, TARGET_PROTEIN)
-    REGULARIZATION_SELECTED = find_best_regularization(regularization_list, correlation_list, REGULARIZATION_PERCENT)
-    FINAL_SELECTION = output_final_selection_independent_site(REGULARIZATION_SELECTED, DNACODON_FILE, estimate_selection, REPLICATES)
-    if os.path.exists(OUTPUT_DIR):
-        FINAL_SELECTION.to_csv(OUTPUT_DIR+TARGET_PROTEIN+'.csv.gz', index = False, compression = 'gzip')
+    q = len(AA)
+    L = len(sites)
+    bigL = q*L
+    
+    p2i = {}
+    for seq_i in range(len(sites)):
+        for a in AA:
+            p2i[(sites[seq_i], a)] = (q * seq_i) + AA.index(a)
+    
+    # Shape dx vector (reps x [q*L]) and covariance matrix (reps x [q*L, q*L]), compute for each replicate
+    dx   = [np.zeros(bigL) for i in range(reps)]
+    icov = [np.zeros((bigL, bigL)) for i in range(reps)]
+
+    for r_idx in range(reps):
+        # Get times
+        times = list(np.unique(aa_freqs['single'][r_idx]['generation']))
+        times.sort()
+
+        dtsum = np.array([times[1]-times[0]] + [times[i+1]-times[i-1] for i in range(1, len(times)-1)] + [times[-1]-times[-2]])
+
+        # Compute dense frequency vector to speed calculations
+        x = np.array([np.zeros(bigL) for i in range(len(times))])
+        for i in range(len(times)):
+            t = times[i]
+            df_t = aa_freqs['single'][r_idx][aa_freqs['single'][r_idx]['generation']==t]
+            for df_iter, row in df_t.iterrows():
+                x[i][p2i[(row['site'], row['aa'])]] += row['frequency']
+            
+        # Compute dx (final - initial frequency)
+        dx[r_idx] = x[-1] - x[0]
+
+        # Compute integrated covariance
+        ## Off-diagonal terms, same time (note: diagonals will temporarily be incorrect)
+        #icov[r_idx] = np.einsum('i,ijk->jk', dtsum, -np.array([np.outer(x[i], x[i])/3 for i in range(len(times))]), optimize=True)
+        icov[r_idx] = np.tensordot(dtsum, -np.array([np.outer(x[i], x[i])/3 for i in range(len(times))]), axes=1)
+
+        ## Off-diagonal terms, cross times
+        for i in range(1, len(times)):
+            dt = times[i] - times[i-1]
+            icov[r_idx] -= dt * (np.outer(x[i-1], x[i]) + np.outer(x[i], x[i-1]))/6
+
+        ## Off-diagonal terms, sparse pair correlations
+        for i in range(len(times)):
+            df_t = aa_freqs['double'][r_idx][aa_freqs['double'][r_idx]['generation']==times[i]]
+            for df_iter, row in df_t.iterrows():
+                icov[r_idx][p2i[(row['site_1'], row['aa_1'])], p2i[(row['site_2'], row['aa_2'])]] += dtsum[i] * row['frequency']/2
+                icov[r_idx][p2i[(row['site_2'], row['aa_2'])], p2i[(row['site_1'], row['aa_1'])]] += dtsum[i] * row['frequency']/2
+
+        ## Diagonal terms, same time (overwrite previous diagonals)
+        icov[r_idx][np.diag_indices_from(icov[r_idx])] = dtsum.dot((x/2) - (x**2/3))
+
+        ## Diagonal terms, cross times
+        for i in range(1, len(times)):
+            dt = times[i] - times[i-1]
+            icov[r_idx][np.diag_indices_from(icov[r_idx])] -= dt * (x[i] * x[i-1])/3
+
+    return dx, icov, p2i
+
+
+def compute_dx_covariance_independent(aa_freqs):
+    '''
+    Compute net change in amino acid frequency and integrated covariance matrix
+    from amino acid frequency data. This version assumes that each site is
+    independent, so that the covariance matrix is block diagonal.
+    '''
+    
+    # Gather information
+    reps  = len(aa_freqs['single'])
+    sites = list(np.unique(aa_freqs['single'][0]['site']))
+    sites.sort()
+
+    q = len(AA)
+    L = len(sites)
+    bigL = q*L
+    
+    aa2i = {}
+    for a in AA:
+        aa2i[a] = AA.index(a)
+    
+    # Shape dx vector (reps x [q*L]) and covariance matrix (reps x [q*L, q*L]), compute for each replicate
+    dx   = [[np.zeros(q) for i in range(L)] for j in range(reps)]
+    icov = [[np.zeros((q, q)) for i in range(L)] for j in range(reps)]
+
+    for r_idx in range(reps):
+        # Get times
+        times = list(np.unique(aa_freqs['single'][r_idx]['generation']))
+        times.sort()
+
+        dtsum = np.array([times[1]-times[0]] + [times[i+1]-times[i-1] for i in range(1, len(times)-1)] + [times[-1]-times[-2]])
+
+        # Iterate over individual sites
+        for seq_i in range(L):
+            df_site = aa_freqs['single'][r_idx][aa_freqs['single'][r_idx]['site']==sites[seq_i]]
+
+            # Compute dense frequency vector to speed calculations
+            x = np.array([np.zeros(q) for i in range(len(times))])
+            for i in range(len(times)):
+                t = times[i]
+                df_t = df_site[df_site['generation']==t]
+                for df_iter, row in df_t.iterrows():
+                    x[i][aa2i[row['aa']]] += row['frequency']
+                
+            # Compute dx (final - initial frequency)
+            dx[r_idx][seq_i] = x[-1] - x[0]
+
+            # Compute integrated covariance
+            ## Off-diagonal terms, same time (note: diagonals will temporarily be incorrect)
+            #icov[r_idx][seq_i] = np.einsum('i,ijk->jk', dtsum, -np.array([np.outer(x[i], x[i])/3 for i in range(len(times))]), optimize=True)
+            icov[r_idx][seq_i] = np.tensordot(dtsum, -np.array([np.outer(x[i], x[i])/3 for i in range(len(times))]), axes=1)
+
+            ## Off-diagonal terms, cross times
+            for i in range(1, len(times)):
+                dt = times[i] - times[i-1]
+                icov[r_idx][seq_i] -= dt * (np.outer(x[i-1], x[i]) + np.outer(x[i], x[i-1]))/6
+
+            ## Diagonal terms, same time (overwrite previous diagonals)
+            icov[r_idx][seq_i][np.diag_indices_from(icov[r_idx][seq_i])] = dtsum.dot((x/2) - (x**2/3))
+
+            ## Diagonal terms, cross times
+            for i in range(1, len(times)):
+                dt = times[i] - times[i-1]
+                icov[r_idx][seq_i][np.diag_indices_from(icov[r_idx][seq_i])] -= dt * (x[i] * x[i-1])/3
+
+    return dx, icov, aa2i
+
+
+def get_aa_freqs(freq_dir, name, freq_types, replicates):
+    '''
+    Load amino acid frequencies from file.
+    '''
+    
+    aa_freqs = {}
+    for type in freq_types:
+        freq_list = []
+        for rep in replicates:
+            freq_list.append(pd.read_csv(get_aa_freq_file(freq_dir, name, type, rep)))
+        aa_freqs[type] = freq_list
+
+    return aa_freqs
+
+
+def get_max_reads(freq_dir, name, replicates):
+    '''
+    Get maximum number of reads across all replicates.
+    '''
+    
+    max_reads = 1e2
+    for rep in replicates:
+        df = pd.read_csv(get_reads_file(freq_dir, name, rep))
+        if np.max(df['reads'])>max_reads:
+            max_reads = np.max(df['reads'])
+            
+    return max_reads
+
+
+def get_best_regularization(corrs, gamma_values, corr_cutoff_pct=0.05):
+    '''
+    Compute best regularization strength from correlation data.
+    '''
+
+    corr_thresh = (np.max(corrs)**2 - corrs[0]**2)*corr_cutoff_pct
+    gamma_opt = 0.1
+    if np.fabs(np.max(corrs)**2-corrs[0]**2)<0.01:
+        gamma_opt = gamma_values[0]
     else:
-        os.makedirs(OUTPUT_DIR)
-        FINAL_SELECTION.to_csv(OUTPUT_DIR+TARGET_PROTEIN+'.csv.gz', index = False, compression = 'gzip')
-    with open(OUTPUT_DIR+TARGET_PROTEIN + '_supplementary.log', 'w') as f:
-        f.write('Optimized regularization = %.6f' %REGULARIZATION_SELECTED)
-    # reg =  %int(np.log10(REGULARIZATION_SELECTED))
+        gamma_set = False
+        for i in range(np.argmax(corrs), 0, -1):
+            if np.fabs((corrs[i]**2-corrs[i-1]**2)/(np.log10(gamma_values[i])-np.log10(gamma_values[i-1]))) >= corr_thresh:
+                gamma_opt = gamma_values[i]
+                gamma_set = True
+                break
+        if not gamma_set:
+            gamma_opt = gamma_values[np.argmax(corrs)]
+    
+    return gamma_opt
 
 
-def optimize_regularization_independent_site(estimate_selection, REPLICATES, REGULARIZATION_LIST):
-    correlation_list = []
-    for regular in REGULARIZATION_LIST:
-        temp_sele=[]
-        temp_corr = []
-        for replicate in REPLICATES:
-            temp_sele.append(estimate_selection[str(replicate)][regular])
-        for pairs in list(combinations(temp_sele, 2)):
-            temp_corr.append(st.pearsonr(pairs[0], pairs[1])[0])
-        correlation_list.append(np.mean(temp_corr))
-    return correlation_list
-
-def PLOT_REGULARIZATION_CORRELATION(regularization_list, correlation_list, protein_name):
-    plt.plot(regularization_list, correlation_list)
+def plot_regularization(corrs, gamma_values):
+    '''
+    Plot correlation as a function of regularization strength.
+    '''
+    
+    plt.plot(gamma_values, corrs)
     plt.xscale('log')
-    plt.xlabel('Regularization')
-    plt.ylabel('Pearson Correlation')
-    plt.title(protein_name+' regularization plot')
+    plt.xlabel('Regularization strength (gamma)')
+    plt.ylabel('Average correlation between replicates')
     plt.show()
 
-def find_best_regularization(reg_list, corr_list, percent):
-    threshold = (max(corr_list)-min(corr_list))/percent
-    max_index = corr_list.index(max(corr_list))
-    if abs(corr_list[max_index]-corr_list[0])<0.01:
-        optimized_regularization = reg_list[0]
-    else:
-        for i in range(max_index,0,-1):
-            if abs(corr_list[i]-corr_list[i-1])>=threshold*corr_list[i]:
-                optimized_regularization = reg_list[i]
-                break  
-    print('Optimized regularization term = %.1e' %optimized_regularization)
-    return optimized_regularization
 
-
-def cov_inverse(cov, L, q, regular):
-    cov_temp = cov.copy()
-    for i in range(L):
-        for a in range(q):
-            cov_temp[(q * i) + a, (q * i) + a] += regular  # diagonal regularization
+def infer_correlated(name, freq_dir, output_dir, n_replicates, corr_cutoff_pct, with_epistasis=False, plot_gamma=True):
+    '''
+    Infer selection coefficients from data that includes correlations (counts)
+    between pairs of mutant sites. This is not possible with data that includes
+    single codon/amino acid counts only.
     
-    for i in range(L):
-        cov_block = np.zeros((q, q))
-        for a in range(q):
-            for b in range(q):
-                cov_block[a, b] = cov_temp[(q * i) + a, (q * i) + b]
+    Required arguments:
+        - name: String that will be associated with saved files, serving as an
+            identifier for the data set
+        - freq_dir: Directory where variant frequency data has been saved; assumes
+            data saved in the format of compute_variant_frequencies(...)
+        - output_dir: Directory where selection coefficients will be saved
+        - n_replicates: Number of experimental replicates
+        - corr_cutoff_pct: Cutoff on the maximum allowed drop in correlation
+            between replicates, used to determine the optimal regularization
+            strength
 
-        cov_block = np.linalg.inv(cov_block)
+    Optional arguments:
+        - with_epistasis (default:False): Flag to infer epistatic interactions; this
+            requires correlation data for sets of three and four codons/amino acids;
+            not currently functional (implemented separately in C++ code in the 
+            epistasis_inference directory)
+        - plot_gamma (default:True): Plot correlation between replicates as a 
+            function of the regularization strength gamma
+    '''
+    ################################################################################
 
-        for a in range(q):
-            for b in range(q):
-                cov_temp[(q * i) + a, (q * i) + b] = cov_block[a, b]
+    # Get codon frequencies and auxiliary information
+    freq_types = ['single', 'double']
+    if with_epistasis:
+        # freq_types = freq_types + ['triple', 'quadruple']
+        pass
+        
+    replicates = [i+1 for i in range(n_replicates)]
+    aa_freqs = get_aa_freqs(freq_dir, name, freq_types, replicates)
 
-    return cov_temp
-
-def output_final_selection_independent_site(REGULARIZATION_SELECTED, DNACODON_FILE, estimate_selection, REPLICATES):
+    # Get frequency change and covariance, used to compute selection coefficients, and map to indices
+    dx, icov, p2i = compute_dx_covariance(aa_freqs)
     
-    df_0 = pd.read_csv('%s' %DNACODON_FILE, comment = '#', memory_map = True)
-    site_list = []
-    for site in df_0['site']:
-        site_list+=[site]*21  
-    AA_list = AA*len(df_0['site'])
-    rep_list = []
-    for replicate in REPLICATES:
-        rep_list.append('rep_'+str(replicate))
-    df_selection = pd.DataFrame(columns=['site', 'amino_acid']+rep_list)
-    df_selection['site'] = site_list
-    df_selection['amino_acid'] = AA_list
-    for replicate in REPLICATES:
-        df_selection['rep_'+str(replicate)] = estimate_selection[str(replicate)][REGULARIZATION_SELECTED]
-    df_selection['joint'] = estimate_selection['joint'][REGULARIZATION_SELECTED]
-    return df_selection   
-        
-def MPL_independent_site_inference(TARGET_PROTEIN, REPLICATES, DNACODON_FILE, PRE_FILE, POST_FILE):
-    print('------ Calculating single replicate selection coefficients for %s ------' %TARGET_PROTEIN)
-    print("\nCalculating error probability from %s...\n" %DNACODON_FILE)
+    # Compute optimal regularization value
+    ## Get correlations for each value of gamma
+    max_reads = get_max_reads(freq_dir, name, replicates)
+    gamma_values = np.logspace(np.log10(1/max_reads), 4, num=20)
+    corrs = []
+    for g in gamma_values:
+        s = np.zeros_like(dx)
+        for r_idx in range(n_replicates):
+            s[r_idx] = np.inner(np.linalg.inv(icov[r_idx] + g*np.eye(len(icov[r_idx]))), dx[r_idx])
+        corrs.append(np.mean([st.pearsonr(s[i], s[j]).statistic for i in range(n_replicates) for j in range(i+1, n_replicates)]))
 
-    err = err_correct(DNACODON_FILE)
-    estimate_selection = {}
+    ## (Optional) plot the results
+    if plot_gamma:
+        plot_regularization(corrs, gamma_values)
+
+    ## Select best regularization value
+    gamma_opt = get_best_regularization(corrs, gamma_values, corr_cutoff_pct)
+    print('Found best regularization strength gamma = %.1e, R = %.2f' % (gamma_opt, corrs[list(gamma_values).index(gamma_opt)]))
     
-    minimum = sys.float_info.max
+    ## Compute selection coefficients at optimal gamma
+    s = np.zeros_like(dx)
+    for r_idx in range(n_replicates):
+        s[r_idx] = np.inner(np.linalg.inv(icov[r_idx] + gamma_opt*np.eye(len(icov[r_idx]))), dx[r_idx])
+        
+    s_joint = np.inner(np.linalg.inv(np.sum(icov, axis=0) + gamma_opt*np.eye(len(icov[0]))), np.sum(dx, axis=0))
+
+    # Convert selection coefficients to a data frame and save to file
+    df_ref = aa_freqs['single'][0][aa_freqs['single'][0]['WT_indicator']==True]
+    ref_aa = {}
+    for df_iter, row in df_ref.iterrows():
+        ref_aa[row['site']] = row['aa']
+        
+    sel_cols = ['site', 'amino_acid', 'WT_indicator'] + ['rep_%d' % r for r in replicates] + ['joint']
+    sel_data = []
+    for pair, loc in p2i.items():
+        sel_data.append([pair[0], pair[1], pair[1]==ref_aa[pair[0]]] + [s[r][loc] for r in range(n_replicates)] + [s_joint[loc]])
+
+    path = get_selection_file(output_dir, name, file_ext='.csv.gz')
+    df_temp = pd.DataFrame(data=sel_data, columns=sel_cols)
+    df_temp.to_csv(path, index=False, compression='gzip')
+
+
+def infer_independent(name, freq_dir, output_dir, n_replicates, corr_cutoff_pct, plot_gamma=True):
+    '''
+    Infer selection coefficients from data that consists of single amino acid
+    frequencies only.
     
-    file_idx = 0
-    for run_name in REPLICATES:
-        run_name = str(run_name)
-        estimate_selection[run_name]={}
-        func_para = {
-            'PRE_FILE':     PRE_FILE[file_idx],           
-            'POST_FILE':    POST_FILE[file_idx],        
-            'run_name':     run_name,                                            # Replicate serial number
-            'homolog':      TARGET_PROTEIN,                                      # Homolog name
-            'err':          err                                                  # Error probability for this homolog
-        }
-        file_idx += 1
-        FREQUENCY_DIFF, COVARIANCE_MATRIX, L, q, max_read = MPL_independent_site_elements(**func_para)
-        if run_name == str(REPLICATES[0]):
-            joint_freq_diff = np.array(FREQUENCY_DIFF)
-            joint_cov_mat = np.array(COVARIANCE_MATRIX)
-        else:
-            joint_freq_diff = np.add(joint_freq_diff, FREQUENCY_DIFF)
-            joint_cov_mat = np.add(joint_cov_mat, COVARIANCE_MATRIX)
-        # print('rank of integrated cov matrix: ', np.linalg.matrix_rank(COVARIANCE_MATRIX))
-        # test_matrix = COVARIANCE_MATRIX.copy()
-        # test_matrix = test_matrix[~(test_matrix==0).all(1)]
-        # test_matrix = test_matrix.T[~(test_matrix==0).T.all(1)].T
-        # # test_matrix = test_matrix[~(test_matrix==0).all(0)]
-        # print(len(test_matrix), len(test_matrix[0]))
-        
-        if minimum > 1e50:
-            minimum = max_read
-            regularization_list = [np.power(10, float(i)) for i in range(int(np.log10(1/minimum)-1), 4)]
-        for REGULAR in regularization_list:
-            INVERSE_COV = cov_inverse(COVARIANCE_MATRIX, L, q, REGULAR)
-            estimate_selection[run_name][REGULAR] = np.dot(INVERSE_COV, FREQUENCY_DIFF)
-    estimate_selection['joint']={}
-    for REGULAR in regularization_list:
-            INVERSE_COV = cov_inverse(joint_cov_mat, L, q, REGULAR)
-            estimate_selection['joint'][REGULAR] = np.dot(INVERSE_COV, joint_freq_diff)        
+    Required arguments:
+        - name: String that will be associated with saved files, serving as an
+            identifier for the data set
+        - freq_dir: Directory where variant frequency data has been saved; assumes
+            data saved in the format of compute_variant_frequencies(...)
+        - output_dir: Directory where selection coefficients will be saved
+        - n_replicates: Number of experimental replicates
+        - corr_cutoff_pct: Cutoff on the maximum allowed drop in correlation
+            between replicates, used to determine the optimal regularization
+            strength
+
+    Optional arguments:
+        - plot_gamma (default:True): Plot correlation between replicates as a 
+            function of the regularization strength gamma
+    '''
+    ################################################################################
+
+    # Get amino acid frequencies and auxiliary information
+    freq_types = ['single']
+    replicates = [i+1 for i in range(n_replicates)]
+    aa_freqs = get_aa_freqs(freq_dir, name, freq_types, replicates)
+
+    # Get frequency change and covariance, used to compute selection coefficients, and map to indices
+    dx, icov, aa2i = compute_dx_covariance_independent(aa_freqs)
     
-    return estimate_selection, regularization_list
+    # Compute optimal regularization value
+    ## Get correlations for each value of gamma
+    max_reads = get_max_reads(freq_dir, name, replicates)
+    gamma_values = np.logspace(np.log10(1/max_reads), 4, num=20)
 
-
-
-def err_correct(DNACODON_FILE):
-
-    df_0 = pd.read_csv('%s' %DNACODON_FILE, comment = '#', memory_map = True)     # Read raw data file
-
-    r    = len(CODONS)              # How many codon 
-    L    = len(df_0)                # How long the sequence is
-    err  = np.zeros((L, r))         # Error matrix record
-    q    = len(AA)                  # How many amino acid
-
-    # Get wildtype sequence
-    wt = []
-    for i in range(L):
-        wt.append(str(df_0.iloc[i].wildtype))
-
-    # Get the total number of reads for each site
-    norm_0 = np.zeros(L)
-    for i in range(L):
-        norm_0[i] = df_0[CODONS].sum(axis=1).tolist()[i]       
-
-    # Compute error probability
-    for i in range(L):
-        err[i] = df_0.iloc[i][CODONS].tolist()/norm_0[i]       
-        wild_type_index = CODONS.index(wt[i])       
-        err[i][wild_type_index] = norm_0[i]/df_0.iloc[i][CODONS].tolist()[wild_type_index]
-
-    return err
-
-def MPL_independent_site_elements(**func_para):
- 
-    PRE_FILE     = func_para['PRE_FILE']
-    POST_FILE    = func_para['POST_FILE']
-    run_name     = func_para['run_name']
-    homolog      = func_para['homolog']
-    err          = func_para['err']
-
-    print("Calculating selection coefficients for replicate_%s of %s:" %(run_name,homolog))
-
-    df_0 = pd.read_csv('%s' % PRE_FILE,  comment = '#', memory_map = True)
-    df_1 = pd.read_csv('%s' % POST_FILE, comment = '#', memory_map = True)
-
-    q    = len(AA)
-    L    = len(df_0)
-    size = q * L
-    x_0  = np.zeros(size)
-    x_1  = np.zeros(size)
-    dx   = np.zeros(size)
-    dmut = np.zeros(size)
-    cov  = np.zeros((size, size))
-
-    wt = []
-    for i in range(L):
-        wt.append(str(df_0.iloc[i].wildtype))
-
-    print("Correcting reads and computing allele frequency difference and mutational contribution...")
-    norm_0 = np.zeros(L)
-    norm_1 = np.zeros(L)
-    for i in range(L):
-        temp_1_wt = df_1.iloc[i][wt[i]]
-        temp_0_wt = df_0.iloc[i][wt[i]]
-        wt_index = CODONS.index(wt[i])
-        
-        x = df_0.iloc[i][CODONS].tolist() - temp_0_wt * err[i]
-        y = df_1.iloc[i][CODONS].tolist() - temp_1_wt * err[i]
-        
-        x = [np.max([x_i,0]) for x_i in x]
-        y = [np.max([y_i,0]) for y_i in y]
-
-        x[wt_index] = temp_0_wt*err[i][wt_index]
-        y[wt_index] = temp_1_wt*err[i][wt_index]
-        norm_0[i] = sum(x)
-        norm_1[i] = sum(y)
-
-
-        x_0_c = [x_i/norm_0[i] for x_i in x]
-        x_1_c = [x_i/norm_1[i] for x_i in y]
-        
-        
-        for c in CODONS:    
-            aa    = codon2aa(c)
-            aaidx = AA.index(aa)
+    ## Get correlations for each value of gamma
+    L = len(dx[0])
+    corrs = []
+    for g in gamma_values:
+        s = np.zeros_like(dx)
+        for r_idx in range(n_replicates):
+            for seq_i in range(L):
+                s[r_idx][seq_i] = np.inner(np.linalg.inv(icov[r_idx][seq_i] + g*np.eye(len(icov[r_idx][seq_i]))), dx[r_idx][seq_i])
             
-            x_0[(q * i) + aaidx] += x_0_c[CODONS.index(c)]
-            x_1[(q * i) + aaidx] += x_1_c[CODONS.index(c)]
-            dx[(q * i) + aaidx]  += x_1_c[CODONS.index(c)] - x_0_c[CODONS.index(c)]
+        corrs.append(np.mean([st.pearsonr(s[i].flatten(), s[j].flatten()).statistic for i in range(n_replicates) for j in range(i+1, n_replicates)]))
 
+    ## (Optional) plot the results
+    if plot_gamma:
+        plot_regularization(corrs, gamma_values)
 
-            for c_i in range(3):
-                for n in NUC:
-                    if n!=c[c_i]:
-                        m_aa    = codon2aa([c[k] if k !=c_i else n for k in range(3)])
-                        m_aaidx = AA.index(m_aa)
-                        dmut[(q * i) + aaidx]   -= x_0_c[CODONS.index(c)] * MU[c[c_i]+n]
-                        dmut[(q * i) + m_aaidx] += x_0_c[CODONS.index(c)] * MU[c[c_i]+n]
-
-    max_read = np.max((norm_0.max(),norm_1.max()))
-
-    # Get wildtype sequence for amino acid
-    wt = []
-    for i in range(L):
-        wt.append(AA.index(codon2aa(df_0.iloc[i].wildtype)))
-
-    # Compute average frequencies for all states, and non-WT frequencies for each site
-    x_avg = np.zeros(size)
-    x_mut = np.zeros(L)
-    for i in range(L):
-        for a in range(q):
-            x_avg[(q * i) + a] = (x_0[(q * i) + a] + x_1[(q * i) + a])/2
-
-            if a!=wt[i]:
-                x_mut[i] += x_avg[(q * i) + a]
-
-    # Compute covariance
-    for i in range(L):
-        for a in range(q):
-
-            # diagonal terms
-            cov[(q * i) + a, (q * i) + a]  = (3 - 2 * x_1[(q * i) + a]) * (x_1[(q * i) + a] + x_0[(q * i) + a])/6 - (x_0[(q * i) + a] * x_0[(q * i) + a])/3
-
-            # off-diagonal, same site
-            for b in range(a+1, q):
-                cov[(q * i) + a, (q * i) + b] = -(2 * x_0[(q * i) + a] * x_0[(q * i) + b] + 2 * x_1[(q * i) + a] * x_1[(q * i) + b] + x_1[(q * i) + a] * x_0[(q * i) + b] + x_1[(q * i) + b] * x_0[(q * i) + a])/6
-                cov[(q * i) + b, (q * i) + a] = -(2 * x_0[(q * i) + a] * x_0[(q * i) + b] + 2 * x_1[(q * i) + a] * x_1[(q * i) + b] + x_1[(q * i) + a] * x_0[(q * i) + b] + x_1[(q * i) + b] * x_0[(q * i) + a])/6
-    cov_temp = cov.copy()
-    return dx - dmut, cov_temp, L, q, max_read
-
-
-
-# codes for full length data
-
-# TARGET_PROTEIN_NAME, SITE_LIST, REPLICATES, INPUT_COUNTS_DIR, OUTPUT_SELECTION_DIR, REGULARIZATION_PERCENT
-# TARGET_PROTEIN_NAME, SITE_LIST, REPLICATES, INPUT_COUNTS_DIR, OUTPUT_SELECTION_DIR, REGULARIZATION_PERCENT
-def full_length_pipeline(TARGET_PROTEIN_NAME, REPLICATE, INPUT_COUNTS_DIR, OUTPUT_SELECTION_DIR, REGULARIZATION_PERCENT):
-    EPISTASIS = False
-    INPUT_FILE_PREFIX, FLAG_LIST, REPLICATES = initialization(REPLICATE, EPISTASIS)
-    FREQUENCY_DIFF, COVARIANCE_MATRIX, MAX_READ, SITE_LIST = MPL_full_length_elements(TARGET_PROTEIN_NAME, FLAG_LIST, INPUT_COUNTS_DIR, REPLICATES, INPUT_FILE_PREFIX)
-    REGULARIZATION_LIST = [np.power(10, float(i)) for i in range(int(np.log10(1/MAX_READ)-1), 4)]
-    CORRELATION_LIST = optimize_regularization_full_length(REGULARIZATION_LIST, SITE_LIST, COVARIANCE_MATRIX, FREQUENCY_DIFF, REPLICATES)
-    PLOT_REGULARIZATION_CORRELATION(REGULARIZATION_LIST, CORRELATION_LIST, TARGET_PROTEIN_NAME)
-    REGULARIZATION_SELECTED = find_best_regularization(REGULARIZATION_LIST, CORRELATION_LIST, REGULARIZATION_PERCENT)
-    FINAL_SELECTION = output_final_selection_full_length(REGULARIZATION_SELECTED, SITE_LIST, COVARIANCE_MATRIX, FREQUENCY_DIFF, REPLICATES)
-    if os.path.exists(OUTPUT_SELECTION_DIR):
-        FINAL_SELECTION.to_csv(OUTPUT_SELECTION_DIR + TARGET_PROTEIN_NAME + '.csv.gz', index = False, compression = 'gzip')
-    else:
-        os.makedirs(OUTPUT_SELECTION_DIR)
-        FINAL_SELECTION.to_csv(OUTPUT_SELECTION_DIR + TARGET_PROTEIN_NAME + '.csv.gz', index = False, compression = 'gzip')
-
-    with open(OUTPUT_SELECTION_DIR+TARGET_PROTEIN_NAME + '_supplementary.log', 'w') as f:
-        f.write('Optimized regularization = %.e' %REGULARIZATION_SELECTED)
-
-def MPL_full_length_elements(Target_protein, flag_list, Input_dir, replicates, Input_file_prefix):
-    df_counts_dict = {}
-    df_frequency_dict = {}
-    df_frequency_change_dict = {}
-    max_read_final = 0
-    for flag in flag_list:
-        print('Reading %s allele counts files from:' %flag)
-        df_counts_dict[flag], site_list = get_counts(Target_protein, Input_dir, replicates, Input_file_prefix, flag)
-    for flag in flag_list:
-        df_frequency_dict[flag], max_read = counts_to_frequency(df_counts_dict, replicates, flag, site_list)
-        max_read_final = max(max_read_final, max_read)
-    for flag in flag_list:
-        df_frequency_change_dict[flag] = frequency_change(df_frequency_dict, flag)
-    cov_matx = covariance_matrix(df_frequency_dict, flag_list, site_list)   
-    return df_frequency_change_dict, cov_matx, max_read_final, site_list
-
-def output_final_selection_full_length(gamma, sites, cov_matx, df_frequency_change_dict, replicates):
-    copy_cov_matx = copy.deepcopy(cov_matx['amino_acid'])
-    q = len(AA)
-    L = len(sites)
-    estimate_selection = {}
-    joint_freq_change = np.array([0]*(q*L))
-    joint_cov_mat = np.array([[0]*(q*L)]*(q*L))
-    for rep in list(copy_cov_matx.keys()):
-        invert_matrix = np.zeros((q * L, q * L))
-        for i in range(len(list(copy_cov_matx[rep].keys())) - 1):
-            time_i = list(copy_cov_matx[rep].keys())[i]
-            time_i_post = list(copy_cov_matx[rep].keys())[i+1]
-            time_interval = (time_i_post- time_i)
-            invert_matrix += time_interval * copy_cov_matx[rep][time_i]
-        joint_freq_change = np.add(joint_freq_change, df_frequency_change_dict['single']['amino_acid'][rep])
-        joint_cov_mat = np.add(joint_cov_mat, invert_matrix)
-        # print('rank of integrated cov matrix: ', np.linalg.matrix_rank(invert_matrix))
-        # test_matrix = invert_matrix.copy()
-        # test_matrix = test_matrix[~(test_matrix==0).all(1)]
-        # test_matrix = test_matrix.T[~(test_matrix==0).T.all(1)].T
-        # # test_matrix = test_matrix[~(test_matrix==0).all(0)]
-        # print(len(test_matrix), len(test_matrix[0]))
-        for k in range(q * L):
-            invert_matrix[k,k] += gamma
-        invert_matrix = np.linalg.inv(invert_matrix)
-        estimate_selection[rep] = np.inner(invert_matrix, df_frequency_change_dict['single']['amino_acid'][rep])
-    print('rank of joint cov matrix: ', np.linalg.matrix_rank(joint_cov_mat))
-    print('length of sequence: ',L)
-    for k in range(q * L):
-        joint_cov_mat[k,k] += gamma
-    joint_selection = np.inner(np.linalg.inv(joint_cov_mat), joint_freq_change)   
-    df_column = ['site', 'amino_acid'] + ['rep_' + str(k) for k in replicates]
-    df_selection_coefficients = pd.DataFrame(columns = df_column)
-    column_site = []
-    column_aa = []
-    column_sc = []
-    for rep in replicates:
-        column_sc.append([])
-    for site_name in sites:
-        for aa in AA:
-            column_site.append(site_name)
-            column_aa.append(aa)
-    for rep in replicates:
-        column_sc[replicates.index(rep)].append(estimate_selection[rep])
-    df_selection_coefficients['site'] = column_site
-    df_selection_coefficients['amino_acid'] = column_aa
-    for rep in replicates:
-        df_selection_coefficients['rep_' + str(rep)] = ['{:.2E}'.format(i) for i in column_sc[replicates.index(rep)][0]]
-    df_selection_coefficients['joint'] = ['{:.2E}'.format(i) for i in joint_selection]   
-    return df_selection_coefficients
-
-def optimize_regularization_full_length(regularization_list, sites, cov_matx, df_frequency_change_dict, replicates):
-    correlation_list = []
+    ## Select best regularization value
+    gamma_opt = get_best_regularization(corrs, gamma_values, corr_cutoff_pct)
+    print('Found best regularization strength gamma = %.1e, R = %.2f' % (gamma_opt, corrs[list(gamma_values).index(gamma_opt)]))
     
-    for gamma in regularization_list:
-        copy_cov_matx = copy.deepcopy(cov_matx['amino_acid'])
-        q = len(AA)
-        L = len(sites)
-        estimate_selection = {}
+    ## Compute selection coefficients at optimal gamma
+    s = np.zeros_like(dx)
+    for r_idx in range(n_replicates):
+        for seq_i in range(L):
+            s[r_idx][seq_i] = np.inner(np.linalg.inv(icov[r_idx][seq_i] + gamma_opt*np.eye(len(icov[r_idx][seq_i]))), dx[r_idx][seq_i])
+    
+    s_joint = np.zeros_like(dx[0])
+    for seq_i in range(L):
+        s_joint[seq_i] = np.inner(np.linalg.inv(np.sum([icov[r_idx][seq_i] for r_idx in range(n_replicates)], axis=0) + gamma_opt*np.eye(len(icov[0][seq_i]))), np.sum([dx[r_idx][seq_i] for r_idx in range(n_replicates)], axis=0))
+
+    # Convert selection coefficients to a data frame and save to file
+    df_ref = aa_freqs['single'][0][aa_freqs['single'][0]['WT_indicator']==True]
+    ref_aa = {}
+    for df_iter, row in df_ref.iterrows():
+        ref_aa[row['site']] = row['aa']
+
+    sites = list(np.unique(aa_freqs['single'][0]['site']))
         
-        for rep in list(copy_cov_matx.keys()):
-            
-            invert_matrix = np.zeros((q * L, q * L))
-            for k in range(q * L):
-                invert_matrix[k,k] += gamma
-            for i in range(len(list(copy_cov_matx[rep].keys()))-1):
-                time_i = list(copy_cov_matx[rep].keys())[i]
-                time_i_post = list(copy_cov_matx[rep].keys())[i+1]
-                time_interval = time_i_post- time_i
-                invert_matrix += time_interval * copy_cov_matx[rep][time_i]
-            invert_matrix = np.linalg.inv(invert_matrix)
-            estimate_selection[rep] = np.inner(invert_matrix, df_frequency_change_dict['single']['amino_acid'][rep])
-        df_column = ['site', 'amino_acid'] + ['rep_' + str(k) for k in replicates]
-        df_selection_coefficients = pd.DataFrame(columns = df_column)
-        column_site = []
-        column_aa = []
-        column_sc = []
-        for rep in replicates:
-            column_sc.append([])
-        for site_name in sites:
-            for aa in AA:
-                column_site.append(site_name+1)
-                column_aa.append(aa)
-        for rep in replicates:
-            column_sc[replicates.index(rep)].append(estimate_selection[rep])
+    sel_cols = ['site', 'amino_acid', 'WT_indicator'] + ['rep_%d' % r for r in replicates] + ['joint']
+    sel_data = []
+    for seq_i in range(L):
+        for aa, loc in aa2i.items():
+            sel_data.append([sites[seq_i], aa, aa==ref_aa[sites[seq_i]]] + [s[r][seq_i][loc] for r in range(n_replicates)] + [s_joint[seq_i][loc]])
 
-        df_selection_coefficients['site'] = column_site
-        df_selection_coefficients['amino_acid'] = column_aa
-        for rep in replicates:
-            df_selection_coefficients['rep_' + str(rep)] = column_sc[replicates.index(rep)][0]
-
-        correlation_list.append((df_selection_coefficients.iloc[:,2:].corr().sum().sum()-len(replicates))/(len(replicates)*(len(replicates)-1)))
-    return correlation_list
-
-
-
-def get_counts(Target_protein, Input_dir, replicates, Input_file_prefix, flag):
-
-    Input_file_single = []
-    df_allele_counts = {}
-    
-    if flag == 'single':
-        for replicate in replicates:
-            df_allele_counts[replicate] = {}
-            Input_file = Input_dir+Target_protein+'_' + Input_file_prefix[flag] + str(replicate) + '.csv.gzip'
-            print(' ', Input_file)
-            table = pd.read_csv(Input_file, compression='gzip')
-            site_list = sorted(table['site'].unique())
-            original_rows = table.shape[0]
-            indexNames = table[table['counts'] <= 0].index
-            table.drop(indexNames , inplace = True)
-            current_rows = table.shape[0]
-            
-            table['codon_counts_position'] = table['codon'].apply(lambda a: CODONS.index(a))
-            table['AA_counts_position'] = table['codon_counts_position'].apply(lambda a: codon_to_aa_num[a])
-            table.drop('codon', axis = 1, inplace = True)
-
-            for gen in table['generation'].unique().tolist():
-                temp = table[table['generation'] == gen].copy()
-                temp.drop('generation', axis = 1, inplace = True)
-                df_allele_counts[replicate][gen] = temp           
-            print('   delete %d rows of zero count records, remain %d rows of non zero count records' %(original_rows - current_rows, current_rows))
-
-    if flag == 'double':
-        for replicate in replicates:
-            df_allele_counts[replicate] = {}
-            Input_file = Input_dir+Target_protein+'_' + Input_file_prefix[flag] + str(replicate) + '.csv.gzip'
-            print(' ', Input_file)
-            table = pd.read_csv(Input_file, compression='gzip')
-            site_list = sorted(np.unique(table[['site_1', 'site_2']].values))
-            original_rows = table.shape[0]
-            indexNames = table[table['counts'] <= 0].index
-            table.drop(indexNames , inplace = True)
-            current_rows = table.shape[0]
-            table['codon_counts_position_1'] = table['codon_1'].apply(lambda a: CODONS.index(a))
-            table.drop('codon_1', axis = 1, inplace = True)
-            table['codon_counts_position_2'] = table['codon_2'].apply(lambda a: CODONS.index(a))
-            table.drop('codon_2', axis = 1, inplace = True)
-            table['AA_counts_position_1'] = table['codon_counts_position_1'].apply(lambda a: codon_to_aa_num[a])            
-            table['AA_counts_position_2'] = table['codon_counts_position_2'].apply(lambda a: codon_to_aa_num[a])
-            
-            for gen in table['generation'].unique().tolist():
-                temp = table[table['generation'] == gen].copy()
-                temp.drop('generation', axis = 1, inplace = True)
-                df_allele_counts[replicate][gen] = temp   
-            print('   delete %d rows of zero count records, remain %d rows of non zero count records' %(original_rows - current_rows, current_rows))
-
-    table = None
-    temp = None
-    indexNames = None
-    return df_allele_counts, site_list
-
-def counts_to_frequency(df_allele_counts_original, replicates, flag, sites):
-    
-    replicate_length = len(replicates)
-    df_allele_frequency = {}
-    
-    max_read = 0
-    
-    if flag == 'single':
-        print('Getting %s allele frequencies table:' %(flag))
-        df_allele_frequency['amino_acid'] = {}
-        replicates = df_allele_counts_original[flag].keys()
-        for rep in replicates:
-            df_allele_frequency['amino_acid'][rep] = {}
-            print('Replicate %d' %rep)
-            generations = list(df_allele_counts_original[flag][rep].keys())
-            for gen in generations:
-                single_aminoacid_counts_list = np.zeros(len(sites) * 21)
-                single_aminoacid_frequency_list = np.zeros(len(sites) * 21)
-                site_value = df_allele_counts_original[flag][rep][gen]['site'].tolist()
-                site_index = [sites.index(k) for k in site_value]
-                
-                counts_value = df_allele_counts_original[flag][rep][gen]['counts'].tolist()
-                AA_counts_index = df_allele_counts_original[flag][rep][gen]['AA_counts_position'].tolist()
-
-                for i in range(len(AA_counts_index)):
-                    single_aminoacid_counts_list[site_index[i]*21 + AA_counts_index[i]] += counts_value[i]                    
-                
-                for i in range(len(sites)):
-                    total_reads = single_aminoacid_counts_list[i*21 : i*21+21].sum()  
-                    single_aminoacid_frequency_list[i*21 : i*21+21] = single_aminoacid_counts_list[i*21 : i*21+21] / total_reads
-                df_allele_frequency['amino_acid'][rep][gen] = single_aminoacid_frequency_list
-                print('\tTotal %d reads in generation %d' %(total_reads, gen))
-                max_read = max(total_reads, max_read)
-                
-    if flag == 'double':
-        print('Getting %s allele frequencies table:' %(flag))
-        df_allele_frequency['amino_acid'] = {}
-        replicates = df_allele_counts_original[flag].keys()
-        for rep in replicates:
-            df_allele_frequency['amino_acid'][rep] = {}
-            print('Replicate %d' %rep)
-            generations = list(df_allele_counts_original[flag][rep].keys())
-            for gen in generations:
-                aminoacid_length = len(sites) * 21
-                double_aminoacid_counts_list = np.zeros((aminoacid_length, aminoacid_length))
-                double_aminoacid_frequency_list = np.zeros((aminoacid_length, aminoacid_length))
-                
-                counts_value = df_allele_counts_original[flag][rep][gen]['counts'].tolist()
-                
-                site_value_1 = df_allele_counts_original[flag][rep][gen]['site_1'].tolist()
-                site_index_1 = [sites.index(k) for k in site_value_1]
-                AA_counts_index_1 = df_allele_counts_original[flag][rep][gen]['AA_counts_position_1'].tolist()
-                
-                site_value_2 = df_allele_counts_original[flag][rep][gen]['site_2'].tolist()
-                site_index_2 = [sites.index(k) for k in site_value_2]
-                AA_counts_index_2 = df_allele_counts_original[flag][rep][gen]['AA_counts_position_2'].tolist()
-                
-                for i in range(len(AA_counts_index_1)):
-                    double_aminoacid_counts_list[site_index_1[i]*21 + AA_counts_index_1[i], site_index_2[i]*21 + AA_counts_index_2[i]] += counts_value[i]
-                    double_aminoacid_counts_list[site_index_2[i]*21 + AA_counts_index_2[i], site_index_1[i]*21 + AA_counts_index_1[i]] += counts_value[i]
-
-                total_reads = double_aminoacid_counts_list[0:21, 21:42].sum()
-
-                double_aminoacid_frequency_list = double_aminoacid_counts_list/total_reads
-                
-                df_allele_frequency['amino_acid'][rep][gen] = double_aminoacid_frequency_list
-                
-                print('\tTotal %d reads in generation %d' %(total_reads, gen))
-                max_read = max(total_reads, max_read)
-                
-        aminoacid_length = None
-        double_aminoacid_counts_list = None
-        double_aminoacid_frequency_list = None                
-        counts_value = None                
-        site_value_1 = None
-        AA_counts_index_1 = None                
-        site_value_2 = None
-        AA_counts_index_2 = None
-    return (df_allele_frequency, max_read)
-
-def frequency_change(df_allele_frequency, flag):
-    
-    df_allele_frequency_change = {}
-    df_allele_frequency_change['amino_acid'] = {}
-    additional_columns = ['initial_counts', 'initial_frequency', 'final_counts', 'final_frequency']
-    replicates = list(df_allele_frequency[flag]['amino_acid'].keys())
-
-    for rep in replicates:
-        print('Getting %s allele frequency change of replicate %d between initial and final generation...' %(flag, rep))
-        df_allele_frequency_change['amino_acid'][rep] = {}
-        generations = list(df_allele_frequency[flag]['amino_acid'][rep].keys())
-        initial_gen = min(generations)
-        final_gen = max(generations)
-
-        if flag == 'single':
-
-            initial_site_frequency = df_allele_frequency[flag]['amino_acid'][rep][initial_gen].copy()
-            final_site_frequency = df_allele_frequency[flag]['amino_acid'][rep][final_gen].copy()
-            df_allele_frequency_change['amino_acid'][rep] = final_site_frequency - initial_site_frequency
-
-        if flag == 'double':
-            
-            initial_site_frequency = df_allele_frequency[flag]['amino_acid'][rep][initial_gen].copy()
-            final_site_frequency = df_allele_frequency[flag]['amino_acid'][rep][final_gen].copy()
-            df_allele_frequency_change['amino_acid'][rep] = final_site_frequency - initial_site_frequency
-            
-    return df_allele_frequency_change
- 
-def covariance_matrix(df_frequency_dict, flag_list, sites):
-    replicates = list(df_frequency_dict[flag_list[0]]['amino_acid'].keys())
-    generations = list(df_frequency_dict[flag_list[0]]['amino_acid'][replicates[0]].keys())
-    covariance_matrix_dict = {}
-    covariance_matrix_dict['amino_acid'] = {}
-    q = len(AA)
-    L = len(sites)
-    size_of_matrix = q * L
-    for rep in replicates:
-        covariance_matrix_dict['amino_acid'][rep] = {}
-        for gen in range(len(generations[:-1])):   
-            covariance_matrix_dict['amino_acid'][rep][generations[gen]] = (df_frequency_dict['double']['amino_acid'][rep][generations[gen]].copy()+df_frequency_dict['double']['amino_acid'][rep][generations[gen+1]].copy())/2.0
-            # covariance_matrix_dict['amino_acid'][rep][gen] -= covariance_matrix_dict['amino_acid'][rep][gen]
-            for i in range(size_of_matrix):
-                site_i_freq_pre  = df_frequency_dict['single']['amino_acid'][rep][generations[gen]][i]
-                site_i_freq_post = df_frequency_dict['single']['amino_acid'][rep][generations[gen+1]][i]
-                first_term  = (3-2*site_i_freq_post)*(site_i_freq_post+site_i_freq_pre)/6
-                second_term = site_i_freq_pre*site_i_freq_pre/3
-                covariance_matrix_dict['amino_acid'][rep][generations[gen]][i, i] = first_term - second_term
-
-                for j in range(i+1, size_of_matrix):
-                    site_j_freq_pre  = df_frequency_dict['single']['amino_acid'][rep][generations[gen]][j]
-                    site_j_freq_post = df_frequency_dict['single']['amino_acid'][rep][generations[gen+1]][j]
-                    long_term = (2*site_i_freq_pre*site_j_freq_pre + 2*site_i_freq_post*site_j_freq_post + site_i_freq_pre*site_j_freq_post  + site_i_freq_post*site_j_freq_pre)/6
-                    covariance_matrix_dict['amino_acid'][rep][generations[gen]][i, j] -= long_term
-                    covariance_matrix_dict['amino_acid'][rep][generations[gen]][j, i] -= long_term
-        covariance_matrix_dict['amino_acid'][rep][generations[-1]]={}
-    return covariance_matrix_dict
-    
-def initialization(replicate, epistasis):
-    Input_file_prefix = {}
-    replicates = [i+1 for i in range(replicate)]
-
-    if epistasis is False:
-        flag_list = ['single', 'double']
-
-    else:
-        flag_list = ['single', 'double', 'triple', 'quadruple']
-
-    for flag in flag_list:
-        Input_file_prefix[flag] = flag + '_allele_rep'
-
-    return Input_file_prefix, flag_list, replicates
-
+    path = get_selection_file(output_dir, name, file_ext='.csv.gz')
+    df_temp = pd.DataFrame(data=sel_data, columns=sel_cols)
+    df_temp.to_csv(path, index=False, compression='gzip')

@@ -316,7 +316,6 @@ int main(int argc, char* argv[]) {
         }
         // for (int a=0; a < matrix_dim; a++)   dx[a] += dx_each_rep[a];
 
-
         file_name = std::string(protein_name) + "_cov_matrix_rep" + std::to_string(rep+1) + ".txt";
         covariance_matrix_file = file_name.c_str();
         get_line = fopen(covariance_matrix_file, "r");
