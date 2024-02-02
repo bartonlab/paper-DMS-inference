@@ -29,7 +29,7 @@ from matplotlib.lines import Line2D
 
 
 # Plot variables
-FIG_DPI = 400
+FIG_DPI = 600
 
 COLOR_1  = '#1295D8'
 COLOR_2  = '#FFB511'
@@ -90,6 +90,7 @@ DEF_TEXTPROPS = {
 
 FIGPROPS = {
     'transparent' : True,
+    'dpi'         : FIG_DPI,
     #'bbox_inches' : 'tight'
 }
 
@@ -139,7 +140,7 @@ NAME2NAME = {
 ######################
 # FIGURE 1 OVERVIEW AND METHODS COMPARISON
 
-def fig_methods_comparison():
+def fig_methods_comparison(fig_title='fig-1-overview.pdf'):
     ''' Show performance comparison across data sets '''
 
     input_files = {
@@ -169,8 +170,6 @@ def fig_methods_comparison():
                    'Thrombo_TpoR_1':  ['TpoR',             6],
                    'Thrombo_TpoR_2':  ['TpoR_S505N',       6]
                    }
-
-    fig_title = 'fig-1-overview.pdf'
     
     print('protein\t\t\tR (pop)\tR (alt)\tR (between, Pearson/Spearman)')
 
