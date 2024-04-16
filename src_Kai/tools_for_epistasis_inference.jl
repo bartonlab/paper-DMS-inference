@@ -221,18 +221,20 @@ function get_integrated_cov(q, L, Δx_set, x_set, csv_raw, freq_th=1e-2)
         
         # Subtracting the moments
         for i_rnd in 1:n_round
+            w = 1.0
+            # Both side of edges (t=1 and t=K) are weighted by 0.5, as their contribution comes from the half of the time.
+            if(i_rnd == 1 || i_rnd == n_round) w = 0.5 end
             x_ia = x_detecable_i_a_set[i_rnd, :]
             x_klcd = x_detecable_ij_ab_set[i_rnd, :]
             # 2nd order cov.:
-            icov_set[n_rep][1:L_1st_eff, 1:L_1st_eff] -= x_ia * x_ia'
+            icov_set[n_rep][1:L_1st_eff, 1:L_1st_eff] -= (w * x_ia) * x_ia'
             # 3rd order cov.:
-            icov_set[n_rep][1:L_1st_eff, (1+L_1st_eff):end] -= x_ia * x_klcd'
-            icov_set[n_rep][(1+L_1st_eff):end, 1:L_1st_eff] -= x_klcd * x_ia'
+            icov_set[n_rep][1:L_1st_eff, (1+L_1st_eff):end] -= (w * x_ia) * x_klcd'
+            icov_set[n_rep][(1+L_1st_eff):end, 1:L_1st_eff] -= x_klcd * (w * x_ia)'
             # 4th order cov.:
-            icov_set[n_rep][(1+L_1st_eff):end, (1+L_1st_eff):end] -= x_klcd * x_klcd'
+            icov_set[n_rep][(1+L_1st_eff):end, (1+L_1st_eff):end] -= (w * x_klcd) * x_klcd'
         end
     end
-    
     return (icov_set, Δx, idx_detecable_i_a_set, idx_detecable_ij_ab_set)
 end;
 
@@ -302,3 +304,25 @@ function load_icov_iΔxΔxT(dir_load, ids_replicate)
     end
     return (icov_set, iΔxΔxT_set, Δx_set) 
 end
+
+
+function get_best_regularization(corrs, gamma_values; corr_cutoff_pct=0.05)
+    corr_thresh = (maximum(corrs)^2 - corrs[1]^2) * corr_cutoff_pct
+    gamma_opt = 0.1
+    if abs(maximum(corrs)^2 - corrs[1]^2) < 0.01
+        gamma_opt = gamma_values[1]
+    else
+        gamma_set = false
+        for i in argmax(corrs):-1:2
+            if abs((corrs[i]^2 - corrs[i-1]^2) / (log10(gamma_values[i]) - log10(gamma_values[i-1]))) >= corr_thresh
+                gamma_opt = gamma_values[i]
+                gamma_set = true
+                break
+            end
+        end
+        if !gamma_set
+            gamma_opt = gamma_values[argmax(corrs)]
+        end
+    end
+    return gamma_opt
+end;

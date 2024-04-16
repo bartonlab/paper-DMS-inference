@@ -20,12 +20,13 @@ flag_out = parse(Bool, ARGS[5])
 flag_load_cov_Dx = parse(Bool, ARGS[6])
 dir_load = ARGS[7]
 ref_seq = ARGS[8] 
+N_pop_tot = parse(Float64, ARGS[9])
 # ==============================================#
 L, q = length(split(ref_seq, "")), 21
 LLhalf = Int(L * (L - 1)/2); 
 qL = q*L; qq = q^2
 x_rank = qL + qq * LLhalf
-N_pop_tot = 1e5; inv_N_pop_tot = 1.0 / N_pop_tot;
+inv_N_pop_tot = 1.0 / N_pop_tot;
 γ_set = [1e2, 1e3, 1e4] * inv_N_pop_tot
 #  Process Start : ============================================== #
 @time csv_raw = DataFrame(CSV.File(dir_in * file_csv_in));
@@ -103,33 +104,24 @@ for (γ1, γ2) in zip(γ_set, γ_set)
         ia = idx_detecable_i_a_set[id_ia]
         i,a = ia
         push!(type_set, "selection")
-        push!(i_set, @sprintf("%d", i))
-        push!(j_set, "NaN")
-        push!(a_set, @sprintf("%s", number_to_amino_acid[a]))
-        push!(b_set, "NaN")
-        push!(WT_indicator_i, ref_seq_cat[i] == a)
-        push!(WT_indicator_j, "NaN")
+        push!(i_set, @sprintf("%d", i)); push!(j_set, "NaN")
+        push!(a_set, @sprintf("%s", number_to_amino_acid[a])); push!(b_set, "NaN")
+        push!(WT_indicator_i, ref_seq_cat[i] == a); push!(WT_indicator_j, "NaN")
     end;
     for id_ijab in 1:length(idx_detecable_ij_ab_set)
         ijab = idx_detecable_ij_ab_set[id_ijab]
         (ij,ab) = ijab
         i,j = ij; a,b = ab
         push!(type_set, "epistasis")
-        push!(i_set, @sprintf("%d", i))
-        push!(j_set, @sprintf("%d", j))
-        push!(a_set,  @sprintf("%s", number_to_amino_acid[a]))
-        push!(b_set, @sprintf("%s", number_to_amino_acid[b]))
-        push!(WT_indicator_i, ref_seq_cat[i] == a)
-        push!(WT_indicator_j, ref_seq_cat[j] == b)
+        push!(i_set, @sprintf("%d", i)); push!(j_set, @sprintf("%d", j))
+        push!(a_set,  @sprintf("%s", number_to_amino_acid[a])); push!(b_set, @sprintf("%s", number_to_amino_acid[b]))
+        push!(WT_indicator_i, ref_seq_cat[i] == a); push!(WT_indicator_j, ref_seq_cat[j] == b)
     end;
     df = DataFrame( 
         types=type_set,
-        position_i=i_set,
-        position_j=j_set,
-        AA_i=a_set,
-        AA_j=b_set,
-        WT_indicator_i=WT_indicator_i,
-        WT_indicator_j=WT_indicator_j,
+        position_i=i_set, position_j=j_set,
+        AA_i=a_set, AA_j=b_set,
+        WT_indicator_i=WT_indicator_i, WT_indicator_j=WT_indicator_j,
         inference_grouped=[@sprintf("%.6e", x) for x in s_MPL_grouped],
         inference_rep1=[@sprintf("%.6e", x) for x in s_set[1]],
         inference_rep2=[@sprintf("%.6e", x) for x in s_set[2]]
