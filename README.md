@@ -61,4 +61,4 @@ The format of input data for epistasis inference is described in [this file](epi
 
 # License
 
-This repository is dual licensed as [GPL-3.0](LICENSE-GPL) (source code) and [CC0 1.0](LICENSE-CC0) (figures, documentation, and our presentation of the data).
+This repository is dual licensed as [GPL-3.0](LICENSE-GPL.txt) (source code) and [CC0 1.0](LICENSE-CC0.txt) (figures, documentation, and our presentation of the data).
