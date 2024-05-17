@@ -3,11 +3,12 @@
 This repository contains data and scripts for reproducing the results accompanying the manuscript
 
 ### popDMS infers mutation effects from deep mutational scanning data
-Zhenchen Hong<sup>1</sup>, and John P. Barton<sup>2,3,#</sup>
+Zhenchen Hong<sup>1,\*</sup>, Kai Shimagaki<sup>2,3,\*</sup>, and John P. Barton<sup>2,3,#</sup>
 
 <sup>1</sup> Department of Physics and Astronomy, University of California, Riverside  
 <sup>2</sup> Department of Physics and Astronomy, University of Pittsburgh  
 <sup>3</sup> Department of Computational and Systems Biology, University of Pittsburgh School of Medicine  
+<sup>\*</sup> equal contributions  
 <sup>#</sup> correspondence to [jpbarton@pitt.edu](mailto:jpbarton@pitt.edu)
 
 This work is currently available on the bioRxiv at [this link](https://www.biorxiv.org/content/10.1101/2024.01.29.577759v1).
