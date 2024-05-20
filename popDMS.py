@@ -1010,11 +1010,14 @@ def get_max_reads(freq_dir, name, replicates):
     Get maximum number of reads across all replicates.
     '''
     
-    max_reads = 1e2
+    max_reads = 1e5
     for rep in replicates:
-        df = pd.read_csv(get_reads_file(freq_dir, name, rep))
-        if np.max(df['reads'])>max_reads:
-            max_reads = np.max(df['reads'])
+        if os.path.isfile(get_reads_file(freq_dir, name, rep)):
+            df = pd.read_csv(get_reads_file(freq_dir, name, rep))
+            if np.max(df['reads'])>max_reads:
+                max_reads = np.max(df['reads'])
+        else:
+            print('No file %s, setting max_reads=%.2e' % (get_reads_file(freq_dir, name, rep), max_reads))
             
     return max_reads
 

@@ -160,6 +160,8 @@ def fig_methods_comparison(fig_title='fig-1-overview.pdf'):
                    'Flu_Aichi68C':    ['Aichi68C',         2],
                    'Flu_PR8':         ['PR8' ,             3],
                    'Flu_MatrixM1':    ['Matrix_M1',        3],
+                   'Flu_NA':          ['H3N2 NA',          2],
+                   'SC2_Spike':       ['Spike',            2],
                    'ZIKV':            ['ZIKV',             3],
                    'Perth2009':       ['Perth2009',        4],
                    'Flu_MS':          ['MS',               2],
