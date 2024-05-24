@@ -61,6 +61,16 @@ SIZELINE      = 0.6
 AXES_FONTSIZE = 6
 AXWIDTH       = 0.4
 
+# # grant style
+# FONTFAMILY    = 'Arial'
+# SIZESUBLABEL  = 12
+# SIZELABEL     = 8
+# SIZETICK      = 8
+# SMALLSIZEDOT  = 6. * 1.3
+# SIZELINE      = 0.6
+# AXES_FONTSIZE = 8
+# AXWIDTH       = 0.4
+
 DEF_SUBLABEL = {
     'family': FONTFAMILY,
     'size':   SIZESUBLABEL,
@@ -150,6 +160,8 @@ def fig_methods_comparison(fig_title='fig-1-overview.pdf'):
                    'Flu_Aichi68C':    ['Aichi68C',         2],
                    'Flu_PR8':         ['PR8' ,             3],
                    'Flu_MatrixM1':    ['Matrix_M1',        3],
+                   'Flu_NA':          ['H3N2 NA',          2],
+                   'SC2_Spike':       ['Spike',            2],
                    'ZIKV':            ['ZIKV',             3],
                    'Perth2009':       ['Perth2009',        4],
                    'Flu_MS':          ['MS',               2],
@@ -177,6 +189,12 @@ def fig_methods_comparison(fig_title='fig-1-overview.pdf'):
     pop_avg  = {}
     df_ex    = 0
     ex_prot  = 'Ubiq_Ube4b'
+    tot_muts = 0
+    neg_muts = 0
+    n_better = 0
+    n_worse  = 0
+    n_tie    = 0
+    thresh   = 0.05
     
     rps, rss = [], []  # Pearson and Spearman correlations between methods
     
@@ -203,9 +221,9 @@ def fig_methods_comparison(fig_title='fig-1-overview.pdf'):
         df_corr_pref = df_corr_pref[rep_list]
         df_corr_sele = df_corr_sele[rep_list]
 
-        corr_avg_pref = (df_corr_pref.corr().sum().sum() - reps)/(reps**2 - reps)
+        corr_avg_pref = (df_corr_pref.corr(method='spearman').sum().sum() - reps)/(reps**2 - reps)
         pref_avg[target_protein] = corr_avg_pref
-        corr_avg_pop = (df_corr_sele.corr().sum().sum() - reps)/(reps**2 - reps)
+        corr_avg_pop = (df_corr_sele.corr(method='spearman').sum().sum() - reps)/(reps**2 - reps)
         pop_avg[target_protein] = corr_avg_pop
         
         # Check correlations between popDMS and alternatives
@@ -215,11 +233,27 @@ def fig_methods_comparison(fig_title='fig-1-overview.pdf'):
         
         print('%s\t%.2f\t%.2f\t%.2f\t%.2f' % (target_protein + ''.join((2-len(target_protein)//8)*['\t']),
                                               corr_avg_pop, corr_avg_pref, rp, rs))
+        
+        tot_muts += len(df_merge)
+        neg_muts += len(df_merge[df_merge['joint']<-1])
+
+        if corr_avg_pop-corr_avg_pref>thresh:
+            n_better += 1
+        elif corr_avg_pref-corr_avg_pop>thresh:
+            n_worse += 1
+        else:
+            n_tie += 1
                                               
         rps.append(rp)
         rss.append(rs)
                                               
     print('average\t\t\t%.2f\t%.2f\t%.2f\t%.2f\n' % (np.mean(list(pop_avg.values())), np.mean(list(pref_avg.values())), np.mean(rps), np.mean(rss)))
+
+    print('%d/%d = %.2e%% substantially deleterious mutations (s<-1)\n' % (neg_muts, tot_muts, 100*neg_muts/tot_muts))
+
+    print('popDMS better than regression in %d data sets' % n_better)
+    print('Regression better than popDMS in %d data sets' % n_worse)
+    print('popDMS and regression tied in %d data sets\n' % n_tie)
      
     # variables
     w = DOUBLE_COLUMN
@@ -435,12 +469,16 @@ def fig_methods_comparison(fig_title='fig-1-overview.pdf'):
     # Scatter plot of sample experiment of Enrichment ratio
     
     ticks = []
-    lim   = [-0.05, 1.05]
+    lim   = [-6, 0.1]
     td    = (lim[1] - lim[0])*0.05
+
+    for i in range(len(pref_list)):
+        print(np.min(np.log10(pref_list[i])), np.max(np.log10(pref_list[i])))
 
     for i in range(3):
         for j in range(i + 1, 3):
-            corr = round(st.pearsonr(pref_list[i], pref_list[j])[0], n_digits)
+            # corr = round(st.pearsonr(pref_list[i], pref_list[j])[0], n_digits)
+            corr = round(st.pearsonr(np.log10(pref_list[i]), np.log10(pref_list[j]))[0], n_digits)
             ax3_sub = 0
             if i == 0 and j == 1:
                 ax3_sub = plt.subplot(gs_rep2[0, 0])
@@ -455,7 +493,7 @@ def fig_methods_comparison(fig_title='fig-1-overview.pdf'):
                 ax3_sub = plt.subplot(gs_rep2[1, 1])
                 ax3_sub.set_xlabel('Replicate 2', fontsize = SIZELABEL)
 
-            ax3_sub.scatter(pref_list[i], pref_list[j], c=C_PREF, **scatterprops)
+            ax3_sub.scatter(np.log10(pref_list[i]), np.log10(pref_list[j]), c=C_PREF, **scatterprops)
             ax3_sub.text(lim[0]+td, lim[1]-td, 'R = %.2f' % corr, fontsize = SIZELABEL)
 
             ax3_sub.set_xticks(ticks)
@@ -1030,7 +1068,7 @@ def fig_finite_sampling():
     ax2.spines[ 'top' ].set_visible(False)
     ax2.tick_params(axis = 'both', which = 'major', labelsize = SIZELABEL)
     #ax2.legend(handles = legend_fig_1b, frameon = False, fontsize = SIZELABEL, loc = 'upper left')
-    fig.savefig(FIG_DIR + FIG1_NAME, dpi = FIG_DPI, **FIGPROPS)
+    fig.savefig(FIG_DIR + FIG1_NAME, **FIGPROPS)
     
     
 def fig_site_spectrum():
@@ -1061,7 +1099,7 @@ def fig_site_spectrum():
     box_dif2_alt = dict(left=box_l + 3*box_x + 5*box_dx, right=box_l + 4*box_x + 5*box_dx, bottom=box_t - 2*box_y - 1*box_dy, top=box_t - 1*box_y - 1*box_dy)
     
     # read in data
-    pop_file = 'output/selection_coefficients/HIV Env BG505.csv.gz'
+    pop_file = 'output/selection_coefficients/HIV Env BG505_selection_coefficients.csv.gz'
     alt_file = 'output/merged_preference/HIV Env BG505.csv.gz'
 
     df_pop = pd.read_csv(pop_file)
@@ -1154,6 +1192,288 @@ def fig_site_spectrum():
     
 ######################
 # Old figures
+
+# grant version
+
+def fig_grant(fig_title='fig-grant.pdf'):
+    ''' Show performance comparison across data sets and example correlations '''
+
+    input_files = {
+                   'Flu_WSN':         ['WSN',              3],
+                   'Flu_A549':        ['A549',             3],
+                   'Flu_CCL141':      ['CCL141',           3],
+                   'Flu_Aichi68C':    ['Aichi68C',         2],
+                   'Flu_PR8':         ['PR8' ,             3],
+                   'Flu_MatrixM1':    ['Matrix_M1',        3],
+                   'ZIKV':            ['ZIKV',             3],
+                   'Perth2009':       ['Perth2009',        4],
+                   'Flu_MS':          ['MS',               2],
+                   'Flu_MxAneg':      ['MxAneg',           2],
+                   'HIV_BG505':       ['HIV Env BG505' ,   3],
+                   'HIV_BF520':       ['HIV Env BF520' ,   3],
+                   'HIV_CD4_human':   ['HIV BF520 human',  2],
+                   'HIV_CD4_rhesus':  ['HIV BF520 rhesus', 2],
+                   'HIV_bnAbs_FP16':  ['HIV bnAbs FP16',   2],
+                   'HIV_bnAbs_FP20':  ['HIV bnAbs FP20',   2],
+                   'HIV_bnAbs_VRC34': ['HIV bnAbs VRC34',  2],
+                   'HDR_Y2H_1':       ['Y2H_1',            3],
+                   'HDR_Y2H_2':       ['Y2H_2',            3],
+                   'HDR_E3':          ['E3',               6],
+                   'WWdomain_YAP1':   ['YAP1',             2],
+                   'Ubiq_Ube4b':      ['Ube4b',            2],
+                   'HDR_DBR1':        ['DBR1',             2],
+                   'Thrombo_TpoR_1':  ['TpoR',             6],
+                   'Thrombo_TpoR_2':  ['TpoR_S505N',       6]
+                   }
+    
+    print('protein\t\t\tR (pop)\tR (alt)\tR (between, Pearson/Spearman)')
+
+    pref_avg_p = {}
+    pop_avg_p  = {}
+    pref_avg_s = {}
+    pop_avg_s  = {}
+    df_ex    = 0
+    ex_prot  = 'HDR_DBR1'
+    tot_muts = 0
+    neg_muts = 0
+    n_better = 0
+    n_worse  = 0
+    n_tie    = 0
+    thresh   = 0.05
+    
+    rps, rss = [], []  # Pearson and Spearman correlations between methods
+    
+    for target_protein, info in input_files.items():
+        reps = info[1]
+        rep_list = ['rep_'+str(i+1) for i in range(reps)]
+        path = POP_DIR + info[0] + '_selection_coefficients.csv.gz'
+        df_sele = pd.read_csv(path)
+        
+        if target_protein==ex_prot:
+            df_ex = df_sele.copy(deep=True)
+
+        path = PREF_DIR + info[0] + '.csv.gz'
+        df_pref = pd.read_csv(path)
+
+        df_corr_pref = df_pref[[i for i in rep_list]]
+        df_corr_pref = df_corr_pref.dropna()
+        df_corr_sele = df_sele[[i for i in rep_list]]
+        df_corr_sele = df_corr_sele.loc[~(df_corr_sele==0).all(axis=1)]
+
+        # df_merged = pd.merge(df_pref, df_sele, on=['site', 'amino_acid'], how='inner')
+        df_corr_pref = df_corr_pref[rep_list]
+        df_corr_sele = df_corr_sele[rep_list]
+
+        corr_avg_pref = (df_corr_pref.corr(method='pearson').sum().sum() - reps)/(reps**2 - reps)
+        pref_avg_p[target_protein] = corr_avg_pref
+        corr_avg_pref = (df_corr_pref.corr(method='spearman').sum().sum() - reps)/(reps**2 - reps)
+        pref_avg_s[target_protein] = corr_avg_pref
+        
+        corr_avg_pop = (df_corr_sele.corr(method='pearson').sum().sum() - reps)/(reps**2 - reps)
+        pop_avg_p[target_protein] = corr_avg_pop
+        corr_avg_pop = (df_corr_sele.corr(method='spearman').sum().sum() - reps)/(reps**2 - reps)
+        pop_avg_s[target_protein] = corr_avg_pop
+        
+        # Check correlations between popDMS and alternatives
+        df_merge = pd.merge(df_pref, df_sele, how='left', left_on=['site', 'amino_acid'], right_on=['site', 'amino_acid']).dropna()
+        rp, pp = st.pearsonr(df_merge['joint'], df_merge['average'])
+        rs, ps = st.spearmanr(df_merge['joint'], df_merge['average'])
+        
+        print('%s\t%.2f\t%.2f\t%.2f\t%.2f' % (target_protein + ''.join((2-len(target_protein)//8)*['\t']),
+                                              corr_avg_pop, corr_avg_pref, rp, rs))
+        
+        tot_muts += len(df_merge)
+        neg_muts += len(df_merge[df_merge['joint']<-1])
+
+        if corr_avg_pop-corr_avg_pref>thresh:
+            n_better += 1
+        elif corr_avg_pref-corr_avg_pop>thresh:
+            n_worse += 1
+        else:
+            n_tie += 1
+                                              
+        rps.append(rp)
+        rss.append(rs)
+                                              
+    print('average\t\t\t%.2f\t%.2f\t%.2f\t%.2f\n' % (np.mean(list(pop_avg_s.values())), np.mean(list(pref_avg_s.values())), np.mean(rps), np.mean(rss)))
+
+    print('%d/%d = %.2e%% substantially deleterious mutations (s<-1)\n' % (neg_muts, tot_muts, 100*neg_muts/tot_muts))
+
+    print('popDMS better than regression in %d data sets' % n_better)
+    print('Regression better than popDMS in %d data sets' % n_worse)
+    print('popDMS and regression tied in %d data sets\n' % n_tie)
+     
+    # variables
+    w = 3.35
+    h = w
+
+    fig = plt.figure(figsize = (w, h))
+    
+    box_t = 0.95
+    box_b = 0.13
+    box_l = 0.10
+    box_r = 0.95
+    
+    box_dx = 0.10
+    box_dy = 0.12
+    box_x  = (box_r - box_l - box_dx)/2
+    box_y  = box_x * (w/h)
+    
+    
+    box_rep1 = dict(left=box_l,              right=box_l+box_x,          top=box_t,              bottom=box_t-box_y)
+    box_rep2 = dict(left=box_l+box_x+box_dx, right=box_l+2*box_x+box_dx, top=box_t,              bottom=box_t-box_y)
+    box_dr2  = dict(left=box_l+0.02,         right=box_r,                top=box_t-box_y-box_dy, bottom=box_b)
+    
+    gs_rep1 = gridspec.GridSpec(1, 1, **box_rep1)
+    gs_rep2 = gridspec.GridSpec(1, 1, **box_rep2)
+    gs_dr2  = gridspec.GridSpec(1, 1, **box_dr2)
+    
+    # PLOTS
+    
+    # sublabels
+    ldx = -0.05
+    ldy = -0.01
+    fig.text(box_rep1['left']+ldx, box_rep1['top']+ldy, s='a'.upper(), **DEF_SUBLABEL, transform=fig.transFigure)
+    fig.text(box_rep2['left']+ldx, box_rep2['top']+ldy, s='b'.upper(), **DEF_SUBLABEL, transform=fig.transFigure)
+    fig.text(box_dr2['left']+ldx-0.02, box_dr2['top'] +ldy, s='c'.upper(), **DEF_SUBLABEL, transform=fig.transFigure)
+
+    ## a, b -- example performance
+
+    # data_set = 'DBR1'
+    # data_set = 'TpoR_S505N'
+    # data_set = 'HIV Env BF520'
+    data_set = 'Matrix_M1'
+    n_reps   = 2
+
+    ax = plt.subplot(gs_rep1[0, 0])
+
+    df_temp  = pd.read_csv(POP_DIR + data_set + '_selection_coefficients.csv.gz')
+    pop_list = []
+    for rep in range(1, n_reps+1):
+        pop_list.append(df_temp['rep_' + str(rep)].tolist())
+        
+    df_temp = pd.read_csv(PREF_DIR + data_set + '.csv.gz')
+    # df_temp = df_temp[~(df_temp == 0).any(axis=1)]
+    pref_list = []
+    for rep in range(1, n_reps+1):
+        pref_list.append(df_temp['rep_' + str(rep)].tolist())
+
+    scatterprops = dict(alpha=0.2, edgecolor='none', s=SMALLSIZEDOT)
+    
+    ticks = []
+    # lim   = [-0.01, 0.035]
+    # lim   = [-0.06, 0.06]
+    lim   = [-0.35, 1.15]
+    td    = (lim[1] - lim[0])*0.05
+
+    for i in range(len(pop_list)):
+        print(np.min(pop_list[i]), np.max(pop_list[i]))
+    
+    n_digits = 2
+    for i in range(n_reps):
+        for j in range(i+1, n_reps):
+            corr = round(st.pearsonr(pop_list[i], pop_list[j])[0], n_digits)
+
+            ax.scatter(pop_list[i], pop_list[j], **scatterprops)
+            ax.text(lim[0]+td, lim[1]-td, r'$R$'+' = %.2f' % corr, fontsize = SIZELABEL)
+
+            ax.set_ylabel('popDMS replicate 1', fontsize = SIZELABEL)
+            ax.set_xlabel('popDMS replicate 2', fontsize = SIZELABEL)
+
+            ax.set_xticks(ticks)
+            ax.set_yticks(ticks)
+            ax.set_xlim(lim)
+            ax.set_ylim(lim)
+
+            ax.spines['right'].set_visible(False)
+            ax.spines[ 'top' ].set_visible(False)
+            ax.spines['bottom'].set_linewidth(AXWIDTH)
+            ax.spines['left'].set_linewidth(AXWIDTH)
+            
+    # Scatter plot of sample experiment of Enrichment ratio
+
+    ax = plt.subplot(gs_rep2[0, 0])
+    
+    ticks = []
+    # lim   = [-15.5, 3]
+    # lim   = [-3.5, 2]
+    lim   = [-0.05, 1.05]
+    td    = (lim[1] - lim[0])*0.05
+
+    for i in range(len(pref_list)):
+        print(np.min(pref_list[i]), np.max(pref_list[i]))
+
+    for i in range(n_reps):
+        for j in range(i+1, n_reps):
+            corr = round(st.pearsonr(pref_list[i], pref_list[j])[0], n_digits)
+
+            ax.scatter(pref_list[i], pref_list[j], c=C_PREF, **scatterprops)
+            ax.text(lim[0]+td, lim[1]-td, r'$R$'+' = %.2f' % corr, fontsize = SIZELABEL)
+
+            ax.set_ylabel('Preference replicate 1', fontsize = SIZELABEL)
+            ax.set_xlabel('Preference replicate 2', fontsize = SIZELABEL)
+
+            ax.set_xticks(ticks)
+            ax.set_yticks(ticks)
+            ax.set_xlim(lim)
+            ax.set_ylim(lim)
+
+            ax.spines['right'].set_visible(False)
+            ax.spines['top'].set_visible(False)
+            ax.spines['bottom'].set_linewidth(AXWIDTH)
+            ax.spines['left'].set_linewidth(AXWIDTH)
+
+    ## c -- differences in performance
+    
+    ax_dr2 = plt.subplot(gs_dr2[0, 0])
+    
+    keys  = pop_avg_p.keys()
+    dr2_p = np.array([pop_avg_p[k]**2 - pref_avg_p[k]**2 for k in keys])
+    dr2_s = np.array([pop_avg_s[k]**2 - pref_avg_s[k]**2 for k in keys])
+    
+    print('R^2 increase of >0.5 in %d out of %d data sets' % (np.sum(dr2_s>0.5), len(dr2_s)))
+    print('Mean (median) R^2 gain: %.2f (%.2f)' % (np.mean(dr2_s), np.median(dr2_s)))
+    
+    xmin, xmax = -0.80, 0.80
+    ymin, ymax =  0, 5
+
+    n_bins = 35
+    dmax   = xmax - xmin
+    bin_d  = dmax/n_bins
+    bins   = np.arange(xmin, xmax+1*bin_d, bin_d)
+    hist_y = [[np.sum((bins[i]<=dr2) & (dr2<bins[i+1])) for i in range(len(bins)-1)] for dr2 in [dr2_p, dr2_s]]
+    hist_y[0].append(np.sum(dr2_p>=bins[-1]))
+    hist_y[1].append(np.sum(dr2_s>=bins[-1]))
+
+    hist_props    = dict(lw=AXWIDTH/2, width=0.9*dmax/n_bins, align='center', edgecolor=[BKCOLOR], alpha=0.6)
+    lineprops     = dict(lw=SIZELINE*1.2, ls='-', alpha=1.0, drawstyle='steps-pre', clip_on=True)
+    fillprops     = dict(lw=0, alpha=0.2, interpolate=False, step='pre', clip_on=True)
+    dashlineprops = dict(lw=SIZELINE*1.2, ls=':', alpha=1.0, color=BKCOLOR)
+    tprops        = dict(va='top', family=FONTFAMILY, size=SIZELABEL, clip_on=False)
+
+    ax_dr2.text( 0.04, ymax, 'popDMS more\nconsistent',      color=BKCOLOR, rotation=0, ha='left', **tprops)
+    ax_dr2.text(-0.04, ymax, 'Alternative\nmore consistent', color=BKCOLOR, rotation=0, ha='right', **tprops)
+    ax_dr2.axvline(x=0, **dashlineprops)
+
+    tprops['va'] = 'center'
+
+    pprops = { 'colors':   [COLOR_2],
+               'xlim':     [xmin, xmax],
+               'ylim':     [ymin, ymax],
+               'xticks':   [-0.80, -0.60, -0.40, -0.20, 0, 0.20, 0.40, 0.60, 0.80],
+               'yticks':   [0, 1, 2, 3, 4],
+               'axoffset': 0,
+               'xlabel':   'Improvement in ' + r'$R^2$' + ' between replicates',
+               'ylabel':   'Number of data sets',
+               'theme':    'open',
+               'hide':     ['top', 'right'] }
+
+    mp.line(             ax=ax_dr2, x=[bins+(3*bin_d/2)], y=[hist_y[0]], plotprops=lineprops, **pprops)
+    mp.plot(type='fill', ax=ax_dr2, x=[bins+(3*bin_d/2)], y=[hist_y[0]], plotprops=fillprops, **pprops)
+
+    # SAVE FIGURE
+    
+    fig.savefig(FIG_DIR + fig_title, **FIGPROPS)
 
 
 def fig_epistasis():

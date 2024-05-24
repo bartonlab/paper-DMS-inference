@@ -66,24 +66,24 @@ sizelabel    = 6
 sizetick     = 6
 smallsizedot = 6.
 
-## grant
-#fontfamily   = 'Arial'
-#sizesublabel = 12
-#sizetext     = 8
-#sizelabel    = 8
-#sizetick     = 8
-#smallsizedot = 6. * 2
-#sizeline     = 1
+# # grant
+# fontfamily   = 'Arial'
+# sizesublabel = 12
+# sizetext     = 8
+# sizelabel    = 8
+# sizetick     = 8
+# smallsizedot = 6. * 2
+# sizeline     = 1
 
-##slides/poster
-#fontfamily   = 'Avenir'
-#sizesublabel = 18 #24 #18
-#sizetext     = 18 #24 #18
-#sizelabel    = 18 #24 #18
-#sizetick     = 18 #24 #18
-#smallsizedot = 6. * 4
-#axwidth      = 1.5
-#sizeline     = 3.0
+# #slides/poster
+# fontfamily   = 'Avenir'
+# sizesublabel = 18 #24 #18
+# sizetext     = 18 #24 #18
+# sizelabel    = 18 #24 #18
+# sizetick     = 18 #24 #18
+# smallsizedot = 6. * 4
+# axwidth      = 1.5
+# sizeline     = 3.0
 
 def_labelprops = {
     'family' : fontfamily,
