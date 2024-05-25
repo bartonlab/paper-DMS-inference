@@ -20,18 +20,19 @@ flag_out = parse(Bool, ARGS[5])
 flag_load_cov_Dx = parse(Bool, ARGS[6])
 dir_load = ARGS[7]
 ref_seq = ARGS[8] 
-N_pop_tot = parse(Float64, ARGS[9])
+end_exp = parse(Int, ARGS[9]) # =4
+num_values = parse(Int, ARGS[10]) # = 20
 # ==============================================#
 L, q = length(split(ref_seq, "")), 21
 LLhalf = Int(L * (L - 1)/2); 
 qL = q*L; qq = q^2
 x_rank = qL + qq * LLhalf
-inv_N_pop_tot = 1.0 / N_pop_tot;
-γ_set = [1e2, 1e3, 1e4] * inv_N_pop_tot
-#  Process Start : ============================================== #
+
 @time csv_raw = DataFrame(CSV.File(dir_in * file_csv_in));
 (ids_replicate, ids_rounds) = get_replication_round_ids(names(csv_raw));
+γ_set = get_reg_set(ids_replicate, ids_rounds, csv_raw)
 
+#  Process Start : ============================================== #
 Δx_set, x_set, icov_set, iΔxΔxT_set = [], [], [], [] 
 idx_detecable_i_a_set, idx_detecable_ij_ab_set = [], []
 Δx = zeros(x_rank)

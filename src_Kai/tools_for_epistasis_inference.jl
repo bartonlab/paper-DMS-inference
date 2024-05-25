@@ -124,7 +124,7 @@ function get_index_detectable(q, L, freq_th, Δx)
     return (idx_detectable, idx_detecable_i_a_set, idx_detecable_ij_ab_set)
 end
 
-function get_integrated_cov(q, L, Δx_set, x_set, csv_raw, freq_th=1e-2)
+function get_integrated_cov(q, L, Δx_set, x_set, csv_raw, freq_th=1e-10)
     qL = q * L
     (ids_replicate, ids_rounds) = get_replication_round_ids(names(csv_raw))
     n_seq_max = length(csv_raw.sequence)
@@ -175,7 +175,7 @@ function get_integrated_cov(q, L, Δx_set, x_set, csv_raw, freq_th=1e-2)
             coeff_set = num_seq_set .* scale_set
             # It isn't necessary to sum the outer products each time; this operation can be absolved to the summed coefficient.
             
-            coeff_set_sum = sum(coeff_set)
+            coeff_set_sum = sum(coeff_set) - 0.5 * (coeff_set[1]+coeff_set[end])
             g_ia = zeros(L_1st_eff) 
             for id_ia in 1:len_idx_detecable_i_a_set
                 (i,a) = idx_detecable_i_a_set[id_ia]
@@ -243,7 +243,7 @@ end;
 # Note, this expression is valid for both off-diagonal and diagonal elements. 
 # When we consider a half of covariance at t=0 and t=t_K, then integrated covariance with linear interpolation iC^l is:
 # iC^l = iC^c + 1/6∑_{k=0}^{K+1} Δx(k,k+1)Δx(k,k+1)^\top)
-function get_correction_with_linear_interpolation(Δx, x_set, csv_raw, freq_th=1e-2)
+function get_correction_with_linear_interpolation(Δx, x_set, csv_raw, freq_th=1e-10)
     (ids_replicate, ids_rounds) = get_replication_round_ids(names(csv_raw))
     
     idx_reduced = abs.(Δx) .> freq_th
@@ -305,7 +305,6 @@ function load_icov_iΔxΔxT(dir_load, ids_replicate)
     return (icov_set, iΔxΔxT_set, Δx_set) 
 end
 
-
 function get_best_regularization(corrs, gamma_values; corr_cutoff_pct=0.05)
     corr_thresh = (maximum(corrs)^2 - corrs[1]^2) * corr_cutoff_pct
     gamma_opt = 0.1
@@ -325,4 +324,52 @@ function get_best_regularization(corrs, gamma_values; corr_cutoff_pct=0.05)
         end
     end
     return gamma_opt
+end;
+
+function get_gamma_list_from_file_list(fkey_file, fkey_dir, flag_epistasis=false)
+    files = Glob.glob(fkey_file * "*.csv", fkey_dir)
+
+    # Extract the <gamma> values from the filenames
+    gamma_values = []
+
+    for file in files
+        match_this = match(r"parameters_gamma1-(.*)\.csv", file)
+        if(flag_epistasis)
+            match_this = match(r"parameters_gamma1-(.*)_gamma2-(.*)\.csv", file)
+        end
+        if match_this !== nothing
+            gamma_value = match_this.captures[1]
+            push!(gamma_values, gamma_value)
+        end
+    end
+    
+    idx = sortperm( parse.(Float64, gamma_values))
+    gamma_values = copy(gamma_values[idx])
+    return gamma_values
+end;
+
+function get_Pearson_Spearman_gamma(gamma_values, fkey_file, fkey_dir)
+    Pearson_set = []; Spearman_set = [];
+    vec_set_K1, vec_set_K2 = [], []
+    for x in gamma_values
+        file_s_e = fkey_dir * fkey_file * x * ".csv"
+        csv_selc = DataFrame(CSV.File(file_s_e));
+        s1_temp = csv_selc.inference_rep1
+        s2_temp = csv_selc.inference_rep2    
+        cor_P = cor(s1_temp, s2_temp)
+        cor_S = corspearman(float.(s1_temp), float.(s2_temp))
+        #@printf("%s %.2e, %.2e\n", x, cor_P, cor_S)
+        push!(Pearson_set, cor_P)
+        push!(Spearman_set, cor_S)
+    end;
+    return (Pearson_set, Spearman_set)
+end;
+
+function get_reg_set(ids_replicate, ids_rounds, csv_raw, end_exp = 4, num_values = 20)
+    rep_round_headder = reconstruct_list(ids_replicate, ids_rounds);
+    reads_set = [sum(csv_raw[:, Symbol(x)]) for x in rep_round_headder]
+    reads_max = maximum(reads_set);
+    start_exp = log10(1/reads_max)
+    gamma_values = 10 .^ range(start_exp, stop=end_exp, length=num_values)
+    return gamma_values
 end;

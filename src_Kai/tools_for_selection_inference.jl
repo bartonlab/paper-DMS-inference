@@ -302,7 +302,7 @@ function output_frequency_change(Δx_set, x_set, idx_detectable, idx_detecable_i
     CSV.write(@sprintf("%sfrequency_change.csv", dir_out), df)
 end
 
-function get_gamma_list_from_file_list(fkey_file, fkey_dir)
+function get_gamma_list_from_file_list(fkey_file, fkey_dir, flag_epistasis=false)
     files = Glob.glob(fkey_file * "*.csv", fkey_dir)
 
     # Extract the <gamma> values from the filenames
@@ -310,6 +310,9 @@ function get_gamma_list_from_file_list(fkey_file, fkey_dir)
 
     for file in files
         match_this = match(r"parameters_gamma1-(.*)\.csv", file)
+        if(flag_epistasis)
+            match_this = match(r"parameters_gamma1-(.*)_gamma2-(.*)\.csv", file)
+        end
         if match_this !== nothing
             gamma_value = match_this.captures[1]
             push!(gamma_values, gamma_value)

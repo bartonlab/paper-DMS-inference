@@ -243,7 +243,7 @@ function get_enrichment_from_freq_table(nR, sampling_time, q_aa, L_eff, freq_ful
 end;
 
 
-function get_SL(n_R, q, L_max, n_T, freq_mat_reformat, th_SL = 1e-3)
+function get_SL(n_R, q, L_max, n_T, freq_mat_reformat,γ_SL = 1e-3)
     selection_set = zeros(n_R, q*L_max)
     selection_grouped = zeros(q*L_max)
     for i in 1:L_max
@@ -258,9 +258,9 @@ function get_SL(n_R, q, L_max, n_T, freq_mat_reformat, th_SL = 1e-3)
                     x_var_temp += x_mean * ( 1.0 - x_mean )
                 end
                 x_var_av += x_var_temp
-                selection_set[i_r, km(i, i_a, q) ] = Δx_temp / (x_var_temp + th_SL)
+                selection_set[i_r, km(i, i_a, q) ] = Δx_temp / (x_var_temp + γ_SL)
             end
-            selection_grouped[ km(i, i_a, q) ] = Δ_x_av / (x_var_av + th_SL)
+            selection_grouped[ km(i, i_a, q) ] = Δ_x_av / (x_var_av + γ_SL)
         end
     end;
     return (selection_set, selection_grouped)
