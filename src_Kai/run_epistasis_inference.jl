@@ -67,7 +67,6 @@ else
 end
 
 # Run inference; get selection and epistasis . 
-s_set = []
 Leff_1st, Leff_2nd = length(idx_detecable_i_a_set), length(idx_detecable_ij_ab_set)
 idx_reduced = abs.(Δx) .> freq_th
 icov = zeros(Leff_1st + Leff_2nd, Leff_1st + Leff_2nd)
@@ -81,6 +80,7 @@ for n_rep in 1:length(ids_replicate)
 end
 
 for (γ1, γ2) in zip(γ_set, γ_set)
+    s_set = []
     global icov, iΔxΔxT, Δx_reduced
     γI = diagm(0=>[γ1*ones(Leff_1st); γ2*ones(Leff_2nd)])
     for n_rep in 1:length(ids_replicate)

@@ -198,7 +198,7 @@ function get_integrated_cov(q, L, Δx_set, x_set, csv_raw, freq_th=1e-10)
             for s in 1:L_1st_eff
                 # Sum only non-zero elements
                 if(g_ia[s] != 0) # Note g_ia is either 0 or 1.
-                    icov_set[n_rep][1:L_1st_eff, s] += g_ia
+                    icov_set[n_rep][s, 1:L_1st_eff] += g_ia # Julia is column-major!
                 end
                 
             end
@@ -206,18 +206,19 @@ function get_integrated_cov(q, L, Δx_set, x_set, csv_raw, freq_th=1e-10)
             for s in 1:L_2nd_eff
                 # Sum only non-zero elements
                 if(g_klcd[s] != 0)
-                    icov_set[n_rep][1:L_1st_eff, s+L_1st_eff] += g_ia
+                    icov_set[n_rep][s+L_1st_eff, 1:L_1st_eff] += g_ia # Julia is column-major!
                 end
             end
             # 4th order cov.:
             for s in 1:L_2nd_eff
                 # Sum only non-zero elements
                 if(g_klcd[s] != 0)
-                    icov_set[n_rep][(1+L_1st_eff):end, s] += g_klcd
+                    icov_set[n_rep][s+L_1st_eff, (1+L_1st_eff):end] += g_klcd
                 end
             end 
         end        
-        icov_set[n_rep][(1+L_1st_eff):end, 1:L_1st_eff] = copy(icov_set[n_rep][1:L_1st_eff, (1+L_1st_eff):end])'
+        icov_set[n_rep][1:L_1st_eff, (1+L_1st_eff):end] = copy(icov_set[n_rep][(1+L_1st_eff):end, 1:L_1st_eff]')
+        @printf("Rep.%d, Symmetry check: %s\n", n_rep, issymmetric(icov_set[n_rep])) 
         
         # Subtracting the moments
         for i_rnd in 1:n_round
