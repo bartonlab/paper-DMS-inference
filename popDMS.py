@@ -1194,7 +1194,7 @@ def infer_correlated(name, n_replicates, corr_cutoff_pct, freq_dir='.', output_d
         for g in gamma_values:
             s = np.zeros_like(dx)
             for r_idx in range(n_replicates):
-                s[r_idx] = np.inner(np.linalg.inv(icov[r_idx] + g*np.eye(len(icov[r_idx]))), dx[r_idx])
+                s[r_idx] = np.linalg.solve(icov[r_idx] + g*np.eye(len(icov[r_idx])), dx[r_idx])
             corrs.append(np.mean([st.pearsonr(s[i], s[j]).statistic for i in range(n_replicates) for j in range(i+1, n_replicates)]))
 
         ## (Optional) plot the results
@@ -1208,9 +1208,9 @@ def infer_correlated(name, n_replicates, corr_cutoff_pct, freq_dir='.', output_d
     ## Compute selection coefficients at optimal gamma
     s = np.zeros_like(dx)
     for r_idx in range(n_replicates):
-        s[r_idx] = np.inner(np.linalg.inv(icov[r_idx] + gamma_opt*np.eye(len(icov[r_idx]))), dx[r_idx])
+        s[r_idx] = np.linalg.solve(icov[r_idx] + gamma_opt*np.eye(len(icov[r_idx])), dx[r_idx])
         
-    s_joint = np.inner(np.linalg.inv(np.sum(icov, axis=0) + gamma_opt*np.eye(len(icov[0]))), np.sum(dx, axis=0))
+    s_joint = np.linalg.solve(np.sum(icov, axis=0) + gamma_opt*np.eye(len(icov[0])), np.sum(dx, axis=0))
 
     # Convert selection coefficients to a data frame and save to file
     df_ref = aa_freqs['single'][0][aa_freqs['single'][0]['WT_indicator']==True]
