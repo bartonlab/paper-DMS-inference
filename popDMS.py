@@ -990,6 +990,55 @@ def compute_dx_covariance_independent(aa_freqs):
     return dx, icov, aa2i
 
 
+def compute_dx_covariance_barcode(b2i, barcode_freqs, barcode_times):
+    '''
+    Compute net change in barcode frequency and integrated covariance matrix
+    from barcode frequency data.
+    '''
+    
+    # Gather information
+    reps = len(barcode_freqs)
+    q = len(b2i)
+    
+    # Shape dx vector (reps x [q]) and covariance matrix (reps x [q, q]), compute for each replicate
+    dx   = [np.zeros(q) for i in range(reps)]
+    icov = [np.zeros((q, q)) for i in range(reps)]
+
+    for r_idx in range(reps):
+        # Get times
+        times = barcode_times[r_idx]
+        dtsum = np.array([times[1]-times[0]] + [times[i+1]-times[i-1] for i in range(1, len(times)-1)] + [times[-1]-times[-2]])
+
+        # Compute dense frequency vector to speed calculations
+        x = barcode_freqs[r_idx]
+            
+        # Compute dx (final - initial frequency)
+        dx[r_idx] = x[-1] - x[0]
+
+        # Compute integrated covariance
+        ## Off-diagonal terms, same time (note: diagonals will temporarily be incorrect)
+        #icov[r_idx] = np.einsum('i,ijk->jk', dtsum, -np.array([np.outer(x[i], x[i])/3 for i in range(len(times))]), optimize=True)
+        icov[r_idx] = np.tensordot(dtsum, -np.array([np.outer(x[i], x[i])/3 for i in range(len(times))]), axes=1)
+
+        ## Off-diagonal terms, cross times
+        for i in range(1, len(times)):
+            dt = times[i] - times[i-1]
+            icov[r_idx] -= dt * (np.outer(x[i-1], x[i]) + np.outer(x[i], x[i-1]))/6
+
+        ## Off-diagonal terms, sparse pair correlations
+        ## These are all zero for barcode data
+
+        ## Diagonal terms, same time (overwrite previous diagonals)
+        icov[r_idx][np.diag_indices_from(icov[r_idx])] = dtsum.dot((x/2) - (x**2/3))
+
+        ## Diagonal terms, cross times
+        for i in range(1, len(times)):
+            dt = times[i] - times[i-1]
+            icov[r_idx][np.diag_indices_from(icov[r_idx])] -= dt * (x[i] * x[i-1])/3
+
+    return dx, icov
+
+
 def get_aa_freqs(freq_dir, name, freq_types, replicates):
     '''
     Load amino acid frequencies from file.
@@ -1003,6 +1052,42 @@ def get_aa_freqs(freq_dir, name, freq_types, replicates):
         aa_freqs[type] = freq_list
 
     return aa_freqs
+
+
+def get_barcode_data(replicate_files, comment_char=None):
+    '''
+    Compute barcode frequencies from replicate file.
+    '''
+
+    # Read in dataframes and get list of barcodes
+    df_list = [pd.read_csv(f, comment=comment_char).astype({'barcode': str}) for f in replicate_files]
+    barcodes = list(np.sort(np.unique(np.concatenate(tuple([np.unique(df['barcode']) for df in df_list])))))
+    b2i = dict(zip(barcodes, range(len(barcodes))))
+    print(len(b2i))
+
+    # Iterate to get max reads, barcode frequencies, and times
+    max_reads = 1
+    barcode_freqs = []
+    times = []
+
+    for df in df_list:
+        temp_times = np.sort(np.unique(df['generation']))
+        temp_freqs = []
+        times.append(temp_times)
+        for t in temp_times:
+            df_t = df[df['generation']==t]
+            t_reads = np.sum(df_t['counts'])
+            if t_reads>max_reads:
+                max_reads = t_reads
+            
+            f = np.zeros(len(barcodes))
+            for df_iter, row in df_t.iterrows():
+                f[b2i[str(row['barcode'])]] = row['counts']/t_reads
+            temp_freqs.append(f)
+
+        barcode_freqs.append(np.array(temp_freqs))
+
+    return max_reads, b2i, barcode_freqs, times
 
 
 def get_max_reads(freq_dir, name, replicates):
@@ -1028,7 +1113,7 @@ def get_best_regularization(corrs, gamma_values, corr_cutoff_pct=0.05):
     '''
 
     corr_thresh = (np.max(corrs)**2 - corrs[0]**2)*corr_cutoff_pct
-    gamma_opt = 0.1
+    gamma_opt = 1
     if np.fabs(np.max(corrs)**2-corrs[0]**2)<0.01:
         gamma_opt = gamma_values[0]
     else:
@@ -1097,23 +1182,28 @@ def infer_correlated(name, n_replicates, corr_cutoff_pct, freq_dir='.', output_d
     dx, icov, p2i = compute_dx_covariance(aa_freqs)
     
     # Compute optimal regularization value
-    ## Get correlations for each value of gamma
-    max_reads = get_max_reads(freq_dir, name, replicates)
-    gamma_values = np.logspace(np.log10(1/max_reads), 4, num=20)
-    corrs = []
-    for g in gamma_values:
-        s = np.zeros_like(dx)
-        for r_idx in range(n_replicates):
-            s[r_idx] = np.inner(np.linalg.inv(icov[r_idx] + g*np.eye(len(icov[r_idx]))), dx[r_idx])
-        corrs.append(np.mean([st.pearsonr(s[i], s[j]).statistic for i in range(n_replicates) for j in range(i+1, n_replicates)]))
+    if n_replicates==1:
+        print('Only one replicate, setting gamma=1')
+        gamma_opt = 1
 
-    ## (Optional) plot the results
-    if plot_gamma:
-        plot_regularization(corrs, gamma_values)
+    else:
+        ## Get correlations for each value of gamma
+        max_reads = get_max_reads(freq_dir, name, replicates)
+        gamma_values = np.logspace(np.log10(1/max_reads), 4, num=20)
+        corrs = []
+        for g in gamma_values:
+            s = np.zeros_like(dx)
+            for r_idx in range(n_replicates):
+                s[r_idx] = np.inner(np.linalg.inv(icov[r_idx] + g*np.eye(len(icov[r_idx]))), dx[r_idx])
+            corrs.append(np.mean([st.pearsonr(s[i], s[j]).statistic for i in range(n_replicates) for j in range(i+1, n_replicates)]))
 
-    ## Select best regularization value
-    gamma_opt = get_best_regularization(corrs, gamma_values, corr_cutoff_pct)
-    print('Found best regularization strength gamma = %.1e, R = %.2f' % (gamma_opt, corrs[list(gamma_values).index(gamma_opt)]))
+        ## (Optional) plot the results
+        if plot_gamma:
+            plot_regularization(corrs, gamma_values)
+
+        ## Select best regularization value
+        gamma_opt = get_best_regularization(corrs, gamma_values, corr_cutoff_pct)
+        print('Found best regularization strength gamma = %.1e, R = %.2f' % (gamma_opt, corrs[list(gamma_values).index(gamma_opt)]))
     
     ## Compute selection coefficients at optimal gamma
     s = np.zeros_like(dx)
@@ -1170,28 +1260,33 @@ def infer_independent(name, n_replicates, corr_cutoff_pct, freq_dir='.', output_
     dx, icov, aa2i = compute_dx_covariance_independent(aa_freqs)
     
     # Compute optimal regularization value
-    ## Get correlations for each value of gamma
-    max_reads = get_max_reads(freq_dir, name, replicates)
-    gamma_values = np.logspace(np.log10(1/max_reads), 4, num=20)
+    if n_replicates==1:
+        print('Only one replicate, setting gamma=1')
+        gamma_opt = 1
 
-    ## Get correlations for each value of gamma
-    L = len(dx[0])
-    corrs = []
-    for g in gamma_values:
-        s = np.zeros_like(dx)
-        for r_idx in range(n_replicates):
-            for seq_i in range(L):
-                s[r_idx][seq_i] = np.inner(np.linalg.inv(icov[r_idx][seq_i] + g*np.eye(len(icov[r_idx][seq_i]))), dx[r_idx][seq_i])
-            
-        corrs.append(np.mean([st.pearsonr(s[i].flatten(), s[j].flatten()).statistic for i in range(n_replicates) for j in range(i+1, n_replicates)]))
+    else:
+        ## Get correlations for each value of gamma
+        max_reads = get_max_reads(freq_dir, name, replicates)
+        gamma_values = np.logspace(np.log10(1/max_reads), 4, num=20)
 
-    ## (Optional) plot the results
-    if plot_gamma:
-        plot_regularization(corrs, gamma_values)
+        ## Get correlations for each value of gamma
+        L = len(dx[0])
+        corrs = []
+        for g in gamma_values:
+            s = np.zeros_like(dx)
+            for r_idx in range(n_replicates):
+                for seq_i in range(L):
+                    s[r_idx][seq_i] = np.inner(np.linalg.inv(icov[r_idx][seq_i] + g*np.eye(len(icov[r_idx][seq_i]))), dx[r_idx][seq_i])
+                
+            corrs.append(np.mean([st.pearsonr(s[i].flatten(), s[j].flatten()).statistic for i in range(n_replicates) for j in range(i+1, n_replicates)]))
 
-    ## Select best regularization value
-    gamma_opt = get_best_regularization(corrs, gamma_values, corr_cutoff_pct)
-    print('Found best regularization strength gamma = %.1e, R = %.2f' % (gamma_opt, corrs[list(gamma_values).index(gamma_opt)]))
+        ## (Optional) plot the results
+        if plot_gamma:
+            plot_regularization(corrs, gamma_values)
+
+        ## Select best regularization value
+        gamma_opt = get_best_regularization(corrs, gamma_values, corr_cutoff_pct)
+        print('Found best regularization strength gamma = %.1e, R = %.2f' % (gamma_opt, corrs[list(gamma_values).index(gamma_opt)]))
     
     ## Compute selection coefficients at optimal gamma
     s = np.zeros_like(dx)
@@ -1216,6 +1311,77 @@ def infer_independent(name, n_replicates, corr_cutoff_pct, freq_dir='.', output_
     for seq_i in range(L):
         for aa, loc in aa2i.items():
             sel_data.append([sites[seq_i], aa, aa==ref_aa[sites[seq_i]]] + [s[r][seq_i][loc] for r in range(n_replicates)] + [s_joint[seq_i][loc]])
+
+    path = get_selection_file(output_dir, name, file_ext='.csv.gz')
+    df_temp = pd.DataFrame(data=sel_data, columns=sel_cols)
+    df_temp.to_csv(path, index=False, compression='gzip')
+
+
+def infer_barcode(name, replicate_files, corr_cutoff_pct, output_dir='.', plot_gamma=True):
+    '''
+    Infer selection coefficients from barcoded count data. Here we equate barcodes with
+    genotypes and infer selection coefficients from the change in barcode frequencies.
+    In the output selection coefficient file, replicates will be labeled according to
+    their order in the input list of replicate files.
+    
+    Required arguments:
+        - name: String that will be associated with saved files, serving as an
+            identifier for the data set
+        - replicate_files: List of paths to replicate count files
+        - corr_cutoff_pct: Cutoff on the maximum allowed drop in correlation
+            between replicates, used to determine the optimal regularization
+            strength
+
+    Optional arguments:
+        - output_dir (default: '.'): Directory where selection coefficients will be 
+            saved
+        - plot_gamma (default: True): Plot correlation between replicates as a 
+            function of the regularization strength gamma
+    '''
+    ################################################################################
+
+    # Get barcode frequencies and auxiliary information
+    n_replicates = len(replicate_files)
+    max_reads, b2i, barcode_freqs, times = get_barcode_data(replicate_files)
+
+    # Get frequency change and covariance, used to compute selection coefficients, and map to indices
+    dx, icov = compute_dx_covariance_barcode(b2i, barcode_freqs, times)
+    
+    # Compute optimal regularization value
+    if n_replicates==1:
+        print('Only one replicate, setting gamma=1')
+        gamma_opt = 1
+
+    else:
+        ## Get correlations for each value of gamma
+        gamma_values = np.logspace(np.log10(1/max_reads), 4, num=20)
+        corrs = []
+        for g in gamma_values:
+            s = np.zeros_like(dx)
+            for r_idx in range(n_replicates):
+                s[r_idx] = np.inner(np.linalg.inv(icov[r_idx] + g*np.eye(len(icov[r_idx]))), dx[r_idx])
+            corrs.append(np.mean([st.pearsonr(s[i], s[j]).statistic for i in range(n_replicates) for j in range(i+1, n_replicates)]))
+
+        ## (Optional) plot the results
+        if plot_gamma:
+            plot_regularization(corrs, gamma_values)
+
+        ## Select best regularization value
+        gamma_opt = get_best_regularization(corrs, gamma_values, corr_cutoff_pct)
+        print('Found best regularization strength gamma = %.1e, R = %.2f' % (gamma_opt, corrs[list(gamma_values).index(gamma_opt)]))
+    
+    ## Compute selection coefficients at optimal gamma
+    s = np.zeros_like(dx)
+    for r_idx in range(n_replicates):
+        s[r_idx] = np.inner(np.linalg.inv(icov[r_idx] + gamma_opt*np.eye(len(icov[r_idx]))), dx[r_idx])
+        
+    s_joint = np.inner(np.linalg.inv(np.sum(icov, axis=0) + gamma_opt*np.eye(len(icov[0]))), np.sum(dx, axis=0))
+
+    # Convert selection coefficients to a data frame and save to file
+    sel_cols = ['barcode'] + ['rep_%d' % r for r in range(1, n_replicates+1)] + ['joint']
+    sel_data = []
+    for barcode, idx in b2i.items():
+        sel_data.append([barcode] + [s[r][idx] for r in range(n_replicates)] + [s_joint[idx]])
 
     path = get_selection_file(output_dir, name, file_ext='.csv.gz')
     df_temp = pd.DataFrame(data=sel_data, columns=sel_cols)
