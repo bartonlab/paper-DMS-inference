@@ -87,6 +87,7 @@ function return_corresponding_selections(inference_raw1, inference_raw2,
     type_col1, type_col2, pos1_i, pos2_i, AA1_i, AA2_i)
 s1, s2 = [], []
 pos_set_temp, aa_set_temp = [], []
+L_eff = maximum( [inference_raw1[:, Symbol(pos1_i)]; inference_raw2[:, Symbol(pos2_i)] ] )
 for i in 1:L_eff
     idx1 = inference_raw1[:, Symbol(pos1_i)] .== i
     idx2 = inference_raw2[:, Symbol(pos2_i)] .== i
@@ -115,6 +116,7 @@ s1, s2 = [], []
 
 idx_set_csv1, idx_set_csv2 = [], [];
 n_raw1_max, n_raw2_max = length(inference_raw1[:, 1]), length(inference_raw2[:, 1])
+L_eff = maximum( [inference_raw1[:, Symbol(pos1_i)]; inference_raw2[:, Symbol(pos2_i)] ] )
 for i in 1:L_eff
     idx1 = inference_raw1[:, Symbol(pos1_i)] .== i
     idx2 = inference_raw2[:, Symbol(pos2_i)] .== i
