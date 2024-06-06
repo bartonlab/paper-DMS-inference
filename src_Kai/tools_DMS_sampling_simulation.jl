@@ -80,15 +80,15 @@ function negative_multinomial(X0, P, N_itr=10000000)
 end
 
 get_r(λ) = 0.8*λ^0.69 ; #  ACIDE paper # https://www.nature.com/articles/s41467-023-43967-9 
-
-function negative_multinomial_ACIDE(mean_set)
-    r_set = get_r.(mean_set)
+function negative_multinomial_given_dispersion(mean_set, r_set)
+    #r_set = get_r.(mean_set)
     p_values = r_set ./ (r_set + mean_set)
-    sample_NM = zeros(Int, k)
-    for i in 1:k
+    len_p = length(p_values)
+    sample_NM = zeros(Int, len_p)
+    for i in 1:len_p
         sample_NM[i] = rand(NegativeBinomial(r_set[i], p_values[i]))
     end
-    return sample_NM, 1
+    return sample_NM
 end
 
 # Get number of stoping iteration give prob
@@ -215,12 +215,66 @@ function get_freq_tables_from_csv(nR, sampling_time, q_aa, L_eff, csv_count_raw_
     return freq_full_set
 end;
 
-function get_enrichment_from_freq_table(nR, sampling_time, q_aa, L_eff, freq_full_set_in, pseudo_count=1e-5)
-    enrichment_in = zeros(nR, length(sampling_time)-1, q_aa * L_eff)
+function get_enrichment_from_freq_table(nR, sampling_time, q_aa, L_eff, freq_full_set_in, pseudo_count=1e-5, γ=1e-3)
+    nT = length(sampling_time)
+    enrichment_in = zeros(nR, nT-1, q_aa * L_eff)
+    enrichment_in_log_regression = zeros(nR, q_aa * L_eff)
+    enrichment_log_reg_av = zeros(2, q_aa * L_eff) # enrichment_log_reg_av[2, :] should be the same as the Enrich2 method.
+    σ2_r_set = zeros(nR, q_aa * L_eff)
+
+    t_mat = [ones(nT) sampling_time];
+    tt_mat = t_mat' * t_mat
+    @show size(tt_mat)
+    A_denom = tt_mat + γ*I
+    #A_denom[diagind(A_denom)] += γ
+    inv_A_denom = inv(A_denom)
+    @show size(inv_A_denom)
+    
     for i_R in 1:nR
-        for i_T in 2:length(sampling_time)
+        temp_regress = zeros(nT, q_aa * L_eff)
+        temp_regress[1, :] = log.(freq_full_set_in[i_R, 1, :] .+ pseudo_count)
+        
+        for i_T in 2:nT
             enrichment_in[i_R, i_T-1, :] = freq_full_set_in[i_R, i_T, :] ./ (freq_full_set_in[i_R, 1, :] .+ pseudo_count)
+            temp_regress[i_T, :] = log.(freq_full_set_in[i_R, i_T, :] .+ pseudo_count)
+        end
+        
+        # -- Regression of slope: α = ∑_k t_k e_k /  ∑_k t_k^2
+        for i in 1:(q_aa * L_eff)
+            β_iR_i = inv_A_denom * (t_mat' * temp_regress[:, i])
+            enrichment_in_log_regression[i_R, i] = β_iR_i[2] # this gives slope 
+            # Deviation between the regressed model and data at each replicate
+            σ2_r_set[i_R, i] = sum( (t_mat * β_iR_i .- temp_regress[:, i]) .^ 2 ) / (nT - 1)
         end
     end;
-    return enrichment_in
+    
+    # -- Enrich2 integrate individually estimated regresson values as follows: 
+    for i in 1:(q_aa * L_eff)
+        β_al_av = mean(enrichment_in_log_regression[:, i]) # alithmetic average individually regressed value over replicates
+        enrichment_log_reg_av[1, i] = β_al_av
+
+        # Deviation of models among replicates
+        σ2_s = var(enrichment_in_log_regression[:, i]) 
+
+        # Deviation between the regressed model and data at each replicate
+        σ2_r = σ2_r_set[:, i]
+
+        # Get averaged log ratio regression using the Enrich2 scheme.
+        inv_σ = 1.0 ./ ( σ2_s .+  σ2_r)
+        β_Enrich2 = sum( enrichment_in_log_regression[:, i] .* inv_σ ) / sum(inv_σ)
+        enrichment_log_reg_av[2, i] = β_Enrich2
+    end
+    
+    return (enrichment_in, enrichment_in_log_regression, enrichment_log_reg_av)
 end;
+
+function get_preferences_from_enrichment(nR, q_aa, L_eff, enrichment)
+    preference_out = zeros(nR, q_aa * L_eff)
+    for i_R in 1:nR
+        for i in 1:L_eff
+            enrichment_i_iR = copy(enrichment[i_R, end, km.(i, 1:q_aa, q_aa)])
+            preference_out[i_R, km.(i, 1:q_aa, q_aa)] = enrichment_i_iR / sum(enrichment_i_iR)
+        end
+    end
+    return preference_out
+end 

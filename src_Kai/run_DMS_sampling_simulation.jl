@@ -6,6 +6,7 @@ using Random
 using Statistics
 using Printf
 using CSV
+using LinearAlgebra
 using DataFrames
 rng = Random.MersenneTwister(1234);
 include("./tools_DMS_sampling_simulation.jl")
@@ -45,11 +46,7 @@ f_wt = 1.0 + sum(s_GT[km.(1:L_eff, parse.(Int, split(seq_wt_joint, ".")), q)])
 T = 10; # Number of generations.
 nR = 3; # Number of replicates.
 sampling_time = [1, 6, 11];
-#i_N  = 1; # Index of N_list
-#N_list = [1_000, 5_000, 10_000, 50_000, 100_000]
-#N = N_list[i_N]
 
-N_evo_all_replicates, N_evo_NM_all_replicates = [], []
 # ============================================================================
 # Resample sequences N individuals from the total population. 
 flag_uniform_sample=true;
@@ -64,7 +61,6 @@ for s in pop_new
     s.n = s.n * (rand(poisson_dist) + 1)
 end;
 
-
 N_evo_all_replicates, N_evo_NM_all_replicates = [], []
 for i_r in 1:nR
     ### ======= Multinomial process ======= #
@@ -75,11 +71,11 @@ for i_r in 1:nR
     N_tot_evo = zeros(Int, length(pop), length(sampling_time) )
     N_tot_evo_NM = zeros(Int, length(pop), length(sampling_time) )
     
-    f_and_p = [pop[i].n for i in 1:length(pop)]  # Compute product of population size. NOT FITNESS!
-    f_and_p[f_and_p .<= 0] .= 0.0  # Set non-positive fitness to zero, as they shouldn't be observed
-    prob_r = f_and_p / sum(f_and_p)  # Normalize to get probabilities
-    X0 = get_X0(N * n_amplification, prob_r)  # Obtain initial state for the negative multinomial
-    @time n_set_temp_NM, samples_taken = negative_multinomial(X0, prob_r)  # Simulate negative multinomial            
+    num_pop_temporal = [pop[i].n for i in 1:length(pop)]
+    r_set = get_r.(num_pop_temporal)
+    r_set[r_set .<= 1e-3] .= 1e-3 # Prevent from error. In this case r is proportional to mean value, smaller one will be zero anyway.
+    n_set_temp_NM = negative_multinomial_given_dispersion(num_pop_temporal, r_set)
+
     for i in 1:length(pop)
         N_tot_evo[i, 1] = pop[i].n
         N_tot_evo_NM[i, 1] = n_set_temp_NM[i]
@@ -94,11 +90,6 @@ for i_r in 1:nR
         @time n_set_temp = rand(Multinomial(N * n_amplification, prob_r))  # Sample the next generation based on probabilities
         
         # ---- Adding noise though negative binomial distribution.
-        f_and_p = [n_set_temp[i] * pop[i].f for i in 1:length(pop)]  # Compute product of population size and fitness
-        f_and_p[f_and_p .<= 0] .= 0.0  # Set non-positive fitness to zero, as they shouldn't be observed
-        prob_r = f_and_p / sum(f_and_p)  # Normalize to get probabilities
-        X0 = get_X0(N * n_amplification, prob_r)  # Obtain initial state for the negative multinomial
-        @time n_set_temp_NM, samples_taken = negative_multinomial(X0, prob_r)  # Simulate negative multinomial        
         for i in 1:length(pop)
             pop[i].n = n_set_temp[i]  # Update population size
         end
@@ -106,8 +97,13 @@ for i_r in 1:nR
         # -- sampling --
         if(k ∈ sampling_time)
             k_eff = findfirst(sampling_time .== k)
+            # NB sampling should be performed just before the sampling time.
+            num_pop_temporal = copy(n_set_temp)
+            num_pop_temporal[num_pop_temporal .< 0 ] .= 0.0
+            r_set = get_r.(num_pop_temporal)
+            r_set[r_set .<= 1e-3] .= 1e-3 # Prevent from error. In this case r is proportional to mean value, smaller one will be zero anyway.
+            n_set_temp_NM = negative_multinomial_given_dispersion(num_pop_temporal, r_set)        
             for i in 1:length(pop)
-
                 N_tot_evo[i, k_eff] = n_set_temp[i]  # Track evolution over cycles
                 N_tot_evo_NM[i, k_eff] = n_set_temp_NM[i]  # Track evolution over cycles 
             end
@@ -187,34 +183,52 @@ freq_full_set_mult = get_freq_tables_from_csv(nR, sampling_time, q_aa, L_eff, cs
 freq_full_set_neg_mult = get_freq_tables_from_csv(nR, sampling_time, q_aa, L_eff, csv_count_raw_neg_multi);
 
 # --- Get tables of enrichment that compared initial round and a temporal round t. 
-enrichment_mult = get_enrichment_from_freq_table(nR, sampling_time, q_aa, L_eff, freq_full_set_mult)
-enrichment_neg_mult = get_enrichment_from_freq_table(nR, sampling_time, q_aa, L_eff, freq_full_set_neg_mult);
-
-# --- Get averaged enrichment values look at only final round
+(enrichment_mult, enrichment_in_log_regression_mult, enrichment_log_reg_av_mult) = get_enrichment_from_freq_table(nR, sampling_time, q_aa, L_eff, freq_full_set_mult )
+(enrichment_neg_mult, enrichment_in_log_regression_neg_mult, enrichment_log_reg_av_neg_mult) = get_enrichment_from_freq_table(nR, sampling_time, q_aa, L_eff, freq_full_set_neg_mult );
 enrichment_mult_av = [mean(enrichment_mult[:, end, i]) for i in 1:length(enrichment_mult[1, 1, :]) ]
 enrichment_neg_mult_av = [mean(enrichment_neg_mult[:, end, i]) for i in 1:length(enrichment_neg_mult[1, 1, :]) ];
+
+# ---- Get preference values 
+preference_mult = get_preferences_from_enrichment(nR, q_aa, L_eff, enrichment_mult) 
+preference_neg_mult = get_preferences_from_enrichment(nR, q_aa, L_eff, enrichment_neg_mult)
+preference_mult_av = [mean(preference_mult[:, i]) for i in 1:(q_aa * L_eff)]
+preference_neg_mult_av = [mean(preference_neg_mult[:, i]) for i in 1:(q_aa * L_eff)];
+# --------------------------------------------------------- #
 
 # --- Write results to a csv file 
 # multinomial process
 df = DataFrame(
     position=[i for i in 1:L_eff for _ in 1:q_aa], 
     AA_i=[x for _ in 1:L_eff for x in amino_acids])
-
+df[!,  Symbol( "enrich_av" ) ] = enrichment_mult_av;
+df[!,  Symbol( "preference_av" ) ] = preference_mult_av;
+df[!,  Symbol( "enrich_regress_av" ) ] = enrichment_log_reg_av_mult[2, :];
 for i_R in 1:nR
-    df[!,  Symbol( @sprintf("preference_Rep%d", i_R) ) ] = enrichment_mult[i_R, end, :]
+    df[!,  Symbol( @sprintf("enrich_Rep%d", i_R) ) ] = enrichment_mult[i_R, end, :]
 end
-df[!,  Symbol( "preference_av" ) ] = enrichment_mult_av;
+for i_R in 1:nR
+    df[!,  Symbol( @sprintf("preference_Rep%d", i_R) ) ] = preference_mult[i_R, :]
+end
+for i_R in 1:nR
+    df[!,  Symbol( @sprintf("enrich_regress_Rep%d", i_R) ) ] = enrichment_in_log_regression_mult[i_R, :]
+end
 CSV.write( @sprintf("%s%s/multinomial/preference_multinomial.csv", dir_out, fkey) , df);
 
 # negative multinomial process
 df = DataFrame(
     position=[i for i in 1:L_eff for _ in 1:q_aa], 
     AA_i=[x for _ in 1:L_eff for x in amino_acids])
-
+df[!,  Symbol( "enrich_av" ) ] = enrichment_neg_mult_av;
+df[!,  Symbol( "preference_av" ) ] = preference_neg_mult_av;
+df[!,  Symbol( "enrich_regress_av" ) ] = enrichment_log_reg_av_neg_mult[2, :];
 for i_R in 1:nR
-    df[!,  Symbol( @sprintf("preference_Rep%d", i_R) ) ] = enrichment_neg_mult[i_R, end, :]
+    df[!,  Symbol( @sprintf("enrich_Rep%d", i_R) ) ] = enrichment_neg_mult[i_R, end, :]
 end
-df[!,  Symbol( "preference_av" ) ] = enrichment_neg_mult_av;
-#CSV.write("./out_simulation/N-10000_Ntot-1000000_T-10_nR-10/negative-multinomial/preference_negative_multinomial.csv", df);
-
+df[!,  Symbol( "enrich_av" ) ] = enrichment_neg_mult_av;
+for i_R in 1:nR
+    df[!,  Symbol( @sprintf("preference_Rep%d", i_R) ) ] = preference_neg_mult[i_R, :]
+end
+for i_R in 1:nR
+    df[!,  Symbol( @sprintf("enrich_regress_Rep%d", i_R) ) ] = enrichment_in_log_regression_neg_mult[i_R, :]
+end
 CSV.write(@sprintf("%s%s/negative-multinomial/preference_negative_multinomial.csv", dir_out, fkey), df);
