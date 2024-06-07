@@ -22,6 +22,7 @@ dir_load = ARGS[7]
 ref_seq = ARGS[8] 
 end_exp = parse(Int, ARGS[9]) # =4
 num_values = parse(Int, ARGS[10]) # = 20
+fname_time_steps = ARGS[11] #
 # ==============================================#
 L, q = length(split(ref_seq, "")), 21
 qL = q*L; 
@@ -53,7 +54,7 @@ else
     @printf("Done.\n")
     # Get integrated covariance. This process could be longer (~37min - 7h)
     @printf("Start processing to get the integrated covariancies.\n")
-    @time (icov_set, Δx, idx_detecable_i_a_set, idx_detectable) = get_integrated_cov(q, L, Δx_set, x_set, csv_raw, freq_th);
+    @time (icov_set, Δx, idx_detecable_i_a_set, idx_detectable) = get_integrated_cov(q, L, Δx_set, x_set, csv_raw, fname_time_steps, freq_th);
     @printf("Done.\n")
     @printf("Start processing to get the correction in the integrated covariance with linear interpolation.\n")
     @time iΔxΔxT_set = get_correction_with_linear_interpolation(Δx, x_set, csv_raw, freq_th);

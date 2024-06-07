@@ -124,7 +124,7 @@ function get_index_detectable(q, L, freq_th, Δx)
     return (idx_detectable, idx_detecable_i_a_set, idx_detecable_ij_ab_set)
 end
 
-function get_integrated_cov(q, L, Δx_set, x_set, csv_raw, freq_th=1e-10)
+function get_integrated_cov(q, L, Δx_set, x_set, csv_raw, fname_time_steps, freq_th=1e-10)
     qL = q * L
     (ids_replicate, ids_rounds) = get_replication_round_ids(names(csv_raw))
     n_seq_max = length(csv_raw.sequence)
@@ -134,6 +134,15 @@ function get_integrated_cov(q, L, Δx_set, x_set, csv_raw, freq_th=1e-10)
         Δx += Δx_set[n_rep]
     end;
     
+    # Suppose all file has the time points in a plain text file.
+    t_set = readdlm(fname_time_steps)[:,1]
+    Δt_set = zeros(length(t_set))
+    Δt_set[1] = 0.5 * (t_set[2] - t_set[1])
+    Δt_set[end] = 0.5 * (t_set[end] - t_set[end-1])
+    for i in 2:(length(t_set)-1)
+        Δt_set[i] = 0.5 * (t_set[i+1] - t_set[i-1]) 
+    end
+     
     # Compute the integrated covariance matrix. (assume simple piece-wise constant case)
     # TODO: consider piece-wise linear interpolation's case. 
     # Consider only the detectable sites (i,a) where i and a are locus and allele.  
@@ -175,7 +184,7 @@ function get_integrated_cov(q, L, Δx_set, x_set, csv_raw, freq_th=1e-10)
             coeff_set = num_seq_set .* scale_set
             # It isn't necessary to sum the outer products each time; this operation can be absolved to the summed coefficient.
             
-            coeff_set_sum = sum(coeff_set) - 0.5 * (coeff_set[1]+coeff_set[end])
+            coeff_set_sum = sum(coeff_set .* Δt_set)
             g_ia = zeros(L_1st_eff) 
             for id_ia in 1:len_idx_detecable_i_a_set
                 (i,a) = idx_detecable_i_a_set[id_ia]
@@ -222,9 +231,7 @@ function get_integrated_cov(q, L, Δx_set, x_set, csv_raw, freq_th=1e-10)
         
         # Subtracting the moments
         for i_rnd in 1:n_round
-            w = 1.0
-            # Both side of edges (t=1 and t=K) are weighted by 0.5, as their contribution comes from the half of the time.
-            if(i_rnd == 1 || i_rnd == n_round) w = 0.5 end
+            w = Δt_set[i_rnd]
             x_ia = x_detecable_i_a_set[i_rnd, :]
             x_klcd = x_detecable_ij_ab_set[i_rnd, :]
             # 2nd order cov.:
