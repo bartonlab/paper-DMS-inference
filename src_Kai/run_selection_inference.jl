@@ -57,7 +57,7 @@ else
     @time (icov_set, Δx, idx_detecable_i_a_set, idx_detectable) = get_integrated_cov(q, L, Δx_set, x_set, csv_raw, fname_time_steps, freq_th);
     @printf("Done.\n")
     @printf("Start processing to get the correction in the integrated covariance with linear interpolation.\n")
-    @time iΔxΔxT_set = get_correction_with_linear_interpolation(Δx, x_set, csv_raw, freq_th);
+    @time iΔxΔxT_set = get_correction_with_linear_interpolation(Δx, x_set, csv_raw, fname_time_steps, freq_th);
     @printf("Done.\n")
     if(flag_out)
         @printf("Start outputting the integrated covariance and the correction in the integrated covariance.\n")
@@ -82,6 +82,7 @@ for n_rep in 1:length(ids_replicate)
     icov += icov_set[n_rep]
     iΔxΔxT += iΔxΔxT_set[n_rep]
 end
+
 
 for γ1 in γ_set
     s_set = []

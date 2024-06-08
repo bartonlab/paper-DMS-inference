@@ -124,6 +124,16 @@ function get_index_detectable(q, L, freq_th, Δx)
     return (idx_detectable, idx_detecable_i_a_set, idx_detecable_ij_ab_set)
 end
 
+function get_Δt_set(t_set) 
+    Δt_set = zeros(length(t_set))
+    Δt_set[1] = 0.5 * (t_set[2] - t_set[1])
+    Δt_set[end] = 0.5 * (t_set[end] - t_set[end-1])
+    for i in 2:(length(t_set)-1)
+        Δt_set[i] = 0.5 * (t_set[i+1] - t_set[i-1]) 
+    end
+    return Δt_set
+end
+
 function get_integrated_cov(q, L, Δx_set, x_set, csv_raw, fname_time_steps, freq_th=1e-10)
     qL = q * L
     (ids_replicate, ids_rounds) = get_replication_round_ids(names(csv_raw))
@@ -136,12 +146,7 @@ function get_integrated_cov(q, L, Δx_set, x_set, csv_raw, fname_time_steps, fre
     
     # Suppose all file has the time points in a plain text file.
     t_set = readdlm(fname_time_steps)[:,1]
-    Δt_set = zeros(length(t_set))
-    Δt_set[1] = 0.5 * (t_set[2] - t_set[1])
-    Δt_set[end] = 0.5 * (t_set[end] - t_set[end-1])
-    for i in 2:(length(t_set)-1)
-        Δt_set[i] = 0.5 * (t_set[i+1] - t_set[i-1]) 
-    end
+    Δt_set = get_Δt_set(t_set)
      
     # Compute the integrated covariance matrix. (assume simple piece-wise constant case)
     # TODO: consider piece-wise linear interpolation's case. 
@@ -251,9 +256,9 @@ end;
 # Note, this expression is valid for both off-diagonal and diagonal elements. 
 # When we consider a half of covariance at t=0 and t=t_K, then integrated covariance with linear interpolation iC^l is:
 # iC^l = iC^c + 1/6∑_{k=0}^{K+1} Δx(k,k+1)Δx(k,k+1)^\top)
-function get_correction_with_linear_interpolation(Δx, x_set, csv_raw, freq_th=1e-10)
+function get_correction_with_linear_interpolation(Δx, x_set, csv_raw, fname_time_steps, freq_th=1e-10)
     (ids_replicate, ids_rounds) = get_replication_round_ids(names(csv_raw))
-    
+    t_set = readdlm(fname_time_steps)[:,1]
     idx_reduced = abs.(Δx) .> freq_th
     Leff = count( idx_reduced )
     iΔxΔxT_set = []
@@ -263,7 +268,7 @@ function get_correction_with_linear_interpolation(Δx, x_set, csv_raw, freq_th=1
         n_round = length(rep_round_headder)
         for i_rnd in 2:n_round
             Δx_temp = x_set[n_rep][i_rnd, idx_reduced] - x_set[n_rep][i_rnd-1, idx_reduced]
-            iΔxΔxT += Δx_temp * Δx_temp'
+            iΔxΔxT += ((t_set[i_rnd] - t_set[i_rnd-1]) * Δx_temp) * Δx_temp'
         end
         push!(iΔxΔxT_set, copy(iΔxΔxT))
     end
