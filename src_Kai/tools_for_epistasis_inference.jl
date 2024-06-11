@@ -318,6 +318,7 @@ function load_icov_iΔxΔxT(dir_load, ids_replicate)
     return (icov_set, iΔxΔxT_set, Δx_set) 
 end
 
+"""
 function get_best_regularization(corrs, gamma_values; corr_cutoff_pct=0.05)
     corr_thresh = (maximum(corrs)^2 - corrs[1]^2) * corr_cutoff_pct
     gamma_opt = 0.1
@@ -333,6 +334,26 @@ function get_best_regularization(corrs, gamma_values; corr_cutoff_pct=0.05)
             end
         end
         if !gamma_set
+            gamma_opt = gamma_values[argmax(corrs)]
+        end
+    end
+    return gamma_opt
+end;
+"""
+
+function get_best_regularization(corrs, gamma_values; corr_cutoff_pct=0.05)
+    corr_thresh = (maximum(corrs)^2 - corrs[1]^2) * corr_cutoff_pct
+    gamma_opt = 0.1
+    if abs(maximum(corrs)^2 - corrs[1]^2) < 0.01
+        gamma_opt = gamma_values[1]
+    else
+        gamma_set = false
+        Δcorr_set = [abs((corrs[i]^2 - corrs[i-1]^2) / (log10(gamma_values[i]) - log10(gamma_values[i-1])) ) for i in argmax(corrs):-1:2]
+        i_set = [i for i in argmax(corrs):-1:2]
+        i_arg_max = argmax(Δcorr_set);
+        gamma_opt = gamma_values[i_set[i_arg_max]]
+
+        if Δcorr_set[i_arg_max] < corr_thresh # this is the case we never found one that get Δcor >= corr_thresh . 
             gamma_opt = gamma_values[argmax(corrs)]
         end
     end

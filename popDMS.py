@@ -1106,7 +1106,7 @@ def get_max_reads(freq_dir, name, replicates):
             
     return max_reads
 
-
+"""
 def get_best_regularization(corrs, gamma_values, corr_cutoff_pct=0.05):
     '''
     Compute best regularization strength from correlation data.
@@ -1127,7 +1127,26 @@ def get_best_regularization(corrs, gamma_values, corr_cutoff_pct=0.05):
             gamma_opt = gamma_values[np.argmax(corrs)]
     
     return gamma_opt
+"""
 
+def get_best_regularization(corrs, gamma_values, corr_cutoff_pct=0.05):
+    corr_thresh = (max(corrs)**2 - corrs[0]**2) * corr_cutoff_pct
+    gamma_opt = 0.1
+    if abs(max(corrs)**2 - corrs[0]**2) < 0.01:
+        gamma_opt = gamma_values[0]
+    else:
+        gamma_set = False
+        arg_max_corrs = np.argmax(corrs)
+        Δcorr_set = [abs((corrs[i]**2 - corrs[i-1]**2) / (np.log10(gamma_values[i]) - np.log10(gamma_values[i-1])))
+                     for i in range(arg_max_corrs, 1, -1)]
+        i_set = list(range(arg_max_corrs, 1, -1))
+        i_arg_max = np.argmax(Δcorr_set)
+        gamma_opt = gamma_values[i_set[i_arg_max]]
+
+        if Δcorr_set[i_arg_max] < corr_thresh:  # this is the case we never found one that gets Δcor >= corr_thresh
+            gamma_opt = gamma_values[arg_max_corrs]
+
+    return gamma_opt
 
 def plot_regularization(corrs, gamma_values):
     '''

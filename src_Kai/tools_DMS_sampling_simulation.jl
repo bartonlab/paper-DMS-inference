@@ -95,7 +95,7 @@ end
 get_X0(N, P) = Int( floor( N / sum( P / maximum(P) ) ) );
 
 
-function get_initial_complete_population(q, L_eff, Ntot, csv_raw, seq_wt, α=0.005)
+function get_initial_complete_population(q, L_eff, Ntot, csv_raw, seq_wt, α=0.0) # previously α=0.0005
     # Making site independent model
     individual_site_freq = zeros(L_eff, q);  # corrected spelling of 'individual_site_freq'
     for i in 1:L_eff
