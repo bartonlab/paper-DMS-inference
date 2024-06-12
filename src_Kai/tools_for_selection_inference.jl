@@ -263,6 +263,7 @@ function load_icov_iΔxΔxT(dir_load, ids_replicate)
     return (icov_set, iΔxΔxT_set, Δx_set) 
 end
 
+"""
 function get_best_regularization(corrs, gamma_values; corr_cutoff_pct=0.05)
     corr_thresh = (maximum(corrs)^2 - corrs[1]^2) * corr_cutoff_pct
     gamma_opt = 0.1
@@ -284,8 +285,10 @@ function get_best_regularization(corrs, gamma_values; corr_cutoff_pct=0.05)
     end
     return gamma_opt
 end;
+"""
 
-function get_best_regularization_temp(corrs, gamma_values; corr_cutoff_pct=0.05)
+"""
+function get_best_regularization(corrs, gamma_values; corr_cutoff_pct=0.05)
     corr_thresh = (maximum(corrs)^2 - corrs[1]^2) * corr_cutoff_pct
     gamma_opt = 0.1
     if abs(maximum(corrs)^2 - corrs[1]^2) < 0.01
@@ -303,7 +306,51 @@ function get_best_regularization_temp(corrs, gamma_values; corr_cutoff_pct=0.05)
     end
     return gamma_opt
 end;
+"""
 
+function get_best_regularization(corrs, gamma_values; corr_cutoff_pct=0.5)
+    max_corrs = maximum(corrs)
+    corr_thresh = (max_corrs^2 - corrs[1]^2) * corr_cutoff_pct
+    
+    gamma_opt = 0.1
+    if abs(max_corrs^2 - corrs[1]^2) < 0.01
+        gamma_opt = gamma_values[1]
+    else
+        gamma_set = false
+        
+        Δcor_set, i_set = [], []
+        for i in argmax(corrs):-1:2
+            Δcor_num = corrs[i]^2 - corrs[i-1]^2 
+            Δcor_den = (log10(gamma_values[i]) - log10(gamma_values[i-1]) )
+            Δcor_ratio = abs( Δcor_num / Δcor_den )
+            push!(Δcor_set, abs(max_corrs) - max(corrs[i]) )
+            push!(i_set, i)
+            if Δcor_ratio >= corr_thresh
+                gamma_opt = gamma_values[i]
+                gamma_set = true
+                break
+            end
+        end
+        # if the loop completes without finding a gamma, set gamma_opt to the value that gives 1% of the drop in R
+        if !gamma_set
+            i_before_below10percent = find_last_below_threshold(Δcor_set)
+            gamma_opt = gamma_values[ i_set[i_before_below10percent] ]
+        end
+    end
+    return gamma_opt
+end;
+
+# Function to find the index of the last value below a threshold
+function find_last_below_threshold(nums_in, th=0.1)
+    idx_out = 0
+    for (i, value) in enumerate(nums_in)
+        if value >= th
+            break
+        end
+        idx_out = i
+    end
+    return idx_out
+end
 
 function output_frequency_change(Δx_set, x_set, idx_detectable, idx_detecable_i_a_set, dir_out)
     type_set, i_set, a_set= [], [], []

@@ -1111,7 +1111,7 @@ def get_best_regularization(corrs, gamma_values, corr_cutoff_pct=0.05):
     '''
     Compute best regularization strength from correlation data.
     '''
-
+    print("Old function\n")
     corr_thresh = (np.max(corrs)**2 - corrs[0]**2)*corr_cutoff_pct
     gamma_opt = 1
     if np.fabs(np.max(corrs)**2-corrs[0]**2)<0.01:
@@ -1129,6 +1129,7 @@ def get_best_regularization(corrs, gamma_values, corr_cutoff_pct=0.05):
     return gamma_opt
 """
 
+"""
 def get_best_regularization(corrs, gamma_values, corr_cutoff_pct=0.05):
     corr_thresh = (max(corrs)**2 - corrs[0]**2) * corr_cutoff_pct
     gamma_opt = 0.1
@@ -1147,6 +1148,45 @@ def get_best_regularization(corrs, gamma_values, corr_cutoff_pct=0.05):
             gamma_opt = gamma_values[arg_max_corrs]
 
     return gamma_opt
+"""
+
+def find_last_below_threshold(nums_in, th=0.1):
+    idx_out = 0
+    for i, value in enumerate(nums_in):
+        if value >= th:
+            break
+        idx_out = i
+    return idx_out
+
+
+def get_best_regularization(corrs, gamma_values, corr_cutoff_pct=0.5):
+    max_corrs = max(corrs)
+    corr_thresh = (max_corrs**2 - corrs[0]**2) * corr_cutoff_pct
+    
+    gamma_opt = 0.1
+    if abs(max_corrs**2 - corrs[0]**2) < 0.01:
+        gamma_opt = gamma_values[0]
+    else:
+        gamma_set = False
+        
+        delta_cor_set, i_set = [], []
+        for i in range(np.argmax(corrs), 1, -1):
+            delta_cor_num = corrs[i]**2 - corrs[i-1]**2
+            delta_cor_den = (np.log10(gamma_values[i]) - np.log10(gamma_values[i-1]))
+            delta_cor_ratio = abs(delta_cor_num / delta_cor_den)
+            delta_cor_set.append(abs(max_corrs) - abs(corrs[i]))
+            i_set.append(i)
+            if delta_cor_ratio >= corr_thresh:
+                gamma_opt = gamma_values[i]
+                gamma_set = True
+                break
+        # if the loop completes without finding a gamma, set gamma_opt to the value that gives 1% of the drop in R
+        if not gamma_set:
+            i_before_below10percent = find_last_below_threshold(delta_cor_set)
+            gamma_opt = gamma_values[i_set[i_before_below10percent]]
+            
+    return gamma_opt
+
 
 def plot_regularization(corrs, gamma_values):
     '''
