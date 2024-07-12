@@ -4,6 +4,7 @@ __pycache__
 */.ipynb_checkpoints
 
 # Local files
+test
 drafts
 old
 logomaker
@@ -11,6 +12,7 @@ figures_slides.ipynb
 figures_slides.py
 figures/slides-*.pdf
 figures/old
+output/merged_preference/backup
 
 # Mac hidden files
 .DS_Store

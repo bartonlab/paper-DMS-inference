@@ -8,7 +8,6 @@ import scipy as sp
 import scipy.stats as st
 
 import itertools
-from itertools import combinations
 
 import pandas as pd
 pd.set_option('future.no_silent_downcasting', True)
@@ -1106,49 +1105,6 @@ def get_max_reads(freq_dir, name, replicates):
             
     return max_reads
 
-"""
-def get_best_regularization(corrs, gamma_values, corr_cutoff_pct=0.05):
-    '''
-    Compute best regularization strength from correlation data.
-    '''
-    print("Old function\n")
-    corr_thresh = (np.max(corrs)**2 - corrs[0]**2)*corr_cutoff_pct
-    gamma_opt = 1
-    if np.fabs(np.max(corrs)**2-corrs[0]**2)<0.01:
-        gamma_opt = gamma_values[0]
-    else:
-        gamma_set = False
-        for i in range(np.argmax(corrs), 0, -1):
-            if np.fabs((corrs[i]**2-corrs[i-1]**2)/(np.log10(gamma_values[i])-np.log10(gamma_values[i-1]))) >= corr_thresh:
-                gamma_opt = gamma_values[i]
-                gamma_set = True
-                break
-        if not gamma_set:
-            gamma_opt = gamma_values[np.argmax(corrs)]
-    
-    return gamma_opt
-"""
-
-"""
-def get_best_regularization(corrs, gamma_values, corr_cutoff_pct=0.05):
-    corr_thresh = (max(corrs)**2 - corrs[0]**2) * corr_cutoff_pct
-    gamma_opt = 0.1
-    if abs(max(corrs)**2 - corrs[0]**2) < 0.01:
-        gamma_opt = gamma_values[0]
-    else:
-        gamma_set = False
-        arg_max_corrs = np.argmax(corrs)
-        Δcorr_set = [abs((corrs[i]**2 - corrs[i-1]**2) / (np.log10(gamma_values[i]) - np.log10(gamma_values[i-1])))
-                     for i in range(arg_max_corrs, 1, -1)]
-        i_set = list(range(arg_max_corrs, 1, -1))
-        i_arg_max = np.argmax(Δcorr_set)
-        gamma_opt = gamma_values[i_set[i_arg_max]]
-
-        if Δcorr_set[i_arg_max] < corr_thresh:  # this is the case we never found one that gets Δcor >= corr_thresh
-            gamma_opt = gamma_values[arg_max_corrs]
-
-    return gamma_opt
-"""
 
 def find_last_below_threshold(nums_in, th=0.1):
     idx_out = 0
@@ -1160,6 +1116,24 @@ def find_last_below_threshold(nums_in, th=0.1):
 
 
 def get_best_regularization(corrs, gamma_values, corr_cutoff_pct=0.5):
+    '''
+    Compute best regularization strength from correlation data.
+    '''
+
+    # corr_thresh = (np.max(corrs)**2 - corrs[0]**2)*corr_cutoff_pct
+    # gamma_opt = 1
+    # if np.fabs(np.max(corrs)**2-corrs[0]**2)<0.01:
+    #     gamma_opt = gamma_values[0]
+    # else:
+    #     gamma_set = False
+    #     for i in range(np.argmax(corrs), 0, -1):
+    #         if np.fabs((corrs[i]**2-corrs[i-1]**2)/(np.log10(gamma_values[i])-np.log10(gamma_values[i-1]))) >= corr_thresh:
+    #             gamma_opt = gamma_values[i+1]
+    #             gamma_set = True
+    #             break
+    #     if not gamma_set:
+    #         gamma_opt = gamma_values[np.argmax(corrs)]
+
     max_corrs = max(corrs)
     corr_thresh = (max_corrs**2 - corrs[0]**2) * corr_cutoff_pct
     
@@ -1184,7 +1158,7 @@ def get_best_regularization(corrs, gamma_values, corr_cutoff_pct=0.5):
         if not gamma_set:
             i_before_below10percent = find_last_below_threshold(delta_cor_set)
             gamma_opt = gamma_values[i_set[i_before_below10percent]]
-            
+    
     return gamma_opt
 
 
@@ -1200,7 +1174,7 @@ def plot_regularization(corrs, gamma_values):
     plt.show()
 
 
-def infer_correlated(name, n_replicates, corr_cutoff_pct, freq_dir='.', output_dir='.', with_epistasis=False, plot_gamma=True):
+def infer_correlated(name, n_replicates, corr_cutoff_pct, gamma=None, norm_WT=False, freq_dir='.', output_dir='.', with_epistasis=False, plot_gamma=True):
     '''
     Infer selection coefficients from data that includes correlations (counts)
     between pairs of mutant sites. This is not possible with data that includes
@@ -1215,6 +1189,10 @@ def infer_correlated(name, n_replicates, corr_cutoff_pct, freq_dir='.', output_d
             strength
 
     Optional arguments:
+        - gamma (default: None): Regularization strength for selection coefficient;
+            if None, will be determined by correlation between replicates
+        - norm_WT (default: False): If True, will normalize selection coefficients
+            such that the wildtype has a selection coefficient of zero
         - freq_dir (default: '.'): Directory where variant frequency data has been 
             saved; assumes data saved in the format of compute_variant_frequencies
         - output_dir (default: '.'): Directory where selection coefficients will be 
@@ -1241,8 +1219,13 @@ def infer_correlated(name, n_replicates, corr_cutoff_pct, freq_dir='.', output_d
     dx, icov, p2i = compute_dx_covariance(aa_freqs)
     
     # Compute optimal regularization value
-    if n_replicates==1:
-        print('Only one replicate, setting gamma=1')
+    gamma_opt = 1
+
+    if gamma is not None:
+        gamma_opt = gamma
+
+    elif n_replicates==1:
+        print('Only one replicate, setting gamma = 1')
         gamma_opt = 1
 
     else:
@@ -1253,7 +1236,7 @@ def infer_correlated(name, n_replicates, corr_cutoff_pct, freq_dir='.', output_d
         for g in gamma_values:
             s = np.zeros_like(dx)
             for r_idx in range(n_replicates):
-                s[r_idx] = np.linalg.solve(icov[r_idx] + g*np.eye(len(icov[r_idx])), dx[r_idx])
+                s[r_idx] = np.inner(np.linalg.inv(icov[r_idx] + g*np.eye(len(icov[r_idx]))), dx[r_idx])
             corrs.append(np.mean([st.pearsonr(s[i], s[j]).statistic for i in range(n_replicates) for j in range(i+1, n_replicates)]))
 
         ## (Optional) plot the results
@@ -1267,16 +1250,31 @@ def infer_correlated(name, n_replicates, corr_cutoff_pct, freq_dir='.', output_d
     ## Compute selection coefficients at optimal gamma
     s = np.zeros_like(dx)
     for r_idx in range(n_replicates):
-        s[r_idx] = np.linalg.solve(icov[r_idx] + gamma_opt*np.eye(len(icov[r_idx])), dx[r_idx])
+        s[r_idx] = np.inner(np.linalg.inv(icov[r_idx] + gamma_opt*np.eye(len(icov[r_idx]))), dx[r_idx])
         
-    s_joint = np.linalg.solve(np.sum(icov, axis=0) + gamma_opt*np.eye(len(icov[0])), np.sum(dx, axis=0))
+    s_joint = np.inner(np.linalg.inv(np.sum(icov, axis=0) + gamma_opt*np.eye(len(icov[0]))), np.sum(dx, axis=0))
 
-    # Convert selection coefficients to a data frame and save to file
+    # Get WT sequence and site list
     df_ref = aa_freqs['single'][0][aa_freqs['single'][0]['WT_indicator']==True]
     ref_aa = {}
     for df_iter, row in df_ref.iterrows():
         ref_aa[row['site']] = row['aa']
-        
+
+    sites = list(np.unique(aa_freqs['single'][0]['site']))
+
+    # Optionally normalize selection coefficients
+    if norm_WT:
+        for r_idx in range(n_replicates):
+            for seq_i in range(len(sites)):
+                s_WT = s[r_idx][p2i[(sites[seq_i], ref_aa[sites[seq_i]])]]
+                for a in AA:
+                    s[r_idx][p2i[(sites[seq_i], a)]] -= s_WT
+        for seq_i in range(len(sites)):
+            s_WT = s_joint[p2i[(sites[seq_i], ref_aa[sites[seq_i]])]]
+            for a in AA:
+                s_joint[p2i[(sites[seq_i], a)]] -= s_WT
+    
+    # Convert selection coefficients to a data frame and save to file
     sel_cols = ['site', 'amino_acid', 'WT_indicator'] + ['rep_%d' % r for r in replicates] + ['joint']
     sel_data = []
     for pair, loc in p2i.items():
@@ -1287,7 +1285,7 @@ def infer_correlated(name, n_replicates, corr_cutoff_pct, freq_dir='.', output_d
     df_temp.to_csv(path, index=False, compression='gzip')
 
 
-def infer_independent(name, n_replicates, corr_cutoff_pct, freq_dir='.', output_dir='.', plot_gamma=True):
+def infer_independent(name, n_replicates, corr_cutoff_pct, gamma=None, norm_WT=False, freq_dir='.', output_dir='.', plot_gamma=True):
     '''
     Infer selection coefficients from data that consists of single amino acid
     frequencies only.
@@ -1301,6 +1299,10 @@ def infer_independent(name, n_replicates, corr_cutoff_pct, freq_dir='.', output_
             strength
 
     Optional arguments:
+        - gamma (default: None): Regularization strength for selection coefficient;
+            if None, will be determined by correlation between replicates
+        - norm_WT (default: False): If True, will normalize selection coefficients
+            such that the wildtype has a selection coefficient of zero
         - freq_dir (default: '.'): Directory where variant frequency data has been
             saved; assumes data saved in the format of compute_variant_frequencies
         - output_dir (default: '.'): Directory where selection coefficients will be
@@ -1317,10 +1319,16 @@ def infer_independent(name, n_replicates, corr_cutoff_pct, freq_dir='.', output_
 
     # Get frequency change and covariance, used to compute selection coefficients, and map to indices
     dx, icov, aa2i = compute_dx_covariance_independent(aa_freqs)
+    L = len(dx[0])
     
     # Compute optimal regularization value
-    if n_replicates==1:
-        print('Only one replicate, setting gamma=1')
+    gamma_opt = 1
+
+    if gamma is not None:
+        gamma_opt = gamma
+
+    elif n_replicates==1:
+        print('Only one replicate, setting gamma = 1')
         gamma_opt = 1
 
     else:
@@ -1329,7 +1337,6 @@ def infer_independent(name, n_replicates, corr_cutoff_pct, freq_dir='.', output_
         gamma_values = np.logspace(np.log10(1/max_reads), 4, num=20)
 
         ## Get correlations for each value of gamma
-        L = len(dx[0])
         corrs = []
         for g in gamma_values:
             s = np.zeros_like(dx)
@@ -1357,14 +1364,24 @@ def infer_independent(name, n_replicates, corr_cutoff_pct, freq_dir='.', output_
     for seq_i in range(L):
         s_joint[seq_i] = np.inner(np.linalg.inv(np.sum([icov[r_idx][seq_i] for r_idx in range(n_replicates)], axis=0) + gamma_opt*np.eye(len(icov[0][seq_i]))), np.sum([dx[r_idx][seq_i] for r_idx in range(n_replicates)], axis=0))
 
-    # Convert selection coefficients to a data frame and save to file
+    # Get WT sequence and site list
     df_ref = aa_freqs['single'][0][aa_freqs['single'][0]['WT_indicator']==True]
     ref_aa = {}
     for df_iter, row in df_ref.iterrows():
         ref_aa[row['site']] = row['aa']
 
     sites = list(np.unique(aa_freqs['single'][0]['site']))
-        
+
+    # Optionally normalize selection coefficients
+    if norm_WT:
+        for r_idx in range(n_replicates):
+            for seq_i in range(L):
+                s[r_idx][seq_i] -= s[r_idx][seq_i][aa2i[ref_aa[sites[seq_i]]]]
+
+        for seq_i in range(L):
+            s_joint[seq_i] -= s_joint[seq_i][aa2i[ref_aa[sites[seq_i]]]]
+
+    # Convert selection coefficients to a data frame and save to file
     sel_cols = ['site', 'amino_acid', 'WT_indicator'] + ['rep_%d' % r for r in replicates] + ['joint']
     sel_data = []
     for seq_i in range(L):
@@ -1376,7 +1393,7 @@ def infer_independent(name, n_replicates, corr_cutoff_pct, freq_dir='.', output_
     df_temp.to_csv(path, index=False, compression='gzip')
 
 
-def infer_barcode(name, replicate_files, corr_cutoff_pct, output_dir='.', plot_gamma=True):
+def infer_barcode(name, replicate_files, corr_cutoff_pct, gamma=None, output_dir='.', plot_gamma=True):
     '''
     Infer selection coefficients from barcoded count data. Here we equate barcodes with
     genotypes and infer selection coefficients from the change in barcode frequencies.
@@ -1407,8 +1424,13 @@ def infer_barcode(name, replicate_files, corr_cutoff_pct, output_dir='.', plot_g
     dx, icov = compute_dx_covariance_barcode(b2i, barcode_freqs, times)
     
     # Compute optimal regularization value
-    if n_replicates==1:
-        print('Only one replicate, setting gamma=1')
+    gamma_opt = 1
+
+    if gamma is not None:
+        gamma_opt = gamma
+
+    elif n_replicates==1:
+        print('Only one replicate, setting gamma = 1')
         gamma_opt = 1
 
     else:
